@@ -43,20 +43,76 @@ class CustomerReviewRepository:
 
     def get_customer_review_by_id(self, review_id: int) -> Optional[Dict[str, Any]]:
         """
-        Récupère un customer_review par son ID
+        Récupère un customer_review par son ID avec ses formules et notes
 
         Args:
             review_id: ID du customer_review
 
         Returns:
-            Dictionnaire avec les données du customer_review ou None
+            Dictionnaire avec les données du customer_review enrichi avec formules et notes, ou None
         """
         connection = get_connection()
         if not connection:
             return None
 
         try:
-            return crud_customer_review.get_by_id(connection, review_id)
+            # 1) Récupération de base du customer_review
+            review = crud_customer_review.get_by_id(connection, review_id)
+            if not review:
+                return None
+
+            # 2) Enrichir avec les formules et notes
+            def _get_notes(table_name: str, formula_id: int) -> List[Dict[str, Any]]:
+                cursor = connection.cursor()
+                try:
+                    query = f"""
+                        SELECT id, name, quantity
+                        FROM {table_name}
+                        WHERE formula_id = %s
+                        ORDER BY id ASC
+                    """
+                    cursor.execute(query, (formula_id,))
+                    return cursor.fetchall()
+                except Exception as e:
+                    print(f"Erreur récupération notes depuis {table_name} pour formula_id={formula_id} : {e}")
+                    return []
+                finally:
+                    cursor.close()
+
+            def _get_formulas_for_review(review_id: int) -> List[Dict[str, Any]]:
+                cursor = connection.cursor()
+                try:
+                    # On passe par customer_files pour lier customers_review → files → formula
+                    query = """
+                        SELECT f.id, f.customer_id, f.file_id
+                        FROM formula f
+                        JOIN customer_files cf ON cf.id = f.file_id
+                        WHERE cf.customer_review_id = %s
+                        ORDER BY f.id ASC
+                    """
+                    cursor.execute(query, (review_id,))
+                    formulas = cursor.fetchall() or []
+
+                    for formula in formulas:
+                        formula_id = formula["id"]
+                        formula["top_notes"] = _get_notes("top_note", formula_id)
+                        formula["heart_notes"] = _get_notes("heart_note", formula_id)
+                        formula["base_notes"] = _get_notes("base_note", formula_id)
+
+                    return formulas
+                except Exception as e:
+                    print(f"Erreur récupération formules pour customer_review_id={review_id} : {e}")
+                    return []
+                finally:
+                    cursor.close()
+
+            try:
+                review["formulas"] = _get_formulas_for_review(review_id)
+            except Exception as e:
+                print(f"Erreur enrichissement formulas pour review {review_id}: {e}")
+                review["formulas"] = []
+
+            return review
         finally:
             if connection.open:
                 connection.close()
