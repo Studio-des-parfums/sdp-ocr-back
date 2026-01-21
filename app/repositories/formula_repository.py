@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 
 from app.database import get_connection
 from app.crud import crud_formula, crud_notes
@@ -16,7 +16,7 @@ class FormulaRepository:
         file_id: int,
         extracted_data: Dict[str, Any],
         customer_review_id: Optional[int] = None,
-    ) -> Optional[int]:
+    ) -> Tuple[Optional[int], bool]:
         """
         Crée une formule liée à un customer (optionnel) et à un fichier,
         puis insère les notes de tête / cœur / fond associées.
@@ -30,20 +30,25 @@ class FormulaRepository:
             customer_review_id: ID du customer_review (optionnel)
 
         Returns:
-            ID de la formule créée ou None si erreur
+            Tuple (formula_id, notes_were_corrected)
+            - formula_id: ID de la formule créée ou None si erreur
+            - notes_were_corrected: True si au moins une note a été corrigée
         """
         connection = get_connection()
         if not connection:
-            return None
+            return None, False
 
         try:
             formula_id = crud_formula.create(
                 connection, customer_id, file_id, customer_review_id=customer_review_id
             )
             if not formula_id:
-                return None
+                return None, False
+
+            notes_were_corrected = False
 
             def _normalize_notes(key: str) -> List[Dict[str, Any]]:
+                nonlocal notes_were_corrected
                 raw_notes = extracted_data.get(key) or []
                 if not isinstance(raw_notes, list):
                     return []
@@ -57,6 +62,14 @@ class FormulaRepository:
                     
                     # Correction du nom via Fuzzy Matching
                     corrected_name = note_corrector.correct_note_name(name)
+                    
+                    # Vérifier si le nom a été modifié ou est inconnu
+                    if corrected_name == "A définir":
+                        notes_were_corrected = True
+                        print(f"❓ Note inconnue : '{name}' → 'A définir'")
+                    elif corrected_name != name:
+                        notes_were_corrected = True
+                        print(f"🔧 Note corrigée : '{name}' → '{corrected_name}'")
                     
                     quantity_raw = note.get("quantite_ml")
                     quantity = None
@@ -93,7 +106,7 @@ class FormulaRepository:
                     note.get("quantity"),
                 )
 
-            return formula_id
+            return formula_id, notes_were_corrected
 
         finally:
             if connection.open:

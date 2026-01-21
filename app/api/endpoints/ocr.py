@@ -386,7 +386,7 @@ async def upload_pdf_and_download_csv(file: UploadFile = File(...)):
 
                                 # Créer la formule et les notes associées pour ce fichier
                                 try:
-                                    formula_id = formula_repository.create_formula_with_notes(
+                                    formula_id, notes_were_corrected = formula_repository.create_formula_with_notes(
                                         customer_id=customer_id,
                                         file_id=pdf_file_id,
                                         extracted_data=extracted_data,
@@ -394,6 +394,8 @@ async def upload_pdf_and_download_csv(file: UploadFile = File(...)):
                                     )
                                     if formula_id:
                                         print(f"🧪 Formule créée avec ID: {formula_id} pour file_id: {pdf_file_id}")
+                                        if notes_were_corrected:
+                                            print(f"⚠️ Des notes ont été corrigées automatiquement")
                                     else:
                                         print("⚠️ Formule non créée (voir logs précédents)")
                                 except Exception as e:

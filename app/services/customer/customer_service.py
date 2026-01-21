@@ -27,6 +27,9 @@ class CustomerBusinessService:
         # Mapper les champs OCR vers les colonnes DB
         customer_data, was_email_corrected, phone_error = self._map_ocr_to_customer(extracted_data)
 
+        # Vérifier si des notes de parfum ont été corrigées
+        notes_were_corrected = self._check_notes_corrections(extracted_data)
+
         connection = get_connection()
         if not connection:
             return None, "error"
@@ -42,6 +45,12 @@ class CustomerBusinessService:
             if was_email_corrected:
                 print(f"Customer avec email corrigé → customers_review (type: Modifié)")
                 review_id = crud_customer_review.create(connection, customer_data, "Modifié")
+                return review_id, "customer_review"
+
+            # Si des notes ont été corrigées, mettre dans customers_review
+            if notes_were_corrected:
+                print(f"Customer avec notes corrigées → customers_review (type: Modifié - Note)")
+                review_id = crud_customer_review.create(connection, customer_data, "Modifié - Note")
                 return review_id, "customer_review"
 
             # Vérifier si le customer existe déjà (seulement si on a email ou téléphone)
@@ -310,6 +319,56 @@ class CustomerBusinessService:
         finally:
             if connection.open:
                 connection.close()
+
+    def _check_notes_corrections(self, extracted_data: Dict[str, Any]) -> bool:
+        """
+        Vérifie si des notes de parfum ont été corrigées ou sont inconnues
+
+        Args:
+            extracted_data: Données extraites de l'OCR
+
+        Returns:
+            True si au moins une note a été corrigée ou est inconnue ("A définir"), False sinon
+        """
+        from app.utils.note_corrector import note_corrector
+
+        def _check_notes_list(notes_key: str) -> bool:
+            """Vérifie si des notes dans une liste ont été corrigées ou sont inconnues"""
+            raw_notes = extracted_data.get(notes_key) or []
+            if not isinstance(raw_notes, list):
+                return False
+            
+            for note in raw_notes:
+                if not isinstance(note, dict):
+                    continue
+                name = (note.get("essence") or "").strip()
+                if not name or name == "---":
+                    continue
+                
+                # Vérifier si le nom serait corrigé ou inconnu
+                corrected_name = note_corrector.correct_note_name(name)
+                
+                # Si la note est inconnue (A définir)
+                if corrected_name == "A définir":
+                    print(f"❓ Note inconnue détectée : '{name}' → 'A définir'")
+                    return True
+                
+                # Si la note a été corrigée
+                if corrected_name != name:
+                    print(f"🔧 Note qui sera corrigée détectée : '{name}' → '{corrected_name}'")
+                    return True
+            
+            return False
+
+        # Vérifier les trois types de notes
+        if _check_notes_list("notes_de_tete"):
+            return True
+        if _check_notes_list("notes_de_coeur"):
+            return True
+        if _check_notes_list("notes_de_fond"):
+            return True
+
+        return False
 
 
 customer_business_service = CustomerBusinessService()
