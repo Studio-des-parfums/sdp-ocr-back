@@ -199,11 +199,22 @@ def update(connection: pymysql.connections.Connection, customer_id: int,
     try:
         cursor = connection.cursor()
 
-        # Filtrer les valeurs None/vides
-        clean_data = {k: v for k, v in customer_data.items() if v is not None and v != ""}
+        # Vérifier d'abord que le customer existe
+        check_query = "SELECT id FROM customers WHERE id = %s"
+        cursor.execute(check_query, (customer_id,))
+        if not cursor.fetchone():
+            return False
+
+        # Filtrer les valeurs None/vides MAIS garder les valeurs explicitement None pour les nettoyer
+        clean_data = {}
+        for k, v in customer_data.items():
+            # Garder toutes les valeurs sauf les chaînes vides
+            if v != "":
+                clean_data[k] = v
 
         if not clean_data:
-            return False
+            # Pas de données à mettre à jour, mais le customer existe
+            return True
 
         # Construire la requête UPDATE
         set_clauses = [f"{col} = %s" for col in clean_data.keys()]
@@ -219,8 +230,9 @@ def update(connection: pymysql.connections.Connection, customer_id: int,
         cursor.execute(query, values)
         connection.commit()
 
-        success = cursor.rowcount > 0
-        return success
+        # Si rowcount == 0, ça peut être parce que les valeurs étaient déjà identiques
+        # Mais on a vérifié l'existence au début, donc on retourne True
+        return True
 
     except Exception as e:
         print(f"Erreur mise à jour customer : {e}")
