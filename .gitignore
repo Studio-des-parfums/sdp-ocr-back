@@ -136,3 +136,13 @@ generated_files/
 *.html
 test_websocket.html
 pdf_converter.html
+
+# Ignorer tous les fichiers dans files/pending/
+files/pending/*
+
+# Ignorer tous les sous-dossiers dans files/customers/
+files/customers/*/
+
+# Garder la structure des dossiers
+!files/pending/.gitkeep
+!files/customers/.gitkeep

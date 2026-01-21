@@ -1,17 +1,32 @@
+import os
+
 import pymysql
 from pymysql import MySQLError
+from dotenv import load_dotenv
+
+
+# Charge les variables d'environnement depuis le fichier .env (si présent)
+load_dotenv()
 
 
 def get_connection():
+    """
+    Crée une connexion MySQL en utilisant les variables d'environnement suivantes :
+    - DB_HOST
+    - DB_PORT
+    - DB_USER
+    - DB_PASSWORD
+    - DB_NAME
+    """
     try:
         connection = pymysql.connect(
-            host="srv1420.hstgr.io",
-            port=3306,
-            user="u440859155_dwain_sdp",
-            password="Daventys93110@",
-            database="u440859155_sdp_test",
+            host=os.getenv("DB_HOST", "localhost"),
+            port=int(os.getenv("DB_PORT", 3306)),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            database=os.getenv("DB_NAME"),
             cursorclass=pymysql.cursors.DictCursor,
-            autocommit=True
+            autocommit=True,
         )
 
         print("Connexion MySQL réussie (PyMySQL)")

@@ -1,5 +1,5 @@
 import re
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from app.schemas.ocr_schemas import DocumentType, BlankSheetData, StudioParfumsData
 
 
@@ -211,6 +211,153 @@ class DataExtractor:
             prefix, digits = '', clean
 
         return prefix + ' '.join(digits[i:i+2] for i in range(0, len(digits), 2))
+
+    # =====================================================================
+    # EXTRACTION DES NOTES DE PARFUM DEPUIS TABLEAUX MARKDOWN
+    # =====================================================================
+
+    def extract_perfume_notes_from_markdown(self, markdown_text: str) -> Dict[str, Any]:
+        """
+        Extrait les notes de parfum (tête, cœur, fond) depuis le texte markdown
+        en parsant les tableaux.
+        
+        Retourne un dict avec:
+        - notes_de_tete: List[Dict[str, Any]] avec {"essence": str, "quantite_ml": str}
+          (quantite_ml est toujours une string, ex: "1", "2", "2 + 1", "1 + 1", etc.)
+        - notes_de_coeur: List[Dict[str, Any]] avec {"essence": str, "quantite_ml": str}
+        - notes_de_fond: List[Dict[str, Any]] avec {"essence": str, "quantite_ml": str}
+        """
+        result = {
+            "notes_de_tete": [],
+            "notes_de_coeur": [],
+            "notes_de_fond": []
+        }
+
+        if not markdown_text:
+            return result
+
+        # Chercher les sections et leurs tableaux
+        result["notes_de_tete"] = self._parse_perfume_table(markdown_text, "tête")
+        result["notes_de_coeur"] = self._parse_perfume_table(markdown_text, "cœur")
+        result["notes_de_fond"] = self._parse_perfume_table(markdown_text, "fond")
+
+        return result
+
+    def _parse_perfume_table(self, markdown_text: str, note_type: str) -> List[Dict[str, Any]]:
+        """
+        Parse un tableau markdown pour un type de note donné.
+        
+        Structure attendue du tableau:
+        | Code ess. | Notes de tête | Qté en ml | Qté utile |   |
+        | --- | --- | --- | --- | --- |
+        |   | Essence 1 | 1 |  |  |
+        |   | Essence 2 | 2 |  |  |
+        
+        L'essence est dans la 2ème colonne, la quantité dans la 3ème colonne.
+        
+        Args:
+            markdown_text: Texte markdown complet
+            note_type: "tête", "cœur" ou "fond"
+        
+        Returns:
+            Liste de dicts avec {"essence": str, "quantite_ml": float}
+        """
+        notes = []
+        
+        # Patterns pour trouver la section (insensible à la casse, avec variantes)
+        patterns = {
+            "tête": [r"notes?\s+de\s+tête", r"note\s+de\s+tete", r"header\s+note"],
+            "cœur": [r"notes?\s+de\s+cœur", r"notes?\s+de\s+coeur", r"heart\s+note"],
+            "fond": [r"notes?\s+de\s+fond", r"base\s+note"]
+        }
+        
+        if note_type not in patterns:
+            return notes
+        
+        # Trouver la ligne d'en-tête de la section (ex: "| Code ess. | Notes de tête | Qté en ml |")
+        section_header_pattern = None
+        for pattern in patterns[note_type]:
+            # Chercher le pattern dans une ligne de tableau
+            section_header_pattern = rf'\|[^|]*\|\s*{pattern}[^|]*\|'
+            match = re.search(section_header_pattern, markdown_text, re.IGNORECASE)
+            if match:
+                section_start = match.start()
+                break
+        else:
+            return notes
+        
+        # Extraire toutes les lignes du tableau markdown
+        lines = markdown_text.split('\n')
+        section_lines = []
+        in_section = False
+        found_header = False
+        
+        # Trouver où commence notre section et où elle se termine
+        for i, line in enumerate(lines):
+            # Vérifier si c'est notre ligne d'en-tête de section
+            for pattern in patterns[note_type]:
+                if re.search(rf'\|[^|]*\|\s*{pattern}[^|]*\|', line, re.IGNORECASE):
+                    in_section = True
+                    found_header = True
+                    # Skip la ligne d'en-tête et le séparateur suivant
+                    continue
+            
+            if in_section:
+                # Si on trouve une nouvelle section (autre que la nôtre), on s'arrête
+                is_other_section = False
+                for other_type, other_patterns in patterns.items():
+                    if other_type != note_type:
+                        for other_pattern in other_patterns:
+                            if re.search(rf'\|[^|]*\|\s*{other_pattern}[^|]*\|', line, re.IGNORECASE):
+                                in_section = False
+                                is_other_section = True
+                                break
+                        if is_other_section:
+                            break
+                if is_other_section:
+                    break
+                
+                # Si c'est une ligne de tableau, l'ajouter
+                if '|' in line and found_header:
+                    section_lines.append(line)
+        
+        # Parser les lignes de la section
+        for line in section_lines:
+            # Split par | en gardant les cellules vides pour préserver l'index
+            cells = [cell.strip() for cell in line.split('|')]
+            # Enlever la première et dernière cellule vides (début et fin de ligne markdown)
+            if cells and not cells[0]:
+                cells = cells[1:]
+            if cells and not cells[-1]:
+                cells = cells[:-1]
+            
+            # Structure: [Code ess., Notes de tête/cœur/fond, Qté en ml, Qté utile, ...]
+            # L'essence est dans la 2ème colonne (index 1), la quantité dans la 3ème (index 2)
+            if len(cells) >= 3:
+                essence = cells[1].strip()  # 2ème colonne
+                quantite_str = cells[2].strip()  # 3ème colonne
+                
+                # Ignorer les lignes vides ou les en-têtes
+                if not essence or essence.lower() in ["notes de tête", "notes de coeur", "notes de cœur", "notes de fond", 
+                                                       "note de tête", "note de coeur", "note de cœur", "note de fond",
+                                                       "code ess.", "code ess", "qté en ml", "quantité", "quantite"]:
+                    continue
+                
+                # Extraire la quantité (peut contenir des choses comme "1", "1 + 2", "5 + 2", etc.)
+                # On garde toujours comme string, même pour les nombres simples
+                if quantite_str:
+                    # Nettoyer l'expression mais garder tout comme string
+                    quantite_ml = quantite_str.strip()
+                else:
+                    quantite_ml = None
+                
+                # Ajouter la note
+                notes.append({
+                    "essence": essence,
+                    "quantite_ml": quantite_ml
+                })
+        
+        return notes
 
 
 data_extractor = DataExtractor()

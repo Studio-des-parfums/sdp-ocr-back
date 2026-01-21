@@ -12,3 +12,4 @@ dnspython==2.8.0
 pymysql
 pdf2image==1.17.0
 Pillow==12.1.0
+rapidfuzz

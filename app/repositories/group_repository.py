@@ -192,13 +192,13 @@ class GroupRepository:
         """
         return group_business_service.remove_customers_from_group(group_id, customer_ids)
 
-    def get_group_customers(self, group_id: int, page: int = 1,
+    def get_group_customers(self, group_ids: List[int], page: int = 1,
                            size: int = 10) -> Tuple[List[Dict[str, Any]], int]:
         """
-        Récupère tous les customers d'un groupe avec pagination
+        Récupère tous les customers d'un ou plusieurs groupes avec pagination
 
         Args:
-            group_id: ID du groupe
+            group_ids: Liste des IDs des groupes
             page: Numéro de page
             size: Taille de page
 
@@ -210,7 +210,7 @@ class GroupRepository:
             return [], 0
 
         try:
-            return crud_group.get_group_customers(connection, group_id, page, size)
+            return crud_group.get_group_customers(connection, group_ids, page, size)
         finally:
             if connection.open:
                 connection.close()

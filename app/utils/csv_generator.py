@@ -1,6 +1,7 @@
 import csv
 import io
 import re
+import json
 from typing import List, Dict, Any, Optional
 from app.schemas.ocr_schemas import DocumentType
 
@@ -23,6 +24,9 @@ class CSVGenerator:
         "email",
         "profession",
         "date_naissance",
+        "notes_de_tete",
+        "notes_de_coeur",
+        "notes_de_fond",
     ]
 
     def generate_studio_parfums_csv(self, processed_pages: List[Dict[str, Any]]) -> str:
@@ -66,6 +70,9 @@ class CSVGenerator:
                 "email": self._clean_email(data.get("email")),
                 "profession": self._clean_simple(data.get("profession")),
                 "date_naissance": self._clean_date(data.get("date_naissance")),
+                "notes_de_tete": self._clean_perfume_notes(data.get("notes_de_tete")),
+                "notes_de_coeur": self._clean_perfume_notes(data.get("notes_de_coeur")),
+                "notes_de_fond": self._clean_perfume_notes(data.get("notes_de_fond")),
             }
 
             writer.writerow(row)
@@ -208,6 +215,30 @@ class CSVGenerator:
             digits = "20" + digits[2:]
 
         return digits
+
+    def _clean_perfume_notes(self, value: Optional[List[Dict[str, Any]]]) -> str:
+        """
+        Nettoie et formate les notes de parfum (liste de dicts) en JSON string pour le CSV.
+        Accepte notes_de_tete, notes_de_coeur, notes_de_fond.
+        
+        Format attendu: [{"essence": str, "quantite_ml": float}, ...]
+        """
+        if not value:
+            return ""
+        
+        try:
+            # Si c'est déjà une liste, la convertir en JSON
+            if isinstance(value, list):
+                return json.dumps(value, ensure_ascii=False)
+            # Si c'est une string JSON, la retourner telle quelle
+            elif isinstance(value, str):
+                # Vérifier que c'est du JSON valide
+                json.loads(value)
+                return value
+            else:
+                return ""
+        except (json.JSONDecodeError, TypeError):
+            return ""
 
     def _detect_identifiant_prefix(self, studio_pages: List[Dict[str, Any]]) -> str:
         """

@@ -331,14 +331,14 @@ def remove_customer_from_group(connection: pymysql.connections.Connection, custo
         cursor.close()
 
 
-def get_group_customers(connection: pymysql.connections.Connection, group_id: int,
+def get_group_customers(connection: pymysql.connections.Connection, group_ids: List[int],
                        page: int = 1, size: int = 10) -> Tuple[List[Dict[str, Any]], int]:
     """
-    Récupère tous les customers d'un groupe avec pagination
+    Récupère tous les customers d'un ou plusieurs groupes avec pagination
 
     Args:
         connection: Connexion MySQL
-        group_id: ID du groupe
+        group_ids: Liste des IDs des groupes
         page: Numéro de page
         size: Taille de page
 
@@ -348,34 +348,44 @@ def get_group_customers(connection: pymysql.connections.Connection, group_id: in
     try:
         cursor = connection.cursor()
 
-        # Compter le total
-        count_query = """
-            SELECT COUNT(*) as total
+        if not group_ids:
+            return [], 0
+
+        # Créer la clause IN pour les group_ids
+        placeholders = ', '.join(['%s'] * len(group_ids))
+
+        # Compter le total (DISTINCT pour éviter les doublons si un client est dans plusieurs groupes)
+        count_query = f"""
+            SELECT COUNT(DISTINCT c.id) as total
             FROM customer_groups cg
             JOIN customers c ON cg.customer_id = c.id
-            WHERE cg.group_id = %s
+            WHERE cg.group_id IN ({placeholders})
         """
-        cursor.execute(count_query, (group_id,))
+        cursor.execute(count_query, group_ids)
         total = cursor.fetchone()['total']
 
-        # Récupérer les données avec pagination
+        # Récupérer les données avec pagination (DISTINCT pour éviter les doublons)
         offset = (page - 1) * size
-        query = """
-            SELECT c.*, cg.added_at, cg.added_by
+        query = f"""
+            SELECT DISTINCT c.*,
+                   MIN(cg.added_at) as added_at,
+                   MIN(cg.added_by) as added_by
             FROM customer_groups cg
             JOIN customers c ON cg.customer_id = c.id
-            WHERE cg.group_id = %s
-            ORDER BY cg.added_at DESC
+            WHERE cg.group_id IN ({placeholders})
+            GROUP BY c.id
+            ORDER BY added_at DESC
             LIMIT %s OFFSET %s
         """
 
-        cursor.execute(query, (group_id, size, offset))
+        params = list(group_ids) + [size, offset]
+        cursor.execute(query, params)
         customers = cursor.fetchall()
 
         return customers, total
 
     except Exception as e:
-        print(f"Erreur récupération customers du groupe : {e}")
+        print(f"Erreur récupération customers des groupes : {e}")
         return [], 0
     finally:
         cursor.close()

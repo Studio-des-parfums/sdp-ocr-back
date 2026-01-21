@@ -2,6 +2,28 @@ from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional, List, Union
 from datetime import datetime
 
+
+class NoteSchema(BaseModel):
+    """
+    Schéma pour une note (tête / cœur / fond) d'une formule
+    """
+    id: int
+    name: str
+    quantity: Optional[str] = None
+
+
+class FormulaWithNotes(BaseModel):
+    """
+    Schéma pour une formule avec ses notes associées
+    """
+    id: int
+    customer_id: Optional[int] = None
+    file_id: int
+    top_notes: List[NoteSchema] = []
+    heart_notes: List[NoteSchema] = []
+    base_notes: List[NoteSchema] = []
+
+
 class CustomerReviewBase(BaseModel):
     """
     Schéma de base pour les customers review
@@ -49,6 +71,8 @@ class CustomerReviewResponse(CustomerReviewBase):
     Schéma de réponse pour un customer review
     """
     id: int
+    created_at: Optional[datetime] = None
+    formulas: List[FormulaWithNotes] = []
 
     @field_validator('verified_email', 'verified_domain', 'verified_phone', mode='before')
     @classmethod

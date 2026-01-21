@@ -295,8 +295,14 @@ class CustomerBusinessService:
                 phone = customer_data['phone']
                 if phone:
                     print(f"Validation du téléphone : {phone}")
-                    update_data['verified_phone'] = phone_intelligence_validator.verify_phone_number(phone)
-                    print(f"Résultat validation téléphone : {update_data['verified_phone']}")
+                    phone_validation_result = phone_intelligence_validator.verify_phone_number(phone)
+                    # Ne mettre à jour verified_phone que si l'API a retourné un résultat (True ou False)
+                    # Si None (erreur API, rate limit), on garde l'ancienne valeur
+                    if phone_validation_result is not None:
+                        update_data['verified_phone'] = phone_validation_result
+                        print(f"Résultat validation téléphone : {phone_validation_result}")
+                    else:
+                        print(f"⚠️ Validation téléphone impossible (API error/rate limit) - verified_phone non modifié")
 
             # Mettre à jour le customer
             return crud_customer.update(connection, customer_id, update_data)

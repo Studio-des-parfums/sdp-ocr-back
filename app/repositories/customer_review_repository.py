@@ -79,7 +79,63 @@ class CustomerReviewRepository:
             return [], 0
 
         try:
-            return crud_customer_review.get_all(connection, page, size, review_type)
+            # 1) Récupération de base depuis customers_review
+            reviews, total = crud_customer_review.get_all(connection, page, size, review_type)
+
+            # 2) Pour chaque review, récupérer les formules + notes associées
+            def _get_notes(table_name: str, formula_id: int) -> List[Dict[str, Any]]:
+                cursor = connection.cursor()
+                try:
+                    query = f"""
+                        SELECT id, name, quantity
+                        FROM {table_name}
+                        WHERE formula_id = %s
+                        ORDER BY id ASC
+                    """
+                    cursor.execute(query, (formula_id,))
+                    return cursor.fetchall()
+                except Exception as e:
+                    print(f"Erreur récupération notes depuis {table_name} pour formula_id={formula_id} : {e}")
+                    return []
+                finally:
+                    cursor.close()
+
+            def _get_formulas_for_review(review_id: int) -> List[Dict[str, Any]]:
+                cursor = connection.cursor()
+                try:
+                    # On passe par customer_files pour lier customers_review → files → formula
+                    query = """
+                        SELECT f.id, f.customer_id, f.file_id
+                        FROM formula f
+                        JOIN customer_files cf ON cf.id = f.file_id
+                        WHERE cf.customer_review_id = %s
+                        ORDER BY f.id ASC
+                    """
+                    cursor.execute(query, (review_id,))
+                    formulas = cursor.fetchall() or []
+
+                    for formula in formulas:
+                        formula_id = formula["id"]
+                        formula["top_notes"] = _get_notes("top_note", formula_id)
+                        formula["heart_notes"] = _get_notes("heart_note", formula_id)
+                        formula["base_notes"] = _get_notes("base_note", formula_id)
+
+                    return formulas
+                except Exception as e:
+                    print(f"Erreur récupération formules pour customer_review_id={review_id} : {e}")
+                    return []
+                finally:
+                    cursor.close()
+
+            for review in reviews:
+                try:
+                    review_id = review.get("id")
+                    if review_id:
+                        review["formulas"] = _get_formulas_for_review(review_id)
+                except Exception as e:
+                    print(f"Erreur enrichissement formulas pour review {review.get('id')}: {e}")
+
+            return reviews, total
         finally:
             if connection.open:
                 connection.close()
@@ -165,8 +221,14 @@ class CustomerReviewRepository:
                 phone = customer_data['phone']
                 if phone:
                     print(f"Validation du téléphone : {phone}")
-                    update_data['verified_phone'] = phone_intelligence_validator.verify_phone_number(phone)
-                    print(f"Résultat validation téléphone : {update_data['verified_phone']}")
+                    phone_validation_result = phone_intelligence_validator.verify_phone_number(phone)
+                    # Ne mettre à jour verified_phone que si l'API a retourné un résultat (True ou False)
+                    # Si None (erreur API, rate limit), on garde l'ancienne valeur
+                    if phone_validation_result is not None:
+                        update_data['verified_phone'] = phone_validation_result
+                        print(f"Résultat validation téléphone : {phone_validation_result}")
+                    else:
+                        print(f"⚠️ Validation téléphone impossible (API error/rate limit) - verified_phone non modifié")
 
             # Mettre à jour le customer_review
             success = crud_customer_review.update(connection, review_id, update_data)

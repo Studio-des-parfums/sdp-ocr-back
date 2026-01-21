@@ -4,6 +4,7 @@ from typing import List
 import os
 import uuid
 import time
+import json
 from datetime import datetime, timedelta
 
 from app.core.mistral_client import mistral_ocr_client
@@ -13,6 +14,7 @@ from app.utils.data_extractor import data_extractor
 from app.utils.csv_generator import csv_generator
 from app.repositories.customer_repository import customer_repository
 from app.repositories.customer_file_repository import customer_file_repository
+from app.repositories.formula_repository import formula_repository
 from app.services.file import file_storage_service
 from app.schemas.ocr_schemas import OCRResponse, ProcessedPage, DocumentType
 
@@ -38,7 +40,7 @@ async def upload_pdf_for_ocr(file: UploadFile = File(...)):
         # Split PDF into pages using pikepdf (évite limite 32MB)
         print(f"Starting PDF splitting for file: {file.filename}")
         try:
-            page_pdfs = pdf_splitter.split_pdf_to_pages(pdf_content, max_pages=None)
+            page_pdfs = pdf_splitter.split_pdf_to_pages(pdf_content, max_pages=5)
             if not page_pdfs:
                 raise HTTPException(status_code=400, detail="No pages found in PDF")
         except Exception as e:
@@ -55,24 +57,98 @@ async def upload_pdf_for_ocr(file: UploadFile = File(...)):
             try:
                 print(f"OCR processing page {page_number} ({len(page_pdf_bytes)} bytes)")
 
-                # OCR de la page individuelle avec Mistral
-                ocr_response = await mistral_ocr_client.process_pdf_ocr(page_pdf_bytes)
-
-                # Extraire le texte de la première page de la réponse
+                extracted_data = {}
                 raw_text = ""
-                if "pages" in ocr_response and len(ocr_response["pages"]) > 0:
-                    raw_text = ocr_response["pages"][0].get("markdown", "")
+                doc_type = DocumentType.UNKNOWN
+                confidence = 0.0
+                ann_response = None
+                ocr_response = None
 
-                print(f"Page {page_number}: extracted {len(raw_text)} characters")
+                try:
+                    ann_response = await mistral_ocr_client.process_pdf_annotations(page_pdf_bytes)
+                    ann = (
+                        ann_response.get("document_annotation")
+                        or ann_response.get("document_annotations")
+                        or ann_response.get("annotation")
+                    )
+                    # Récupérer le markdown depuis la réponse si disponible
+                    if "pages" in ann_response and len(ann_response["pages"]) > 0:
+                        raw_text = ann_response["pages"][0].get("markdown", "")
+                    
+                    if isinstance(ann, dict):
+                        extracted_data = ann
+                        dt = ann.get("document_type")
+                        if dt in (DocumentType.BLANK_SHEET.value, DocumentType.STUDIO_PARFUMS.value, DocumentType.UNKNOWN.value):
+                            doc_type = DocumentType(dt)
+                            confidence = 1.0
+                        # Log utile pour vérifier le mapping côté endpoint
+                        print(f"Page {page_number}: document_annotation={ann}")
+                        print(f"Page {page_number}: extracted structured data via Annotations")
+                    else:
+                        print(f"Page {page_number}: annotations present but not a dict, fallback to OCR text")
+                except Exception as e:
+                    print(f"Page {page_number}: annotations failed, fallback to OCR text ({e})")
 
-                doc_type, confidence = document_classifier.classify_document(raw_text)
+                if not extracted_data:
+                    ocr_response = await mistral_ocr_client.process_pdf_ocr(page_pdf_bytes)
+
+                    if "pages" in ocr_response and len(ocr_response["pages"]) > 0:
+                        raw_text = ocr_response["pages"][0].get("markdown", "")
+
+                    print(f"Page {page_number}: extracted {len(raw_text)} characters (markdown)")
+
+                    doc_type, confidence = document_classifier.classify_document(raw_text)
 
                 if doc_type == DocumentType.BLANK_SHEET:
                     total_blank_sheets += 1
                 elif doc_type == DocumentType.STUDIO_PARFUMS:
                     total_studio_parfums += 1
 
-                extracted_data = data_extractor.extract_data(raw_text, doc_type)
+                if not extracted_data:
+                    extracted_data = data_extractor.extract_data(raw_text, doc_type)
+
+                # Extraire les notes de parfum depuis les tableaux pour les formulaires Studio des Parfums
+                if doc_type == DocumentType.STUDIO_PARFUMS:
+                    try:
+                        # Les tableaux sont disponibles dans ann_response ou ocr_response
+                        tables_content = ""
+                        response_with_tables = ann_response if ann_response else ocr_response
+                        
+                        # Récupérer les tableaux depuis la réponse
+                        if response_with_tables and "pages" in response_with_tables and len(response_with_tables["pages"]) > 0:
+                            page_data = response_with_tables["pages"][0]
+                            if "tables" in page_data and len(page_data["tables"]) > 0:
+                                # Concaténer le contenu de tous les tableaux
+                                tables_content = "\n\n".join([
+                                    table.get("content", "") 
+                                    for table in page_data["tables"]
+                                ])
+                                print(f"📊 Page {page_number}: {len(page_data['tables'])} tableau(x) trouvé(s)")
+                                print(f"📝 Contenu des tableaux ({len(tables_content)} caractères):")
+                                print(tables_content[:500])  # Afficher les 500 premiers caractères
+                        
+                        # Parser les notes depuis le contenu des tableaux
+                        if tables_content:
+                            perfume_notes = data_extractor.extract_perfume_notes_from_markdown(tables_content)
+                            extracted_data.update(perfume_notes)
+                            
+                            # Log de vérification
+                            print(f"✅ Page {page_number}: Notes extraites:")
+                            print(f"  - Notes de tête: {len(perfume_notes.get('notes_de_tete', []))} items")
+                            print(f"  - Notes de cœur: {len(perfume_notes.get('notes_de_coeur', []))} items")
+                            print(f"  - Notes de fond: {len(perfume_notes.get('notes_de_fond', []))} items")
+                        else:
+                            print(f"⚠️ Page {page_number}: Aucun tableau trouvé dans la réponse API")
+                            
+                    except Exception as e:
+                        print(f"❌ Page {page_number}: Erreur extraction notes de parfum: {e}")
+                        import traceback
+                        traceback.print_exc()
+
+                # Logging du JSON final pour debug
+                if doc_type == DocumentType.STUDIO_PARFUMS:
+                    print(f"Page {page_number}: JSON final complet:")
+                    print(json.dumps(extracted_data, indent=2, ensure_ascii=False))
 
                 processed_pages.append(
                     ProcessedPage(
@@ -174,16 +250,86 @@ async def upload_pdf_and_download_csv(file: UploadFile = File(...)):
             try:
                 print(f"[{page_number}/{total_pages}] OCR processing page {page_number} ({len(page_pdf_bytes)} bytes)")
 
-                # OCR de la page individuelle avec Mistral
-                ocr_response = await mistral_ocr_client.process_pdf_ocr(page_pdf_bytes)
-
-                # Extraire le texte de la première page de la réponse
+                extracted_data = {}
                 raw_text = ""
-                if "pages" in ocr_response and len(ocr_response["pages"]) > 0:
-                    raw_text = ocr_response["pages"][0].get("markdown", "")
+                doc_type = DocumentType.UNKNOWN
+                confidence = 0.0
+                ann_response = None
+                ocr_response = None
 
-                doc_type, confidence = document_classifier.classify_document(raw_text)
-                extracted_data = data_extractor.extract_data(raw_text, doc_type)
+                # 1) Annotations
+                try:
+                    ann_response = await mistral_ocr_client.process_pdf_annotations(page_pdf_bytes)
+                    ann = (
+                        ann_response.get("document_annotation")
+                        or ann_response.get("document_annotations")
+                        or ann_response.get("annotation")
+                    )
+                    # Récupérer le markdown depuis la réponse si disponible
+                    if "pages" in ann_response and len(ann_response["pages"]) > 0:
+                        raw_text = ann_response["pages"][0].get("markdown", "")
+                    
+                    if isinstance(ann, dict):
+                        extracted_data = ann
+                        dt = ann.get("document_type")
+                        if dt in (DocumentType.BLANK_SHEET.value, DocumentType.STUDIO_PARFUMS.value, DocumentType.UNKNOWN.value):
+                            doc_type = DocumentType(dt)
+                            confidence = 1.0
+                        print(f"Page {page_number}: document_annotation={ann}")
+                except Exception as e:
+                    print(f"Page {page_number}: annotations failed, fallback to OCR text ({e})")
+
+                # 2) Fallback OCR texte + extraction regex
+                if not extracted_data:
+                    ocr_response = await mistral_ocr_client.process_pdf_ocr(page_pdf_bytes)
+
+                    if "pages" in ocr_response and len(ocr_response["pages"]) > 0:
+                        raw_text = ocr_response["pages"][0].get("markdown", "")
+
+                    doc_type, confidence = document_classifier.classify_document(raw_text)
+                    extracted_data = data_extractor.extract_data(raw_text, doc_type)
+
+                # Extraire les notes de parfum depuis les tableaux pour les formulaires Studio des Parfums
+                if doc_type == DocumentType.STUDIO_PARFUMS:
+                    try:
+                        # Les tableaux sont disponibles dans ann_response ou ocr_response
+                        tables_content = ""
+                        response_with_tables = ann_response if ann_response else ocr_response
+                        
+                        # Récupérer les tableaux depuis la réponse
+                        if response_with_tables and "pages" in response_with_tables and len(response_with_tables["pages"]) > 0:
+                            page_data = response_with_tables["pages"][0]
+                            if "tables" in page_data and len(page_data["tables"]) > 0:
+                                # Concaténer le contenu de tous les tableaux
+                                tables_content = "\n\n".join([
+                                    table.get("content", "") 
+                                    for table in page_data["tables"]
+                                ])
+                                print(f"📊 Page {page_number}: {len(page_data['tables'])} tableau(x) trouvé(s)")
+                                print(f"📝 Contenu des tableaux ({len(tables_content)} caractères):")
+                                print(tables_content[:500])  # Afficher les 500 premiers caractères
+                        
+                        # Parser les notes depuis le contenu des tableaux
+                        if tables_content:
+                            perfume_notes = data_extractor.extract_perfume_notes_from_markdown(tables_content)
+                            extracted_data.update(perfume_notes)
+                            
+                            # Log de vérification
+                            print(f"✅ Page {page_number}: Notes extraites:")
+                            print(f"  - Notes de tête: {len(perfume_notes.get('notes_de_tete', []))} items")
+                            print(f"  - Notes de cœur: {len(perfume_notes.get('notes_de_coeur', []))} items")
+                            print(f"  - Notes de fond: {len(perfume_notes.get('notes_de_fond', []))} items")
+                        else:
+                            print(f"⚠️ Page {page_number}: Aucun tableau trouvé dans la réponse API")
+                        
+                        # Logging du JSON final pour debug
+                        print(f"Page {page_number}: JSON final complet (CSV):")
+                        print(json.dumps(extracted_data, indent=2, ensure_ascii=False))
+                            
+                    except Exception as e:
+                        print(f"❌ Page {page_number}: Erreur extraction notes de parfum: {e}")
+                        import traceback
+                        traceback.print_exc()
 
                 # Si c'est un formulaire Studio des Parfums, insérer en base de données
                 customer_id = None
@@ -211,7 +357,7 @@ async def upload_pdf_and_download_csv(file: UploadFile = File(...)):
                                     f"page_{page_number}_{file.filename}"
                                 )
 
-                                # Enregistrer le PDF dans customer_files
+                                # Enregistrer le PDF dans customer_files pour le PDF
                                 file_data = {
                                     'customer_id': customer_id,
                                     'customer_review_id': customer_review_id,
@@ -237,6 +383,21 @@ async def upload_pdf_and_download_csv(file: UploadFile = File(...)):
                                     customer_file_repository.create_customer_file(img_data)
 
                                 print(f"📁 Fichier PDF + {len(image_paths)} images sauvegardés (file_id: {pdf_file_id})")
+
+                                # Créer la formule et les notes associées pour ce fichier
+                                try:
+                                    formula_id = formula_repository.create_formula_with_notes(
+                                        customer_id=customer_id,
+                                        file_id=pdf_file_id,
+                                        extracted_data=extracted_data,
+                                        customer_review_id=customer_review_id
+                                    )
+                                    if formula_id:
+                                        print(f"🧪 Formule créée avec ID: {formula_id} pour file_id: {pdf_file_id}")
+                                    else:
+                                        print("⚠️ Formule non créée (voir logs précédents)")
+                                except Exception as e:
+                                    print(f"❌ Erreur création formule/notes pour page {page_number}: {e}")
 
                             except Exception as e:
                                 print(f"❌ Erreur sauvegarde fichier page {page_number}: {e}")

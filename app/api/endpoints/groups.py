@@ -202,18 +202,31 @@ async def remove_customers_from_group(group_id: int, request: RemoveCustomersFro
         raise HTTPException(status_code=500, detail=f"Erreur lors de la suppression des clients: {str(e)}")
 
 
-@router.get("/{group_id}/customers")
+@router.get("/customers")
 async def get_group_customers(
-    group_id: int,
+    group_ids: str = Query(..., description="ID(s) des groupes séparés par des virgules (ex: 1 ou 1,2,3)"),
     page: int = Query(1, ge=1, description="Numéro de page"),
     size: int = Query(10, ge=1, le=100, description="Taille de page")
 ):
     """
-    Récupère tous les clients d'un groupe avec pagination
+    Récupère tous les clients d'un ou plusieurs groupes avec pagination
+
+    Exemples:
+    - /groups/customers?group_ids=1 : Récupère les clients du groupe 1
+    - /groups/customers?group_ids=1,2,3 : Récupère les clients des groupes 1, 2 et 3
     """
     try:
+        # Convertir la chaîne d'IDs en liste d'entiers
+        try:
+            group_id_list = [int(gid.strip()) for gid in group_ids.split(',')]
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Les IDs de groupes doivent être des nombres entiers")
+
+        if not group_id_list:
+            raise HTTPException(status_code=400, detail="Au moins un ID de groupe doit être fourni")
+
         customers, total = group_repository.get_group_customers(
-            group_id=group_id,
+            group_ids=group_id_list,
             page=page,
             size=size
         )
@@ -223,9 +236,12 @@ async def get_group_customers(
             "total": total,
             "page": page,
             "size": size,
-            "pages": (total + size - 1) // size
+            "pages": (total + size - 1) // size,
+            "group_ids": group_id_list
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur lors de la récupération des clients: {str(e)}")
 
