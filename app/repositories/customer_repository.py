@@ -37,20 +37,76 @@ class CustomerRepository:
 
     def get_customer_by_id(self, customer_id: int) -> Optional[Dict[str, Any]]:
         """
-        Récupère un customer par son ID
+        Récupère un customer par son ID avec ses formules et notes
 
         Args:
             customer_id: ID du customer
 
         Returns:
-            Dictionnaire avec les données du customer ou None
+            Dictionnaire avec les données du customer enrichi avec formules et notes, ou None
         """
         connection = get_connection()
         if not connection:
             return None
 
         try:
-            return crud_customer.get_by_id(connection, customer_id)
+            # 1) Récupération de base du customer
+            customer = crud_customer.get_by_id(connection, customer_id)
+            if not customer:
+                return None
+
+            # 2) Enrichir avec les formules et notes
+            def _get_notes(table_name: str, formula_id: int) -> List[Dict[str, Any]]:
+                cursor = connection.cursor()
+                try:
+                    query = f"""
+                        SELECT id, name, quantity
+                        FROM {table_name}
+                        WHERE formula_id = %s
+                        ORDER BY id ASC
+                    """
+                    cursor.execute(query, (formula_id,))
+                    return cursor.fetchall()
+                except Exception as e:
+                    print(f"Erreur récupération notes depuis {table_name} pour formula_id={formula_id} : {e}")
+                    return []
+                finally:
+                    cursor.close()
+
+            def _get_formulas_for_customer(customer_id: int) -> List[Dict[str, Any]]:
+                cursor = connection.cursor()
+                try:
+                    # On passe par customer_files pour lier customers → files → formula
+                    query = """
+                        SELECT f.id, f.customer_id, f.file_id
+                        FROM formula f
+                        JOIN customer_files cf ON cf.id = f.file_id
+                        WHERE cf.customer_id = %s
+                        ORDER BY f.id ASC
+                    """
+                    cursor.execute(query, (customer_id,))
+                    formulas = cursor.fetchall() or []
+
+                    for formula in formulas:
+                        formula_id = formula["id"]
+                        formula["top_notes"] = _get_notes("top_note", formula_id)
+                        formula["heart_notes"] = _get_notes("heart_note", formula_id)
+                        formula["base_notes"] = _get_notes("base_note", formula_id)
+
+                    return formulas
+                except Exception as e:
+                    print(f"Erreur récupération formules pour customer_id={customer_id} : {e}")
+                    return []
+                finally:
+                    cursor.close()
+
+            try:
+                customer["formulas"] = _get_formulas_for_customer(customer_id)
+            except Exception as e:
+                print(f"Erreur enrichissement formulas pour customer {customer_id}: {e}")
+                customer["formulas"] = []
+
+            return customer
         finally:
             if connection.open:
                 connection.close()
@@ -58,7 +114,7 @@ class CustomerRepository:
     def get_all_customers(self, page: int = 1, size: int = 10,
                          search: Optional[str] = None) -> Tuple[List[Dict[str, Any]], int]:
         """
-        Récupère tous les customers avec pagination et recherche
+        Récupère tous les customers avec pagination, recherche, et enrichissement avec formules et notes
 
         Args:
             page: Numéro de page
@@ -66,14 +122,70 @@ class CustomerRepository:
             search: Terme de recherche
 
         Returns:
-            Tuple (liste des customers, total)
+            Tuple (liste des customers enrichis avec formules et notes, total)
         """
         connection = get_connection()
         if not connection:
             return [], 0
 
         try:
-            return crud_customer.get_all(connection, page, size, search)
+            # 1) Récupération de base depuis customers
+            customers, total = crud_customer.get_all(connection, page, size, search)
+
+            # 2) Pour chaque customer, récupérer les formules + notes associées
+            def _get_notes(table_name: str, formula_id: int) -> List[Dict[str, Any]]:
+                cursor = connection.cursor()
+                try:
+                    query = f"""
+                        SELECT id, name, quantity
+                        FROM {table_name}
+                        WHERE formula_id = %s
+                        ORDER BY id ASC
+                    """
+                    cursor.execute(query, (formula_id,))
+                    return cursor.fetchall()
+                except Exception as e:
+                    print(f"Erreur récupération notes depuis {table_name} pour formula_id={formula_id} : {e}")
+                    return []
+                finally:
+                    cursor.close()
+
+            def _get_formulas_for_customer(customer_id: int) -> List[Dict[str, Any]]:
+                cursor = connection.cursor()
+                try:
+                    # On passe par customer_files pour lier customers → files → formula
+                    query = """
+                        SELECT f.id, f.customer_id, f.file_id
+                        FROM formula f
+                        JOIN customer_files cf ON cf.id = f.file_id
+                        WHERE cf.customer_id = %s
+                        ORDER BY f.id ASC
+                    """
+                    cursor.execute(query, (customer_id,))
+                    formulas = cursor.fetchall() or []
+
+                    for formula in formulas:
+                        formula_id = formula["id"]
+                        formula["top_notes"] = _get_notes("top_note", formula_id)
+                        formula["heart_notes"] = _get_notes("heart_note", formula_id)
+                        formula["base_notes"] = _get_notes("base_note", formula_id)
+
+                    return formulas
+                except Exception as e:
+                    print(f"Erreur récupération formules pour customer_id={customer_id} : {e}")
+                    return []
+                finally:
+                    cursor.close()
+
+            for customer in customers:
+                try:
+                    customer_id = customer.get("id")
+                    if customer_id:
+                        customer["formulas"] = _get_formulas_for_customer(customer_id)
+                except Exception as e:
+                    print(f"Erreur enrichissement formulas pour customer {customer.get('id')}: {e}")
+
+            return customers, total
         finally:
             if connection.open:
                 connection.close()

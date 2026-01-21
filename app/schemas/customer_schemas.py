@@ -1,6 +1,28 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
+
+
+class NoteSchema(BaseModel):
+    """
+    Schéma pour une note (tête / cœur / fond) d'une formule
+    """
+    id: int
+    name: str
+    quantity: Optional[str] = None
+
+
+class FormulaWithNotes(BaseModel):
+    """
+    Schéma pour une formule avec ses notes associées
+    """
+    id: int
+    customer_id: Optional[int] = None
+    file_id: int
+    top_notes: List[NoteSchema] = []
+    heart_notes: List[NoteSchema] = []
+    base_notes: List[NoteSchema] = []
+
 
 class CustomerBase(BaseModel):
     """Schema de base pour les customers"""
@@ -33,6 +55,7 @@ class CustomerResponse(CustomerBase):
     verified_email: Optional[bool] = None
     verified_domain: Optional[bool] = None
     verified_phone: Optional[bool] = None
+    formulas: List[FormulaWithNotes] = []
 
     class Config:
         from_attributes = True
