@@ -72,7 +72,7 @@ class UserRepository:
                 connection.close()
 
     def get_all_users(self, page: int = 1, size: int = 10, search: Optional[str] = None,
-                     role: Optional[str] = None, team: Optional[str] = None,
+                     role_id: Optional[int] = None, team: Optional[str] = None,
                      is_online: Optional[bool] = None) -> Tuple[List[Dict[str, Any]], int]:
         """
         Récupère tous les users avec pagination et filtres
@@ -81,7 +81,7 @@ class UserRepository:
             page: Numéro de page
             size: Taille de page
             search: Terme de recherche
-            role: Filtre par rôle
+            role_id: Filtre par rôle (ID)
             team: Filtre par équipe
             is_online: Filtre par statut de connexion
 
@@ -93,7 +93,7 @@ class UserRepository:
             return [], 0
 
         try:
-            return crud_user.get_all(connection, page, size, search, role, team, is_online)
+            return crud_user.get_all(connection, page, size, search, role_id, team, is_online)
         finally:
             if connection.open:
                 connection.close()
@@ -217,12 +217,12 @@ class UserRepository:
             if connection.open:
                 connection.close()
 
-    def get_users_by_role(self, role: str) -> List[Dict[str, Any]]:
+    def get_users_by_role_id(self, role_id: int) -> List[Dict[str, Any]]:
         """
         Récupère tous les users d'un rôle
 
         Args:
-            role: Nom du rôle
+            role_id: ID du rôle
 
         Returns:
             Liste des users du rôle
@@ -232,7 +232,7 @@ class UserRepository:
             return []
 
         try:
-            return crud_user.get_by_role(connection, role)
+            return crud_user.get_by_role_id(connection, role_id)
         finally:
             if connection.open:
                 connection.close()

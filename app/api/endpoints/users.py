@@ -55,7 +55,7 @@ async def get_users(
     page: int = Query(1, ge=1, description="Numéro de page"),
     size: int = Query(10, ge=1, le=100, description="Taille de page"),
     search: Optional[str] = Query(None, description="Recherche dans nom, email, téléphone, job, équipe"),
-    role: Optional[str] = Query(None, description="Filtrer par rôle"),
+    role_id: Optional[int] = Query(None, description="Filtrer par rôle (ID)"),
     team: Optional[str] = Query(None, description="Filtrer par équipe"),
     is_online: Optional[bool] = Query(None, description="Filtrer par statut en ligne")
 ):
@@ -63,7 +63,7 @@ async def get_users(
     Récupérer tous les users avec pagination et filtres
     """
     try:
-        users, total = user_repository.get_all_users(page, size, search, role, team, is_online)
+        users, total = user_repository.get_all_users(page, size, search, role_id, team, is_online)
 
         return UserListResponse(
             users=[UserResponse(**user) for user in users],
@@ -99,13 +99,13 @@ async def get_users_by_team(team_name: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
 
-@router.get("/role/{role_name}", response_model=list[UserResponse])
-async def get_users_by_role(role_name: str):
+@router.get("/role/{role_id}", response_model=list[UserResponse])
+async def get_users_by_role(role_id: int):
     """
     Récupérer tous les users d'un rôle
     """
     try:
-        users = user_repository.get_users_by_role(role_name)
+        users = user_repository.get_users_by_role_id(role_id)
         return [UserResponse(**user) for user in users]
 
     except Exception as e:

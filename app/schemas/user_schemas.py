@@ -9,7 +9,7 @@ class UserBase(BaseModel):
     email: Optional[str] = None
     phone: Optional[str] = None
     job: Optional[str] = None
-    role: Optional[str] = None
+    role_id: Optional[int] = None
     is_online: Optional[bool] = False
     team: Optional[str] = None
 

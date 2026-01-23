@@ -102,7 +102,7 @@ def get_by_email(connection: pymysql.connections.Connection, email: str) -> Opti
 
 
 def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int = 10,
-            search: Optional[str] = None, role: Optional[str] = None,
+            search: Optional[str] = None, role_id: Optional[int] = None,
             team: Optional[str] = None, is_online: Optional[bool] = None) -> Tuple[List[Dict[str, Any]], int]:
     """
     Récupère tous les users avec pagination et filtres
@@ -112,7 +112,7 @@ def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int
         page: Numéro de page
         size: Taille de page
         search: Terme de recherche
-        role: Filtre par rôle
+        role_id: Filtre par rôle (ID)
         team: Filtre par équipe
         is_online: Filtre par statut de connexion
 
@@ -134,9 +134,9 @@ def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int
             search_param = f"%{search}%"
             params.extend([search_param] * 6)
 
-        if role:
-            where_clauses.append("role = %s")
-            params.append(role)
+        if role_id is not None:
+            where_clauses.append("role_id = %s")
+            params.append(role_id)
 
         if team:
             where_clauses.append("team = %s")
@@ -341,13 +341,13 @@ def get_by_team(connection: pymysql.connections.Connection, team: str) -> List[D
         cursor.close()
 
 
-def get_by_role(connection: pymysql.connections.Connection, role: str) -> List[Dict[str, Any]]:
+def get_by_role_id(connection: pymysql.connections.Connection, role_id: int) -> List[Dict[str, Any]]:
     """
     Récupère tous les users d'un rôle
 
     Args:
         connection: Connexion MySQL
-        role: Nom du rôle
+        role_id: ID du rôle
 
     Returns:
         Liste des users du rôle
@@ -355,8 +355,8 @@ def get_by_role(connection: pymysql.connections.Connection, role: str) -> List[D
     try:
         cursor = connection.cursor()
 
-        query = "SELECT * FROM users WHERE role = %s ORDER BY first_name, last_name"
-        cursor.execute(query, (role,))
+        query = "SELECT * FROM users WHERE role_id = %s ORDER BY first_name, last_name"
+        cursor.execute(query, (role_id,))
         users = cursor.fetchall()
 
         return users
