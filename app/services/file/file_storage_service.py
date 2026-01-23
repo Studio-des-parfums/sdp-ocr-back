@@ -256,5 +256,79 @@ class FileStorageService:
             print(f"❌ Erreur lecture fichier: {e}")
             return None
 
+    def get_pdf_path_from_image(self, image_relative_path: str) -> Optional[str]:
+        """
+        Trouve le chemin du PDF correspondant à une image convertie
+
+        L'image a le format: {timestamp}_{filename}_page_{n}.png
+        Le PDF a le format: {timestamp}_{filename}.pdf
+
+        Args:
+            image_relative_path: Chemin relatif de l'image
+
+        Returns:
+            Chemin relatif du PDF ou None si non trouvé
+        """
+        try:
+            # Extraire le répertoire et le nom de fichier
+            directory = os.path.dirname(image_relative_path)
+            filename = os.path.basename(image_relative_path)
+
+            # Retirer le suffixe _page_N.png pour obtenir le nom du PDF
+            # Pattern: {timestamp}_{original}_page_{n}.png -> {timestamp}_{original}.pdf
+            import re
+            match = re.match(r'(.+)_page_\d+\.\w+$', filename)
+
+            if match:
+                base_name = match.group(1)
+                pdf_filename = f"{base_name}.pdf"
+                pdf_relative_path = os.path.join(directory, pdf_filename)
+
+                # Vérifier que le PDF existe
+                full_path = os.path.join(self.BASE_STORAGE_DIR, pdf_relative_path)
+                if os.path.exists(full_path):
+                    return pdf_relative_path
+
+            return None
+
+        except Exception as e:
+            print(f"❌ Erreur recherche PDF: {e}")
+            return None
+
+    def get_pdf_thumbnail(self, relative_path: str, dpi: int = 150) -> Optional[bytes]:
+        """
+        Génère une miniature de la première page d'un PDF
+
+        Args:
+            relative_path: Chemin relatif du PDF
+            dpi: Résolution de la miniature (défaut: 150)
+
+        Returns:
+            Image PNG de la première page ou None
+        """
+        try:
+            # Lire le PDF
+            pdf_bytes = self.get_file_bytes(relative_path)
+            if not pdf_bytes:
+                return None
+
+            # Convertir seulement la première page
+            images = convert_from_bytes(pdf_bytes, dpi=dpi, fmt='png', first_page=1, last_page=1)
+
+            if not images:
+                return None
+
+            # Convertir l'image PIL en bytes
+            img_byte_arr = io.BytesIO()
+            images[0].save(img_byte_arr, format='PNG')
+            img_bytes = img_byte_arr.getvalue()
+
+            print(f"🖼️ Miniature générée pour: {relative_path}")
+            return img_bytes
+
+        except Exception as e:
+            print(f"❌ Erreur génération miniature: {e}")
+            return None
+
 
 file_storage_service = FileStorageService()

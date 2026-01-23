@@ -64,7 +64,7 @@ def get_by_id(
         cursor = connection.cursor()
 
         query = """
-            SELECT id, customer_id, file_id, customer_review_id
+            SELECT id, customer_id, file_id, customer_review_id, comment
             FROM formula
             WHERE id = %s
         """
@@ -112,6 +112,102 @@ def delete(
 
     except Exception as e:
         print(f"Erreur suppression formula {formula_id} : {e}")
+        if connection.open:
+            connection.rollback()
+        return False
+    finally:
+        if cursor is not None:
+            cursor.close()
+
+
+def update(
+    connection: pymysql.connections.Connection,
+    formula_id: int,
+    **kwargs,
+) -> bool:
+    """
+    Met à jour une formule avec les champs fournis.
+
+    Args:
+        connection: Connexion MySQL
+        formula_id: ID de la formule
+        **kwargs: Champs à mettre à jour (customer_id, file_id, customer_review_id, comment)
+
+    Returns:
+        True si succès, False sinon
+    """
+    if not kwargs:
+        return True
+
+    cursor = None
+    try:
+        cursor = connection.cursor()
+
+        # Construire la requête dynamiquement
+        allowed_fields = {"customer_id", "file_id", "customer_review_id", "comment"}
+        fields_to_update = {k: v for k, v in kwargs.items() if k in allowed_fields}
+
+        if not fields_to_update:
+            return True
+
+        set_clause = ", ".join([f"{field} = %s" for field in fields_to_update.keys()])
+        values = list(fields_to_update.values()) + [formula_id]
+
+        query = f"""
+            UPDATE formula
+            SET {set_clause}
+            WHERE id = %s
+        """
+        cursor.execute(query, values)
+        connection.commit()
+
+        return cursor.rowcount > 0
+
+    except Exception as e:
+        print(f"Erreur mise à jour formula {formula_id} : {e}")
+        if connection.open:
+            connection.rollback()
+        return False
+    finally:
+        if cursor is not None:
+            cursor.close()
+
+
+def transfer_formulas_to_customer(
+    connection: pymysql.connections.Connection,
+    customer_review_id: int,
+    customer_id: int
+) -> bool:
+    """
+    Transfère toutes les formules d'un customer_review vers un customer.
+    Met à jour customer_id et met customer_review_id à NULL.
+
+    Args:
+        connection: Connexion MySQL
+        customer_review_id: ID du customer_review source
+        customer_id: ID du customer destination
+
+    Returns:
+        True si succès, False sinon
+    """
+    cursor = None
+    try:
+        cursor = connection.cursor()
+
+        query = """
+            UPDATE formula
+            SET customer_id = %s, customer_review_id = NULL
+            WHERE customer_review_id = %s
+        """
+        cursor.execute(query, (customer_id, customer_review_id))
+        connection.commit()
+
+        rows_affected = cursor.rowcount
+        print(f"✅ {rows_affected} formule(s) transférée(s) de customer_review {customer_review_id} vers customer {customer_id}")
+        return True
+
+    except Exception as e:
+        print(f"Erreur transfert formules : {e}")
         if connection.open:
             connection.rollback()
         return False

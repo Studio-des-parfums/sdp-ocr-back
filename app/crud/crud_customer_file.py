@@ -160,6 +160,43 @@ def get_by_customer_review_id(
         cursor.close()
 
 
+def get_by_formula_id(
+    connection: pymysql.connections.Connection,
+    formula_id: int
+) -> Optional[Dict[str, Any]]:
+    """
+    Récupère le fichier associé à une formule via formula.file_id
+
+    Args:
+        connection: Connexion MySQL
+        formula_id: ID de la formule
+
+    Returns:
+        Dictionnaire avec les données du fichier ou None
+    """
+    try:
+        cursor = connection.cursor()
+
+        query = """
+            SELECT cf.id, cf.customer_id, cf.customer_review_id, cf.file_path,
+                   cf.file_name, cf.file_type, cf.file_size, cf.uploaded_at,
+                   cf.created_at, cf.updated_at
+            FROM customer_files cf
+            INNER JOIN formula f ON f.file_id = cf.id
+            WHERE f.id = %s
+        """
+        cursor.execute(query, (formula_id,))
+        result = cursor.fetchone()
+
+        return result
+
+    except Exception as e:
+        print(f"Erreur récupération fichier pour formula {formula_id} : {e}")
+        return None
+    finally:
+        cursor.close()
+
+
 def update(
     connection: pymysql.connections.Connection,
     file_id: int,

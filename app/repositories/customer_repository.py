@@ -76,13 +76,12 @@ class CustomerRepository:
             def _get_formulas_for_customer(customer_id: int) -> List[Dict[str, Any]]:
                 cursor = connection.cursor()
                 try:
-                    # On passe par customer_files pour lier customers → files → formula
+                    # Récupérer directement les formules via formula.customer_id
                     query = """
-                        SELECT f.id, f.customer_id, f.file_id
-                        FROM formula f
-                        JOIN customer_files cf ON cf.id = f.file_id
-                        WHERE cf.customer_id = %s
-                        ORDER BY f.id ASC
+                        SELECT id, customer_id, file_id, comment
+                        FROM formula
+                        WHERE customer_id = %s
+                        ORDER BY id ASC
                     """
                     cursor.execute(query, (customer_id,))
                     formulas = cursor.fetchall() or []
@@ -153,13 +152,12 @@ class CustomerRepository:
             def _get_formulas_for_customer(customer_id: int) -> List[Dict[str, Any]]:
                 cursor = connection.cursor()
                 try:
-                    # On passe par customer_files pour lier customers → files → formula
+                    # Récupérer directement les formules via formula.customer_id
                     query = """
-                        SELECT f.id, f.customer_id, f.file_id
-                        FROM formula f
-                        JOIN customer_files cf ON cf.id = f.file_id
-                        WHERE cf.customer_id = %s
-                        ORDER BY f.id ASC
+                        SELECT id, customer_id, file_id, comment
+                        FROM formula
+                        WHERE customer_id = %s
+                        ORDER BY id ASC
                     """
                     cursor.execute(query, (customer_id,))
                     formulas = cursor.fetchall() or []

@@ -179,10 +179,11 @@ class FormulaRepository:
         top_notes: Optional[List[Dict[str, Any]]] = None,
         heart_notes: Optional[List[Dict[str, Any]]] = None,
         base_notes: Optional[List[Dict[str, Any]]] = None,
+        comment: Optional[str] = None,
         skip_correction: bool = True,
     ) -> bool:
         """
-        Met à jour les notes d'une formule.
+        Met à jour les notes et/ou le commentaire d'une formule.
 
         Pour chaque type de note (tête/cœur/fond):
         - Notes avec 'id' → UPDATE si modifiées
@@ -194,6 +195,7 @@ class FormulaRepository:
             top_notes: Liste des notes de tête (optionnel)
             heart_notes: Liste des notes de cœur (optionnel)
             base_notes: Liste des notes de fond (optionnel)
+            comment: Commentaire de la formule (optionnel)
             skip_correction: Si True, ne pas corriger automatiquement les noms (défaut: True pour modifications manuelles)
 
         Format attendu pour chaque note:
@@ -288,7 +290,12 @@ class FormulaRepository:
             if base_notes is not None:
                 _update_notes_by_type("base_note", base_notes)
 
-            print(f"✅ Notes de la formule {formula_id} mises à jour avec succès")
+            # Mettre à jour le commentaire si fourni
+            if comment is not None:
+                crud_formula.update(connection, formula_id, comment=comment)
+                print(f"💬 Commentaire de la formule {formula_id} mis à jour")
+
+            print(f"✅ Formule {formula_id} mise à jour avec succès")
             return True
 
         except Exception as e:

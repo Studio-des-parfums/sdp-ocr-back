@@ -68,12 +68,13 @@ async def update_formula_notes(formula_id: int, notes_update: FormulaUpdateNotes
     if notes_update.base_notes is not None:
         base_notes_dict = [note.model_dump() for note in notes_update.base_notes]
 
-    # Mettre à jour les notes (skip_correction=True car modification manuelle)
+    # Mettre à jour les notes et/ou le commentaire (skip_correction=True car modification manuelle)
     success = formula_repository.update_formula_notes(
         formula_id,
         top_notes=top_notes_dict,
         heart_notes=heart_notes_dict,
         base_notes=base_notes_dict,
+        comment=notes_update.comment,
         skip_correction=True,  # Pas de correction automatique pour les modifications manuelles
     )
 

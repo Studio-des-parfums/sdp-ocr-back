@@ -172,5 +172,25 @@ class CustomerFileRepository:
             if connection.open:
                 connection.close()
 
+    def get_file_by_formula_id(self, formula_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Récupère le fichier associé à une formule
+
+        Args:
+            formula_id: ID de la formule
+
+        Returns:
+            Dictionnaire avec les données du fichier ou None
+        """
+        connection = get_connection()
+        if not connection:
+            return None
+
+        try:
+            return crud_customer_file.get_by_formula_id(connection, formula_id)
+        finally:
+            if connection.open:
+                connection.close()
+
 
 customer_file_repository = CustomerFileRepository()

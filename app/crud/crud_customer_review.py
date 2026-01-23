@@ -260,13 +260,16 @@ def transfer_to_customers(connection: pymysql.connections.Connection, review_id:
             if existing_customer:
                 existing_customer_id = existing_customer['id']
                 print(f"📧 Email {email} existe déjà dans customers (ID: {existing_customer_id})")
-                print(f"🔄 Fusion: Les fichiers de customer_review {review_id} seront transférés vers customer {existing_customer_id}")
+                print(f"🔄 Fusion: Les fichiers et formules de customer_review {review_id} seront transférés vers customer {existing_customer_id}")
 
         # 3a. Si email existe déjà → Fusionner
         if existing_customer_id:
             # Transférer les fichiers de customer_review vers le customer existant
-            from app.crud import crud_customer_file
+            from app.crud import crud_customer_file, crud_formula
             crud_customer_file.transfer_files_to_customer(connection, review_id, existing_customer_id)
+
+            # Transférer les formules de customer_review vers le customer existant
+            crud_formula.transfer_formulas_to_customer(connection, review_id, existing_customer_id)
 
             # Déplacer physiquement les fichiers du dossier pending vers le dossier du customer
             from app.services.file import file_storage_service
@@ -314,8 +317,11 @@ def transfer_to_customers(connection: pymysql.connections.Connection, review_id:
             customer_id = cursor.lastrowid
 
             # Transférer les fichiers vers le nouveau customer
-            from app.crud import crud_customer_file
+            from app.crud import crud_customer_file, crud_formula
             crud_customer_file.transfer_files_to_customer(connection, review_id, customer_id)
+
+            # Transférer les formules vers le nouveau customer
+            crud_formula.transfer_formulas_to_customer(connection, review_id, customer_id)
 
             # Déplacer physiquement les fichiers du dossier pending vers le dossier du customer
             from app.services.file import file_storage_service
