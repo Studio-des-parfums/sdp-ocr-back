@@ -16,6 +16,8 @@ class FormulaRepository:
         file_id: int,
         extracted_data: Dict[str, Any],
         customer_review_id: Optional[int] = None,
+        reference: Optional[str] = None,
+        perfume_name: Optional[str] = None,
     ) -> Tuple[Optional[int], bool]:
         """
         Crée une formule liée à un customer (optionnel) et à un fichier,
@@ -26,8 +28,10 @@ class FormulaRepository:
             file_id: ID du fichier source (customer_files.id)
             extracted_data: Données extraites de l'OCR, incluant
                             éventuellement notes_de_tete, notes_de_coeur,
-                            notes_de_fond.
+                            notes_de_fond, et date.
             customer_review_id: ID du customer_review (optionnel)
+            reference: Référence/identifiant de la formule (optionnel)
+            perfume_name: Nom du parfum (optionnel)
 
         Returns:
             Tuple (formula_id, notes_were_corrected)
@@ -39,8 +43,11 @@ class FormulaRepository:
             return None, False
 
         try:
+            # Extraire la date des données OCR
+            date = (extracted_data.get('date') or '').strip() or None
+
             formula_id = crud_formula.create(
-                connection, customer_id, file_id, customer_review_id=customer_review_id
+                connection, customer_id, file_id, customer_review_id=customer_review_id, reference=reference, perfume_name=perfume_name, date=date
             )
             if not formula_id:
                 return None, False
@@ -180,6 +187,8 @@ class FormulaRepository:
         heart_notes: Optional[List[Dict[str, Any]]] = None,
         base_notes: Optional[List[Dict[str, Any]]] = None,
         comment: Optional[str] = None,
+        reference: Optional[str] = None,
+        perfume_name: Optional[str] = None,
         skip_correction: bool = True,
     ) -> bool:
         """
@@ -196,6 +205,8 @@ class FormulaRepository:
             heart_notes: Liste des notes de cœur (optionnel)
             base_notes: Liste des notes de fond (optionnel)
             comment: Commentaire de la formule (optionnel)
+            reference: Référence/identifiant de la formule (optionnel)
+            perfume_name: Nom du parfum (optionnel)
             skip_correction: Si True, ne pas corriger automatiquement les noms (défaut: True pour modifications manuelles)
 
         Format attendu pour chaque note:
@@ -290,10 +301,23 @@ class FormulaRepository:
             if base_notes is not None:
                 _update_notes_by_type("base_note", base_notes)
 
-            # Mettre à jour le commentaire si fourni
+            # Mettre à jour le commentaire, la référence et/ou le nom du parfum si fournis
+            update_kwargs = {}
             if comment is not None:
-                crud_formula.update(connection, formula_id, comment=comment)
-                print(f"💬 Commentaire de la formule {formula_id} mis à jour")
+                update_kwargs['comment'] = comment
+            if reference is not None:
+                update_kwargs['reference'] = reference
+            if perfume_name is not None:
+                update_kwargs['perfume_name'] = perfume_name
+
+            if update_kwargs:
+                crud_formula.update(connection, formula_id, **update_kwargs)
+                if comment is not None:
+                    print(f"💬 Commentaire de la formule {formula_id} mis à jour")
+                if reference is not None:
+                    print(f"🏷️ Référence de la formule {formula_id} mise à jour")
+                if perfume_name is not None:
+                    print(f"🍶 Nom du parfum de la formule {formula_id} mis à jour")
 
             print(f"✅ Formule {formula_id} mise à jour avec succès")
             return True

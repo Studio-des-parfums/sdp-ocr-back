@@ -386,11 +386,14 @@ async def upload_pdf_and_download_csv(file: UploadFile = File(...)):
 
                                 # Créer la formule et les notes associées pour ce fichier
                                 try:
+                                    # Extraire la référence depuis les données OCR
+                                    reference = (extracted_data.get('identifiant') or '').strip() or None
                                     formula_id, notes_were_corrected = formula_repository.create_formula_with_notes(
                                         customer_id=customer_id,
                                         file_id=pdf_file_id,
                                         extracted_data=extracted_data,
-                                        customer_review_id=customer_review_id
+                                        customer_review_id=customer_review_id,
+                                        reference=reference
                                     )
                                     if formula_id:
                                         print(f"🧪 Formule créée avec ID: {formula_id} pour file_id: {pdf_file_id}")

@@ -19,6 +19,8 @@ class FormulaWithNotes(BaseModel):
     id: int
     customer_id: Optional[int] = None
     file_id: int
+    reference: Optional[str] = None
+    perfume_name: Optional[str] = None
     top_notes: List[NoteSchema] = []
     heart_notes: List[NoteSchema] = []
     base_notes: List[NoteSchema] = []
@@ -35,7 +37,6 @@ class CustomerReviewBase(BaseModel):
     job: Optional[str] = None
     country: Optional[str] = None
     city: Optional[str] = None
-    reference: Optional[str] = None
     date: Optional[str] = None
     verified_email: Optional[str] = None
     verified_domain: Optional[str] = None
@@ -59,7 +60,6 @@ class CustomerReviewUpdate(BaseModel):
     job: Optional[str] = None
     country: Optional[str] = None
     city: Optional[str] = None
-    reference: Optional[str] = None
     date: Optional[str] = None
     verified_email: Optional[str] = None
     verified_domain: Optional[str] = None
@@ -82,7 +82,7 @@ class CustomerReviewResponse(CustomerReviewBase):
             return None
         return str(v) if v not in [0, ""] else None
 
-    @field_validator('email', 'phone', 'job', 'city', 'country', 'reference', 'date', 'first_name', 'last_name', mode='before')
+    @field_validator('email', 'phone', 'job', 'city', 'country', 'date', 'first_name', 'last_name', mode='before')
     @classmethod
     def validate_string_fields(cls, v):
         """Convertit les valeurs non-string en string et traite les valeurs vides"""

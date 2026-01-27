@@ -159,8 +159,6 @@ class CustomerBusinessService:
             'job': safe_strip(extracted_data.get('profession')),
             'city': safe_strip(extracted_data.get('ville')),
             'country': country,
-            'reference': safe_strip(extracted_data.get('identifiant')),
-            'date': safe_strip(extracted_data.get('date')),
             'verified_email': verified_email,
             'verified_domain': verified_domain,
             'verified_phone': verified_phone

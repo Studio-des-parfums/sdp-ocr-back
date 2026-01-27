@@ -84,7 +84,7 @@ class CustomerReviewRepository:
                 try:
                     # On passe par customer_files pour lier customers_review → files → formula
                     query = """
-                        SELECT f.id, f.customer_id, f.file_id, f.comment
+                        SELECT f.id, f.customer_id, f.file_id, f.comment, f.reference, f.perfume_name
                         FROM formula f
                         JOIN customer_files cf ON cf.id = f.file_id
                         WHERE cf.customer_review_id = %s
@@ -161,7 +161,7 @@ class CustomerReviewRepository:
                 try:
                     # On passe par customer_files pour lier customers_review → files → formula
                     query = """
-                        SELECT f.id, f.customer_id, f.file_id, f.comment
+                        SELECT f.id, f.customer_id, f.file_id, f.comment, f.reference, f.perfume_name
                         FROM formula f
                         JOIN customer_files cf ON cf.id = f.file_id
                         WHERE cf.customer_review_id = %s

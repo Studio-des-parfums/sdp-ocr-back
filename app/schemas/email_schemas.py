@@ -1,18 +1,14 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
-
-
-class EmailSendRequest(BaseModel):
-    """Schema pour envoyer un email"""
-    to_email: EmailStr
-    subject: str
-    body: str
-    is_html: Optional[bool] = False
 
 
 class EmailTestRequest(BaseModel):
     """Schema pour envoyer un email de test"""
     to_email: EmailStr
+
+
+class PyramidRequest(BaseModel):
+    """Schema pour la route pyramid"""
+    reference: str
 
 
 class EmailResponse(BaseModel):

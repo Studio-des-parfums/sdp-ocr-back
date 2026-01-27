@@ -68,7 +68,7 @@ def get_by_id(connection: pymysql.connections.Connection, review_id: int) -> Opt
 
         query = """
             SELECT id, last_name, first_name, phone, email, job, country, city,
-                   reference, date, verified_email, verified_domain, verified_phone, type
+                   verified_email, verified_domain, verified_phone, type
             FROM customers_review
             WHERE id = %s
         """
@@ -118,7 +118,7 @@ def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int
         offset = (page - 1) * size
         query = f"""
             SELECT id, last_name, first_name, phone, email, job, country, city,
-                   reference, date, verified_email, verified_domain, verified_phone, type
+                   verified_email, verified_domain, verified_phone, type
             FROM customers_review {where_clause}
             ORDER BY id DESC
             LIMIT %s OFFSET %s

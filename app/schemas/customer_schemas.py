@@ -19,6 +19,8 @@ class FormulaWithNotes(BaseModel):
     id: int
     customer_id: Optional[int] = None
     file_id: int
+    reference: Optional[str] = None
+    perfume_name: Optional[str] = None
     top_notes: List[NoteSchema] = []
     heart_notes: List[NoteSchema] = []
     base_notes: List[NoteSchema] = []
@@ -33,7 +35,6 @@ class CustomerBase(BaseModel):
     job: Optional[str] = None
     city: Optional[str] = None
     country: Optional[str] = None
-    reference: Optional[str] = None
     date: Optional[str] = None
     verified_email: Optional[bool] = None
     verified_domain: Optional[bool] = None

@@ -45,6 +45,8 @@ class FormulaBase(BaseModel):
     file_id: int
     customer_review_id: Optional[int] = None
     comment: Optional[str] = None
+    reference: Optional[str] = None
+    perfume_name: Optional[str] = None
 
 
 class FormulaCreate(FormulaBase):
@@ -69,6 +71,8 @@ class FormulaUpdateNotes(BaseModel):
     heart_notes: Optional[List[NoteUpdate]] = None
     base_notes: Optional[List[NoteUpdate]] = None
     comment: Optional[str] = None
+    reference: Optional[str] = None
+    perfume_name: Optional[str] = None
 
 
 class FormulaResponse(FormulaBase):

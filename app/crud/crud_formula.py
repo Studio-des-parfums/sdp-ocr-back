@@ -7,6 +7,9 @@ def create(
     customer_id: Optional[int],
     file_id: int,
     customer_review_id: Optional[int] = None,
+    reference: Optional[str] = None,
+    perfume_name: Optional[str] = None,
+    date: Optional[str] = None,
 ) -> Optional[int]:
     """
     Crée une nouvelle formule liée à un customer (ou customer_review) et à un fichier.
@@ -16,6 +19,9 @@ def create(
         customer_id: ID du customer (peut être None si review)
         file_id: ID du fichier source (customer_files.id)
         customer_review_id: ID du customer_review (peut être None si customer)
+        reference: Référence/identifiant de la formule
+        perfume_name: Nom du parfum
+        date: Date extraite du formulaire OCR
 
     Returns:
         ID de la formule créée ou None si erreur
@@ -25,10 +31,10 @@ def create(
         cursor = connection.cursor()
 
         query = """
-            INSERT INTO formula (customer_id, file_id, customer_review_id)
-            VALUES (%s, %s, %s)
+            INSERT INTO formula (customer_id, file_id, customer_review_id, reference, perfume_name, date)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """
-        cursor.execute(query, (customer_id, file_id, customer_review_id))
+        cursor.execute(query, (customer_id, file_id, customer_review_id, reference, perfume_name, date))
 
         connection.commit()
         formula_id = cursor.lastrowid
@@ -64,7 +70,7 @@ def get_by_id(
         cursor = connection.cursor()
 
         query = """
-            SELECT id, customer_id, file_id, customer_review_id, comment
+            SELECT id, customer_id, file_id, customer_review_id, comment, reference, perfume_name, date
             FROM formula
             WHERE id = %s
         """
@@ -75,6 +81,42 @@ def get_by_id(
 
     except Exception as e:
         print(f"Erreur récupération formula {formula_id} : {e}")
+        return None
+    finally:
+        if cursor is not None:
+            cursor.close()
+
+
+def get_by_reference(
+    connection: pymysql.connections.Connection,
+    reference: str,
+) -> Optional[dict]:
+    """
+    Récupère une formule par sa référence.
+
+    Args:
+        connection: Connexion MySQL
+        reference: Référence de la formule
+
+    Returns:
+        Dictionnaire avec les données de la formule ou None si non trouvée
+    """
+    cursor = None
+    try:
+        cursor = connection.cursor()
+
+        query = """
+            SELECT id, customer_id, file_id, customer_review_id, comment, reference, perfume_name, date
+            FROM formula
+            WHERE reference = %s
+        """
+        cursor.execute(query, (reference,))
+        result = cursor.fetchone()
+
+        return result
+
+    except Exception as e:
+        print(f"Erreur récupération formula par référence {reference} : {e}")
         return None
     finally:
         if cursor is not None:
@@ -144,7 +186,7 @@ def update(
         cursor = connection.cursor()
 
         # Construire la requête dynamiquement
-        allowed_fields = {"customer_id", "file_id", "customer_review_id", "comment"}
+        allowed_fields = {"customer_id", "file_id", "customer_review_id", "comment", "reference", "perfume_name", "date"}
         fields_to_update = {k: v for k, v in kwargs.items() if k in allowed_fields}
 
         if not fields_to_update:

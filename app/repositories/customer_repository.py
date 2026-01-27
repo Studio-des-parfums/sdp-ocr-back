@@ -78,7 +78,7 @@ class CustomerRepository:
                 try:
                     # Récupérer directement les formules via formula.customer_id
                     query = """
-                        SELECT id, customer_id, file_id, comment
+                        SELECT id, customer_id, file_id, comment, reference, perfume_name
                         FROM formula
                         WHERE customer_id = %s
                         ORDER BY id ASC
@@ -154,7 +154,7 @@ class CustomerRepository:
                 try:
                     # Récupérer directement les formules via formula.customer_id
                     query = """
-                        SELECT id, customer_id, file_id, comment
+                        SELECT id, customer_id, file_id, comment, reference, perfume_name
                         FROM formula
                         WHERE customer_id = %s
                         ORDER BY id ASC
