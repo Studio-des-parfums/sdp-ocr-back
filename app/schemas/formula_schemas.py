@@ -47,6 +47,7 @@ class FormulaBase(BaseModel):
     comment: Optional[str] = None
     reference: Optional[str] = None
     perfume_name: Optional[str] = None
+    date: Optional[str] = None
 
 
 class FormulaCreate(FormulaBase):
@@ -73,6 +74,7 @@ class FormulaUpdateNotes(BaseModel):
     comment: Optional[str] = None
     reference: Optional[str] = None
     perfume_name: Optional[str] = None
+    date: Optional[str] = None
 
 
 class FormulaResponse(FormulaBase):

@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 from app.core.config import settings
-from app.api.endpoints import ocr, customers, users, export, groups, login_history, customer_reviews, files, formulas, emails, roles
+from app.api.endpoints import ocr, customers, users, export, groups, login_history, customer_reviews, files, formulas, emails, roles, orders
 from app.database import get_connection
 
 app = FastAPI(
@@ -50,6 +50,7 @@ app.include_router(files.router, prefix="/api/v1", tags=["Files"])
 app.include_router(formulas.router, prefix="/api/v1/formulas", tags=["Formulas"])
 app.include_router(emails.router, prefix="/api/v1/emails", tags=["Emails"])
 app.include_router(roles.router, prefix="/api/v1/roles", tags=["Roles"])
+app.include_router(orders.router, prefix="/api/v1/orders", tags=["Orders"])
 
 @app.get("/")
 async def root():
@@ -69,6 +70,7 @@ async def root():
             "formulas": "/api/v1/formulas",
             "emails": "/api/v1/emails",
             "roles": "/api/v1/roles",
+            "orders": "/api/v1/orders",
             "docs": "/docs"
         }
     }

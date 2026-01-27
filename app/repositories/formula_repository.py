@@ -189,6 +189,7 @@ class FormulaRepository:
         comment: Optional[str] = None,
         reference: Optional[str] = None,
         perfume_name: Optional[str] = None,
+        date: Optional[str] = None,
         skip_correction: bool = True,
     ) -> bool:
         """
@@ -207,6 +208,7 @@ class FormulaRepository:
             comment: Commentaire de la formule (optionnel)
             reference: Référence/identifiant de la formule (optionnel)
             perfume_name: Nom du parfum (optionnel)
+            date: Date de la formule (optionnel)
             skip_correction: Si True, ne pas corriger automatiquement les noms (défaut: True pour modifications manuelles)
 
         Format attendu pour chaque note:
@@ -301,7 +303,7 @@ class FormulaRepository:
             if base_notes is not None:
                 _update_notes_by_type("base_note", base_notes)
 
-            # Mettre à jour le commentaire, la référence et/ou le nom du parfum si fournis
+            # Mettre à jour le commentaire, la référence, le nom du parfum et/ou la date si fournis
             update_kwargs = {}
             if comment is not None:
                 update_kwargs['comment'] = comment
@@ -309,6 +311,8 @@ class FormulaRepository:
                 update_kwargs['reference'] = reference
             if perfume_name is not None:
                 update_kwargs['perfume_name'] = perfume_name
+            if date is not None:
+                update_kwargs['date'] = date
 
             if update_kwargs:
                 crud_formula.update(connection, formula_id, **update_kwargs)
@@ -318,6 +322,8 @@ class FormulaRepository:
                     print(f"🏷️ Référence de la formule {formula_id} mise à jour")
                 if perfume_name is not None:
                     print(f"🍶 Nom du parfum de la formule {formula_id} mis à jour")
+                if date is not None:
+                    print(f"📅 Date de la formule {formula_id} mise à jour")
 
             print(f"✅ Formule {formula_id} mise à jour avec succès")
             return True
