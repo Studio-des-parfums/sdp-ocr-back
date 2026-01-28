@@ -1,6 +1,6 @@
 from typing import Dict, Any, Optional, List, Tuple
 from app.database import get_connection
-from app.crud import crud_order, crud_order_item
+from app.crud import crud_order, crud_order_item, crud_customer, crud_formula, crud_notes
 
 
 class OrderRepository:
@@ -29,7 +29,7 @@ class OrderRepository:
                 connection.close()
 
     def get_order_by_id(self, order_id: int) -> Optional[Dict[str, Any]]:
-        """Récupérer une commande par son ID avec ses items"""
+        """Récupérer une commande par son ID avec ses items, client et formule (avec notes)"""
         connection = get_connection()
         if not connection:
             return None
@@ -38,6 +38,17 @@ class OrderRepository:
             if order:
                 # Enrichir avec les items
                 order['items'] = crud_order_item.get_by_order_id(connection, order_id)
+                # Enrichir avec le client
+                if order.get('customer_id'):
+                    order['customer'] = crud_customer.get_by_id(connection, order['customer_id'])
+                # Enrichir avec la formule et ses notes
+                if order.get('formula_id'):
+                    formula = crud_formula.get_by_id(connection, order['formula_id'])
+                    if formula:
+                        formula['top_notes'] = crud_notes.get_notes_by_type(connection, 'top_note', order['formula_id'])
+                        formula['heart_notes'] = crud_notes.get_notes_by_type(connection, 'heart_note', order['formula_id'])
+                        formula['base_notes'] = crud_notes.get_notes_by_type(connection, 'base_note', order['formula_id'])
+                    order['formula'] = formula
             return order
         finally:
             if connection.open:
@@ -47,7 +58,7 @@ class OrderRepository:
                        search: Optional[str] = None,
                        customer_id: Optional[int] = None,
                        status: Optional[str] = None) -> Tuple[List[Dict[str, Any]], int]:
-        """Récupérer toutes les commandes avec pagination"""
+        """Récupérer toutes les commandes avec pagination et infos client"""
         connection = get_connection()
         if not connection:
             return [], 0
@@ -55,9 +66,12 @@ class OrderRepository:
             orders, total = crud_order.get_all(
                 connection, page, size, search, customer_id, status
             )
-            # Enrichir chaque commande avec ses items
+            # Enrichir chaque commande avec ses items et le client
             for order in orders:
                 order['items'] = crud_order_item.get_by_order_id(connection, order['id'])
+                # Enrichir avec le client
+                if order.get('customer_id'):
+                    order['customer'] = crud_customer.get_by_id(connection, order['customer_id'])
             return orders, total
         finally:
             if connection.open:

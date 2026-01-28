@@ -237,5 +237,65 @@ class UserRepository:
             if connection.open:
                 connection.close()
 
+    def consume_csv_quota(self, user_id: int) -> bool:
+        """
+        Consomme un quota CSV pour l'utilisateur
+
+        Args:
+            user_id: ID du user
+
+        Returns:
+            True si quota disponible et consommé, False si dépassé
+        """
+        connection = get_connection()
+        if not connection:
+            return False
+
+        try:
+            return crud_user.consume_csv_quota(connection, user_id)
+        finally:
+            if connection.open:
+                connection.close()
+
+    def consume_pdf_quota(self, user_id: int) -> bool:
+        """
+        Consomme un quota PDF pour l'utilisateur
+
+        Args:
+            user_id: ID du user
+
+        Returns:
+            True si quota disponible et consommé, False si dépassé
+        """
+        connection = get_connection()
+        if not connection:
+            return False
+
+        try:
+            return crud_user.consume_pdf_quota(connection, user_id)
+        finally:
+            if connection.open:
+                connection.close()
+
+    def get_user_quotas(self, user_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Récupère les quotas actuels d'un utilisateur
+
+        Args:
+            user_id: ID du user
+
+        Returns:
+            Dict avec les infos de quota ou None
+        """
+        connection = get_connection()
+        if not connection:
+            return None
+
+        try:
+            return crud_user.get_user_quotas(connection, user_id)
+        finally:
+            if connection.open:
+                connection.close()
+
 
 user_repository = UserRepository()

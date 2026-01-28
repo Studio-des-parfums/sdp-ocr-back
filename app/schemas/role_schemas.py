@@ -5,10 +5,13 @@ from typing import Optional
 class RoleBase(BaseModel):
     """Schéma de base pour les rôles"""
     name: str
-    csv: int = 0
-    pdf: int = 0
+    csv_download_limit: int = 0
     email_sending: bool = False
-    customer_validation: bool = False
+    pdf_extraction_limit: int = 0
+    customers_access: bool = False
+    access_to_extraction: bool = False
+    customers_review_access: bool = False
+    full_access: bool = False
 
 
 class RoleCreate(RoleBase):
@@ -19,10 +22,13 @@ class RoleCreate(RoleBase):
 class RoleUpdate(BaseModel):
     """Schéma pour la mise à jour d'un rôle"""
     name: Optional[str] = None
-    csv: Optional[int] = None
-    pdf: Optional[int] = None
+    csv_download_limit: Optional[int] = None
     email_sending: Optional[bool] = None
-    customer_validation: Optional[bool] = None
+    pdf_extraction_limit: Optional[int] = None
+    customers_access: Optional[bool] = None
+    access_to_extraction: Optional[bool] = None
+    customers_review_access: Optional[bool] = None
+    full_access: Optional[bool] = None
 
 
 class RoleResponse(RoleBase):

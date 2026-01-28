@@ -12,6 +12,10 @@ class UserBase(BaseModel):
     role_id: Optional[int] = None
     is_online: Optional[bool] = False
     team: Optional[str] = None
+    csv_download_count: Optional[int] = 0
+    csv_download_reset_at: Optional[datetime] = None
+    pdf_extraction_count: Optional[int] = 0
+    pdf_extraction_reset_at: Optional[datetime] = None
 
 class UserCreate(UserBase):
     """Schema pour créer un user"""
@@ -25,6 +29,10 @@ class UserResponse(UserBase):
     """Schema de réponse avec l'ID"""
     id: int
     last_login_at: Optional[datetime] = None
+    csv_download_count: Optional[int] = 0
+    csv_download_reset_at: Optional[datetime] = None
+    pdf_extraction_count: Optional[int] = 0
+    pdf_extraction_reset_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

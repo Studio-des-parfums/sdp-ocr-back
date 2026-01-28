@@ -366,3 +366,156 @@ def get_by_role_id(connection: pymysql.connections.Connection, role_id: int) -> 
         return []
     finally:
         cursor.close()
+
+
+def consume_csv_quota(connection: pymysql.connections.Connection, user_id: int) -> bool:
+    """
+    Consomme un quota CSV pour l'utilisateur (reset automatique mensuel)
+
+    Args:
+        connection: Connexion MySQL
+        user_id: ID du user
+
+    Returns:
+        True si le quota est disponible et consommé, False si quota dépassé
+    """
+    try:
+        cursor = connection.cursor()
+
+        query = """
+            UPDATE users u
+            JOIN roles r ON r.id = u.role_id
+            SET
+              u.csv_download_count = CASE
+                WHEN u.csv_download_reset_at IS NULL
+                     OR NOW() >= u.csv_download_reset_at
+                THEN 1
+                ELSE u.csv_download_count + 1
+              END,
+              u.csv_download_reset_at = CASE
+                WHEN u.csv_download_reset_at IS NULL
+                     OR NOW() >= u.csv_download_reset_at
+                THEN DATE_FORMAT(DATE_ADD(NOW(), INTERVAL 1 MONTH), '%%Y-%%m-01')
+                ELSE u.csv_download_reset_at
+              END
+            WHERE u.id = %s
+            AND (
+              u.csv_download_reset_at IS NULL
+              OR NOW() >= u.csv_download_reset_at
+              OR u.csv_download_count < r.csv_download_limit
+            )
+        """
+
+        cursor.execute(query, (user_id,))
+        connection.commit()
+
+        return cursor.rowcount > 0
+
+    except Exception as e:
+        print(f"Erreur consommation quota CSV : {e}")
+        connection.rollback()
+        return False
+    finally:
+        cursor.close()
+
+
+def consume_pdf_quota(connection: pymysql.connections.Connection, user_id: int) -> bool:
+    """
+    Consomme un quota PDF pour l'utilisateur (reset automatique mensuel)
+
+    Args:
+        connection: Connexion MySQL
+        user_id: ID du user
+
+    Returns:
+        True si le quota est disponible et consommé, False si quota dépassé
+    """
+    try:
+        cursor = connection.cursor()
+
+        query = """
+            UPDATE users u
+            JOIN roles r ON r.id = u.role_id
+            SET
+              u.pdf_extraction_count = CASE
+                WHEN u.pdf_extraction_reset_at IS NULL
+                     OR NOW() >= u.pdf_extraction_reset_at
+                THEN 1
+                ELSE u.pdf_extraction_count + 1
+              END,
+              u.pdf_extraction_reset_at = CASE
+                WHEN u.pdf_extraction_reset_at IS NULL
+                     OR NOW() >= u.pdf_extraction_reset_at
+                THEN DATE_FORMAT(DATE_ADD(NOW(), INTERVAL 1 MONTH), '%%Y-%%m-01')
+                ELSE u.pdf_extraction_reset_at
+              END
+            WHERE u.id = %s
+            AND (
+              u.pdf_extraction_reset_at IS NULL
+              OR NOW() >= u.pdf_extraction_reset_at
+              OR u.pdf_extraction_count < r.pdf_extraction_limit
+            )
+        """
+
+        cursor.execute(query, (user_id,))
+        connection.commit()
+
+        return cursor.rowcount > 0
+
+    except Exception as e:
+        print(f"Erreur consommation quota PDF : {e}")
+        connection.rollback()
+        return False
+    finally:
+        cursor.close()
+
+
+def get_user_quotas(connection: pymysql.connections.Connection, user_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Récupère les quotas actuels d'un utilisateur avec ses limites
+
+    Args:
+        connection: Connexion MySQL
+        user_id: ID du user
+
+    Returns:
+        Dict avec les infos de quota ou None
+    """
+    try:
+        cursor = connection.cursor()
+
+        query = """
+            SELECT
+                u.csv_download_count,
+                u.csv_download_reset_at,
+                u.pdf_extraction_count,
+                u.pdf_extraction_reset_at,
+                r.csv_download_limit,
+                r.pdf_extraction_limit,
+                CASE
+                    WHEN u.csv_download_reset_at IS NULL
+                         OR NOW() >= u.csv_download_reset_at
+                    THEN 0
+                    ELSE u.csv_download_count
+                END as csv_current_count,
+                CASE
+                    WHEN u.pdf_extraction_reset_at IS NULL
+                         OR NOW() >= u.pdf_extraction_reset_at
+                    THEN 0
+                    ELSE u.pdf_extraction_count
+                END as pdf_current_count,
+                COALESCE(u.csv_download_reset_at, DATE_FORMAT(DATE_ADD(NOW(), INTERVAL 1 MONTH), '%%Y-%%m-01')) as csv_next_reset,
+                COALESCE(u.pdf_extraction_reset_at, DATE_FORMAT(DATE_ADD(NOW(), INTERVAL 1 MONTH), '%%Y-%%m-01')) as pdf_next_reset
+            FROM users u
+            JOIN roles r ON r.id = u.role_id
+            WHERE u.id = %s
+        """
+
+        cursor.execute(query, (user_id,))
+        return cursor.fetchone()
+
+    except Exception as e:
+        print(f"Erreur récupération quotas : {e}")
+        return None
+    finally:
+        cursor.close()

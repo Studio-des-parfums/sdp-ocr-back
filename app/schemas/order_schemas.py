@@ -1,6 +1,7 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Any, Dict
 from enum import Enum
+from datetime import datetime
 
 
 class OrderStatus(str, Enum):
@@ -68,7 +69,10 @@ class OrderResponse(OrderBase):
     """Schéma de réponse pour une commande"""
     id: int
     status: OrderStatus
+    date: Optional[datetime] = None
     items: List[OrderItemResponse] = []
+    customer: Optional[Dict[str, Any]] = None
+    formula: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True

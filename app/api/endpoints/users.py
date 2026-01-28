@@ -236,3 +236,110 @@ async def delete_user(user_id: int):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
 
+
+@router.get("/{user_id}/quotas")
+async def get_user_quotas(user_id: int):
+    """
+    Récupérer les quotas d'un utilisateur
+    """
+    try:
+        existing_user = user_repository.get_user_by_id(user_id)
+        if not existing_user:
+            raise HTTPException(
+                status_code=404,
+                detail=f"User avec ID {user_id} non trouvé"
+            )
+
+        quotas = user_repository.get_user_quotas(user_id)
+        if not quotas:
+            raise HTTPException(
+                status_code=404,
+                detail="Impossible de récupérer les quotas"
+            )
+
+        return {
+            "csv": {
+                "used": quotas["csv_current_count"],
+                "limit": quotas["csv_download_limit"],
+                "remaining": quotas["csv_download_limit"] - quotas["csv_current_count"],
+                "reset_at": quotas["csv_next_reset"]
+            },
+            "pdf": {
+                "used": quotas["pdf_current_count"],
+                "limit": quotas["pdf_extraction_limit"],
+                "remaining": quotas["pdf_extraction_limit"] - quotas["pdf_current_count"],
+                "reset_at": quotas["pdf_next_reset"]
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
+
+
+@router.post("/{user_id}/quotas/csv/consume")
+async def consume_csv_quota(user_id: int):
+    """
+    Consommer un quota CSV pour l'utilisateur
+    """
+    try:
+        existing_user = user_repository.get_user_by_id(user_id)
+        if not existing_user:
+            raise HTTPException(
+                status_code=404,
+                detail=f"User avec ID {user_id} non trouvé"
+            )
+
+        success = user_repository.consume_csv_quota(user_id)
+
+        if not success:
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "error": "quota_exceeded",
+                    "message": "Quota CSV mensuel dépassé",
+                    "type": "csv"
+                }
+            )
+
+        return {"message": "Quota CSV consommé", "success": True}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
+
+
+@router.post("/{user_id}/quotas/pdf/consume")
+async def consume_pdf_quota(user_id: int):
+    """
+    Consommer un quota PDF pour l'utilisateur
+    """
+    try:
+        existing_user = user_repository.get_user_by_id(user_id)
+        if not existing_user:
+            raise HTTPException(
+                status_code=404,
+                detail=f"User avec ID {user_id} non trouvé"
+            )
+
+        success = user_repository.consume_pdf_quota(user_id)
+
+        if not success:
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "error": "quota_exceeded",
+                    "message": "Quota PDF mensuel dépassé",
+                    "type": "pdf"
+                }
+            )
+
+        return {"message": "Quota PDF consommé", "success": True}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
+

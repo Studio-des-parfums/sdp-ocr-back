@@ -8,15 +8,19 @@ def create(connection: pymysql.connections.Connection,
     try:
         cursor = connection.cursor()
         query = """
-            INSERT INTO roles (name, csv, pdf, email_sending, customer_validation)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO roles (name, csv_download_limit, email_sending, pdf_extraction_limit,
+                               customers_access, access_to_extraction, customers_review_access, full_access)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
         cursor.execute(query, (
             role_data.get('name'),
-            role_data.get('csv', 0),
-            role_data.get('pdf', 0),
+            role_data.get('csv_download_limit', 0),
             role_data.get('email_sending', False),
-            role_data.get('customer_validation', False)
+            role_data.get('pdf_extraction_limit', 0),
+            role_data.get('customers_access', False),
+            role_data.get('access_to_extraction', False),
+            role_data.get('customers_review_access', False),
+            role_data.get('full_access', False)
         ))
         connection.commit()
         return cursor.lastrowid
