@@ -9,8 +9,10 @@ class RoleBase(BaseModel):
     email_sending: bool = False
     pdf_extraction_limit: int = 0
     customers_access: bool = False
+    customers_edit: bool = False
     access_to_extraction: bool = False
     customers_review_access: bool = False
+    formula_edit: bool = False
     full_access: bool = False
 
 
@@ -26,14 +28,18 @@ class RoleUpdate(BaseModel):
     email_sending: Optional[bool] = None
     pdf_extraction_limit: Optional[int] = None
     customers_access: Optional[bool] = None
+    customers_edit: Optional[bool] = None
     access_to_extraction: Optional[bool] = None
     customers_review_access: Optional[bool] = None
+    formula_edit: Optional[bool] = None
     full_access: Optional[bool] = None
 
 
 class RoleResponse(RoleBase):
     """Schéma de réponse pour un rôle"""
     id: int
+    csv_download_limit: Optional[int] = 0
+    pdf_extraction_limit: Optional[int] = 0
 
     class Config:
         from_attributes = True

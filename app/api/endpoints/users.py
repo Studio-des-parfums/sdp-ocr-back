@@ -2,13 +2,16 @@ from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 
 from app.repositories.user_repository import user_repository
+from app.repositories.role_repository import role_repository
 from app.schemas.user_schemas import (
     UserCreate,
     UserUpdate,
     UserResponse,
     UserListResponse,
-    UserLoginUpdate
+    UserLoginUpdate,
+    UserWithRoleResponse
 )
+from app.schemas.role_schemas import RoleResponse
 
 router = APIRouter()
 
@@ -108,6 +111,52 @@ async def get_users_by_role(role_id: int):
         users = user_repository.get_users_by_role_id(role_id)
         return [UserResponse(**user) for user in users]
 
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
+
+@router.get("/by-email", response_model=UserWithRoleResponse)
+async def get_user_by_email(email: str = Query(..., description="Email de l'utilisateur")):
+    """
+    Récupérer un utilisateur par son email avec les informations complètes de son rôle.
+    Utilisé pour la connexion Google OAuth.
+    """
+    try:
+        # Nettoyer l'email (trim + lowercase)
+        clean_email = email.strip().lower()
+        user = user_repository.get_user_by_email(clean_email)
+
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Utilisateur avec l'email {email} non trouvé"
+            )
+
+        # Récupérer les informations du rôle si l'utilisateur en a un
+        role_data = None
+        if user.get('role_id'):
+            role = role_repository.get_role_by_id(user['role_id'])
+            if role:
+                role_data = RoleResponse(**role)
+
+        return UserWithRoleResponse(
+            id=user['id'],
+            first_name=user.get('first_name'),
+            last_name=user.get('last_name'),
+            email=user.get('email'),
+            phone=user.get('phone'),
+            job=user.get('job'),
+            is_online=user.get('is_online', False),
+            team=user.get('team'),
+            last_login_at=user.get('last_login_at'),
+            csv_download_count=user.get('csv_download_count', 0),
+            csv_download_reset_at=user.get('csv_download_reset_at'),
+            pdf_extraction_count=user.get('pdf_extraction_count', 0),
+            pdf_extraction_reset_at=user.get('pdf_extraction_reset_at'),
+            role=role_data
+        )
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
 
