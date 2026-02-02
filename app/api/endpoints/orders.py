@@ -45,13 +45,14 @@ async def get_orders(
     size: int = Query(10, ge=1, le=100, description="Taille de la page"),
     search: Optional[str] = Query(None, description="Recherche dans les commentaires"),
     customer_id: Optional[int] = Query(None, description="Filtrer par client"),
-    status: Optional[str] = Query(None, description="Filtrer par statut")
+    status: Optional[str] = Query(None, description="Filtrer par statut"),
+    formula_id: Optional[int] = Query(None, description="Filtrer par formule")
 ):
     """Récupérer toutes les commandes avec pagination"""
     try:
         orders, total = order_repository.get_all_orders(
             page=page, size=size, search=search,
-            customer_id=customer_id, status=status
+            customer_id=customer_id, status=status, formula_id=formula_id
         )
 
         return {

@@ -47,7 +47,8 @@ def get_all(connection: pymysql.connections.Connection,
             page: int = 1, size: int = 10,
             search: Optional[str] = None,
             customer_id: Optional[int] = None,
-            status: Optional[str] = None) -> Tuple[List[Dict], int]:
+            status: Optional[str] = None,
+            formula_id: Optional[int] = None) -> Tuple[List[Dict], int]:
     """Récupérer toutes les commandes avec pagination"""
     try:
         cursor = connection.cursor()
@@ -66,6 +67,10 @@ def get_all(connection: pymysql.connections.Connection,
         if status:
             where_conditions.append("status = %s")
             params.append(status)
+
+        if formula_id:
+            where_conditions.append("formula_id = %s")
+            params.append(formula_id)
 
         where_clause = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
 

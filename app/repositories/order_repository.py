@@ -55,14 +55,15 @@ class OrderRepository:
     def get_all_orders(self, page: int = 1, size: int = 10,
                        search: Optional[str] = None,
                        customer_id: Optional[int] = None,
-                       status: Optional[str] = None) -> Tuple[List[Dict[str, Any]], int]:
+                       status: Optional[str] = None,
+                       formula_id: Optional[int] = None) -> Tuple[List[Dict[str, Any]], int]:
         """Récupérer toutes les commandes avec pagination et infos client"""
         connection = get_connection()
         if not connection:
             return [], 0
         try:
             orders, total = crud_order.get_all(
-                connection, page, size, search, customer_id, status
+                connection, page, size, search, customer_id, status, formula_id
             )
             # Enrichir chaque commande avec ses items et le client
             for order in orders:
