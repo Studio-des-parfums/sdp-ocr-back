@@ -42,8 +42,7 @@ class LoginHistoryRepository:
 
             return record_id
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def get_login_history_by_user(self, user_id: int, page: int = 1,
                                   size: int = 10) -> Tuple[List[Dict[str, Any]], int]:
@@ -65,8 +64,7 @@ class LoginHistoryRepository:
         try:
             return crud_login_history.get_by_user(connection, user_id, page, size)
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def get_all_login_history(self, page: int = 1,
                              size: int = 10) -> Tuple[List[Dict[str, Any]], int]:
@@ -87,8 +85,7 @@ class LoginHistoryRepository:
         try:
             return crud_login_history.get_all(connection, page, size)
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
 
 login_history_repository = LoginHistoryRepository()

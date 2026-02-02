@@ -475,3 +475,45 @@ def check_customer_exists(connection: pymysql.connections.Connection, customer_i
         return False
     finally:
         cursor.close()
+
+
+def get_unique_customers_from_groups(connection: pymysql.connections.Connection, 
+                                     group_ids: List[int]) -> List[int]:
+    """
+    Récupère tous les IDs de customers uniques présents dans plusieurs groupes
+
+    Args:
+        connection: Connexion MySQL
+        group_ids: Liste des IDs des groupes
+
+    Returns:
+        Liste des IDs de customers uniques
+    """
+    try:
+        cursor = connection.cursor()
+
+        if not group_ids:
+            return []
+
+        # Créer la clause IN pour les group_ids
+        placeholders = ', '.join(['%s'] * len(group_ids))
+
+        query = f"""
+            SELECT DISTINCT customer_id
+            FROM customer_groups
+            WHERE group_id IN ({placeholders})
+        """
+
+        cursor.execute(query, group_ids)
+        results = cursor.fetchall()
+
+        # Extraire les IDs de la liste de dictionnaires
+        customer_ids = [row['customer_id'] for row in results]
+
+        return customer_ids
+
+    except Exception as e:
+        print(f"Erreur récupération customers uniques : {e}")
+        return []
+    finally:
+        cursor.close()

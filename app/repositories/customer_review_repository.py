@@ -38,8 +38,7 @@ class CustomerReviewRepository:
 
             return customer_review_id
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def get_customer_review_by_id(self, review_id: int) -> Optional[Dict[str, Any]]:
         """
@@ -114,8 +113,7 @@ class CustomerReviewRepository:
 
             return review
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def get_all_customer_reviews(self, page: int = 1, size: int = 10,
                                  review_type: Optional[str] = None) -> Tuple[List[Dict[str, Any]], int]:
@@ -193,8 +191,7 @@ class CustomerReviewRepository:
 
             return reviews, total
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def update_customer_review(self, review_id: int,
                                customer_data: Dict[str, Any]) -> bool:
@@ -222,8 +219,7 @@ class CustomerReviewRepository:
 
             return success
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def update_customer_review_with_validation(self, review_id: int,
                                                customer_data: Dict[str, Any]) -> bool:
@@ -296,8 +292,7 @@ class CustomerReviewRepository:
 
             return success
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def delete_customer_review(self, review_id: int) -> bool:
         """
@@ -323,8 +318,7 @@ class CustomerReviewRepository:
 
             return success
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def transfer_to_customers(self, review_id: int) -> Optional[int]:
         """
@@ -348,8 +342,7 @@ class CustomerReviewRepository:
 
             return customer_id
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
 
 customer_review_repository = CustomerReviewRepository()

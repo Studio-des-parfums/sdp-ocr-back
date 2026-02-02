@@ -116,8 +116,7 @@ class FormulaRepository:
             return formula_id, notes_were_corrected
 
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def get_formula_by_id(self, formula_id: int) -> Optional[Dict[str, Any]]:
         """
@@ -147,8 +146,7 @@ class FormulaRepository:
             return formula
 
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def delete_formula(self, formula_id: int) -> bool:
         """
@@ -177,8 +175,7 @@ class FormulaRepository:
             return success
 
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def update_formula_notes(
         self,
@@ -330,12 +327,10 @@ class FormulaRepository:
 
         except Exception as e:
             print(f"❌ Erreur mise à jour notes formule {formula_id}: {e}")
-            if connection.open:
-                connection.rollback()
+            connection.rollback()
             return False
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
 
 formula_repository = FormulaRepository()

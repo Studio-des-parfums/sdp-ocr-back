@@ -44,8 +44,7 @@ def _insert_note(
 
     except Exception as e:
         print(f"Erreur création note dans {table_name} : {e}")
-        if connection.open:
-            connection.rollback()
+        connection.rollback()
         return None
     finally:
         if cursor is not None:
@@ -133,8 +132,7 @@ def update_note(
 
     except Exception as e:
         print(f"Erreur mise à jour note {note_id} dans {table_name} : {e}")
-        if connection.open:
-            connection.rollback()
+        connection.rollback()
         return False
     finally:
         if cursor is not None:
@@ -173,8 +171,7 @@ def delete_note(
 
     except Exception as e:
         print(f"Erreur suppression note {note_id} dans {table_name} : {e}")
-        if connection.open:
-            connection.rollback()
+        connection.rollback()
         return False
     finally:
         if cursor is not None:
@@ -214,8 +211,7 @@ def delete_all_notes_by_formula(
 
     except Exception as e:
         print(f"Erreur suppression notes pour formula {formula_id} : {e}")
-        if connection.open:
-            connection.rollback()
+        connection.rollback()
         return False
     finally:
         if cursor is not None:

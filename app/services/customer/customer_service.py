@@ -71,8 +71,7 @@ class CustomerBusinessService:
             return customer_id, "customer"
 
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def _map_ocr_to_customer(self, extracted_data: Dict[str, Any]) -> Tuple[Dict[str, str], bool, Optional[str]]:
         """
@@ -247,8 +246,7 @@ class CustomerBusinessService:
         try:
             return crud_customer.create(connection, customer_data)
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
 
     def update_customer_with_validation(self, customer_id: int, customer_data: Dict[str, Any]) -> bool:
@@ -315,8 +313,7 @@ class CustomerBusinessService:
             return crud_customer.update(connection, customer_id, update_data)
 
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def _check_notes_corrections(self, extracted_data: Dict[str, Any]) -> bool:
         """

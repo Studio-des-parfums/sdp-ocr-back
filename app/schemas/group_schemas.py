@@ -38,6 +38,14 @@ class RemoveCustomersFromGroup(BaseModel):
     customer_ids: List[int]
 
 
+class MergeGroupsRequest(BaseModel):
+    """Schéma pour fusionner plusieurs groupes"""
+    source_group_ids: List[int]
+    new_group_name: str
+    description: Optional[str] = None
+    created_by: int
+
+
 class CustomerGroupResponse(BaseModel):
     customer_id: int
     group_id: int

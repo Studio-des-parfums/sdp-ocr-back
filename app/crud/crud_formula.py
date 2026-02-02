@@ -43,8 +43,7 @@ def create(
 
     except Exception as e:
         print(f"Erreur création formula : {e}")
-        if connection.open:
-            connection.rollback()
+        connection.rollback()
         return None
     finally:
         if cursor is not None:
@@ -154,8 +153,7 @@ def delete(
 
     except Exception as e:
         print(f"Erreur suppression formula {formula_id} : {e}")
-        if connection.open:
-            connection.rollback()
+        connection.rollback()
         return False
     finally:
         if cursor is not None:
@@ -207,8 +205,7 @@ def update(
 
     except Exception as e:
         print(f"Erreur mise à jour formula {formula_id} : {e}")
-        if connection.open:
-            connection.rollback()
+        connection.rollback()
         return False
     finally:
         if cursor is not None:
@@ -250,8 +247,7 @@ def transfer_formulas_to_customer(
 
     except Exception as e:
         print(f"Erreur transfert formules : {e}")
-        if connection.open:
-            connection.rollback()
+        connection.rollback()
         return False
     finally:
         if cursor is not None:

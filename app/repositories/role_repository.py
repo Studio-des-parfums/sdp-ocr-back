@@ -17,8 +17,7 @@ class RoleRepository:
                 print(f"Rôle créé avec ID: {role_id}")
             return role_id
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def get_role_by_id(self, role_id: int) -> Optional[Dict[str, Any]]:
         """Récupérer un rôle par son ID"""
@@ -28,8 +27,7 @@ class RoleRepository:
         try:
             return crud_role.get_by_id(connection, role_id)
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def get_all_roles(self, page: int = 1, size: int = 10,
                       search: Optional[str] = None) -> Tuple[List[Dict[str, Any]], int]:
@@ -40,8 +38,7 @@ class RoleRepository:
         try:
             return crud_role.get_all(connection, page, size, search)
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def update_role(self, role_id: int, role_data: Dict[str, Any]) -> bool:
         """Mettre à jour un rôle"""
@@ -56,8 +53,7 @@ class RoleRepository:
                 print(f"Rôle {role_id} non trouvé")
             return success
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def delete_role(self, role_id: int) -> bool:
         """Supprimer un rôle définitivement"""
@@ -70,8 +66,7 @@ class RoleRepository:
                 print(f"Rôle {role_id} supprimé")
             return success
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
 
 role_repository = RoleRepository()

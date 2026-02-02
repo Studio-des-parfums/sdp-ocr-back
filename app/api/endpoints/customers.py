@@ -42,7 +42,7 @@ async def create_customer(customer: CustomerCreate):
 async def get_customers(
     page: int = Query(1, ge=1, description="Numéro de page"),
     size: int = Query(10, ge=1, le=100, description="Taille de page"),
-    search: Optional[str] = Query(None, description="Recherche dans nom, email, téléphone, ville")
+    search: Optional[str] = Query(None, description="Recherche dans nom, email, téléphone, ville, référence de formule")
 ):
     """
     Récupérer tous les customers avec pagination et recherche

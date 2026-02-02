@@ -25,8 +25,7 @@ class CustomerFileRepository:
         try:
             return crud_customer_file.create(connection, file_data)
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def get_customer_file_by_id(self, file_id: int) -> Optional[Dict[str, Any]]:
         """
@@ -45,8 +44,7 @@ class CustomerFileRepository:
         try:
             return crud_customer_file.get_by_id(connection, file_id)
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def get_files_by_customer_id(self, customer_id: int) -> List[Dict[str, Any]]:
         """
@@ -65,8 +63,7 @@ class CustomerFileRepository:
         try:
             return crud_customer_file.get_by_customer_id(connection, customer_id)
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def get_files_by_customer_review_id(self, customer_review_id: int) -> List[Dict[str, Any]]:
         """
@@ -85,8 +82,7 @@ class CustomerFileRepository:
         try:
             return crud_customer_file.get_by_customer_review_id(connection, customer_review_id)
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def update_customer_file(self, file_id: int, file_data: Dict[str, Any]) -> bool:
         """
@@ -113,8 +109,7 @@ class CustomerFileRepository:
 
             return success
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def delete_customer_file(self, file_id: int) -> bool:
         """
@@ -140,8 +135,7 @@ class CustomerFileRepository:
 
             return success
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def transfer_files_to_customer(
         self,
@@ -169,8 +163,7 @@ class CustomerFileRepository:
                 customer_id
             )
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def get_file_by_formula_id(self, formula_id: int) -> Optional[Dict[str, Any]]:
         """
@@ -189,8 +182,7 @@ class CustomerFileRepository:
         try:
             return crud_customer_file.get_by_formula_id(connection, formula_id)
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
 
 customer_file_repository = CustomerFileRepository()

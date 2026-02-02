@@ -69,8 +69,7 @@ class GroupBusinessService:
         except Exception as e:
             return {"success": False, "message": f"Erreur lors de l'ajout : {str(e)}"}
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def remove_customers_from_group(self, group_id: int,
                                    customer_ids: List[int]) -> Dict[str, Any]:
@@ -121,8 +120,7 @@ class GroupBusinessService:
         except Exception as e:
             return {"success": False, "message": f"Erreur lors de la suppression : {str(e)}"}
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
 
 group_business_service = GroupBusinessService()

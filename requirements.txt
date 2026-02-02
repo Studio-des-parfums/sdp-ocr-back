@@ -10,6 +10,7 @@ requests==2.31.0
 geoip2==4.7.0
 dnspython==2.8.0
 pymysql
+DBUtils
 pdf2image==1.17.0
 Pillow==12.1.0
 rapidfuzz

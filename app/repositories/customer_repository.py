@@ -107,8 +107,7 @@ class CustomerRepository:
 
             return customer
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def get_all_customers(self, page: int = 1, size: int = 10,
                          search: Optional[str] = None) -> Tuple[List[Dict[str, Any]], int]:
@@ -185,8 +184,7 @@ class CustomerRepository:
 
             return customers, total
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def update_customer(self, customer_id: int, customer_data: Dict[str, Any]) -> bool:
         """
@@ -226,8 +224,7 @@ class CustomerRepository:
 
             return success
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
 
 customer_repository = CustomerRepository()

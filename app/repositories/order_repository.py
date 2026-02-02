@@ -25,8 +25,7 @@ class OrderRepository:
                 print(f"Commande créée avec ID: {order_id}")
             return order_id
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def get_order_by_id(self, order_id: int) -> Optional[Dict[str, Any]]:
         """Récupérer une commande par son ID avec ses items, client et formule (avec notes)"""
@@ -51,8 +50,7 @@ class OrderRepository:
                     order['formula'] = formula
             return order
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def get_all_orders(self, page: int = 1, size: int = 10,
                        search: Optional[str] = None,
@@ -74,8 +72,7 @@ class OrderRepository:
                     order['customer'] = crud_customer.get_by_id(connection, order['customer_id'])
             return orders, total
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def update_order(self, order_id: int, order_data: Dict[str, Any]) -> bool:
         """Mettre à jour une commande"""
@@ -90,8 +87,7 @@ class OrderRepository:
                 print(f"Commande {order_id} non trouvée")
             return success
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def delete_order(self, order_id: int) -> bool:
         """Supprimer une commande et ses items"""
@@ -107,8 +103,7 @@ class OrderRepository:
                 print(f"Commande {order_id} supprimée")
             return success
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     # ==================== ORDER ITEMS ====================
 
@@ -124,8 +119,7 @@ class OrderRepository:
                 print(f"Item {item_id} ajouté à la commande {order_id}")
             return item_id
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def get_order_item_by_id(self, item_id: int) -> Optional[Dict[str, Any]]:
         """Récupérer un item par son ID"""
@@ -135,8 +129,7 @@ class OrderRepository:
         try:
             return crud_order_item.get_by_id(connection, item_id)
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def update_order_item(self, item_id: int, item_data: Dict[str, Any]) -> bool:
         """Mettre à jour un item de commande"""
@@ -149,8 +142,7 @@ class OrderRepository:
                 print(f"Item {item_id} mis à jour")
             return success
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
     def delete_order_item(self, item_id: int) -> bool:
         """Supprimer un item de commande"""
@@ -163,8 +155,7 @@ class OrderRepository:
                 print(f"Item {item_id} supprimé")
             return success
         finally:
-            if connection.open:
-                connection.close()
+            connection.close()
 
 
 order_repository = OrderRepository()
