@@ -51,6 +51,7 @@ class OrderBase(BaseModel):
     allergy: Optional[str] = None
     type: Optional[str] = None
     responsible: Optional[int] = None
+    desired_date: Optional[str] = None
 
 
 class OrderCreate(OrderBase):
@@ -67,6 +68,7 @@ class OrderUpdate(BaseModel):
     status: Optional[OrderStatus] = None
     type: Optional[str] = None
     responsible: Optional[int] = None
+    desired_date: Optional[str] = None
 
 
 class OrderResponse(OrderBase):
@@ -74,6 +76,7 @@ class OrderResponse(OrderBase):
     id: int
     status: OrderStatus
     date: Optional[datetime] = None
+    desired_date: Optional[datetime] = None
     items: List[OrderItemResponse] = []
     customer: Optional[Dict[str, Any]] = None
     formula: Optional[Dict[str, Any]] = None

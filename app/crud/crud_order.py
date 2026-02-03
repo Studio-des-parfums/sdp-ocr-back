@@ -8,8 +8,8 @@ def create(connection: pymysql.connections.Connection,
     try:
         cursor = connection.cursor()
         query = """
-            INSERT INTO orders (customer_id, formula_id, comment, allergy, status, type, responsible)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO orders (customer_id, formula_id, comment, allergy, status, type, responsible, desired_date)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
         cursor.execute(query, (
             order_data.get('customer_id'),
@@ -18,7 +18,8 @@ def create(connection: pymysql.connections.Connection,
             order_data.get('allergy'),
             order_data.get('status', 'PENDING'),
             order_data.get('type'),
-            order_data.get('responsible')
+            order_data.get('responsible'),
+            order_data.get('desired_date')
         ))
         connection.commit()
         return cursor.lastrowid
@@ -81,11 +82,11 @@ def get_all(connection: pymysql.connections.Connection,
             params.append(formula_id)
 
         if date_from:
-            where_conditions.append("orders.date >= %s")
+            where_conditions.append("COALESCE(orders.desired_date, orders.date) >= %s")
             params.append(date_from)
 
         if date_to:
-            where_conditions.append("orders.date <= %s")
+            where_conditions.append("COALESCE(orders.desired_date, orders.date) <= %s")
             params.append(date_to)
 
         if order_type:
