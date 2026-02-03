@@ -227,4 +227,44 @@ class CustomerRepository:
             connection.close()
 
 
+    def bulk_update_customers(self, updates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Met à jour plusieurs customers en masse
+
+        Args:
+            updates: Liste de dictionnaires avec 'id' et les champs à modifier
+
+        Returns:
+            Liste de résultats avec id, success et error pour chaque customer
+        """
+        results = []
+
+        for item in updates:
+            customer_id = item.pop("id")
+            try:
+                existing = self.get_customer_by_id(customer_id)
+                if not existing:
+                    results.append({
+                        "id": customer_id,
+                        "success": False,
+                        "error": f"Customer avec ID {customer_id} non trouvé"
+                    })
+                    continue
+
+                success = self.update_customer(customer_id, item)
+                results.append({
+                    "id": customer_id,
+                    "success": success,
+                    "error": None if success else "Erreur lors de la mise à jour"
+                })
+            except Exception as e:
+                results.append({
+                    "id": customer_id,
+                    "success": False,
+                    "error": str(e)
+                })
+
+        return results
+
+
 customer_repository = CustomerRepository()

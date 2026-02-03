@@ -49,6 +49,8 @@ class OrderBase(BaseModel):
     formula_id: int
     comment: Optional[str] = None
     allergy: Optional[str] = None
+    type: Optional[str] = None
+    responsible: Optional[int] = None
 
 
 class OrderCreate(OrderBase):
@@ -63,6 +65,8 @@ class OrderUpdate(BaseModel):
     comment: Optional[str] = None
     allergy: Optional[str] = None
     status: Optional[OrderStatus] = None
+    type: Optional[str] = None
+    responsible: Optional[int] = None
 
 
 class OrderResponse(OrderBase):

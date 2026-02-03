@@ -6,7 +6,10 @@ from app.schemas.customer_schemas import (
     CustomerCreate,
     CustomerUpdate,
     CustomerResponse,
-    CustomerListResponse
+    CustomerListResponse,
+    CustomerBulkUpdateRequest,
+    CustomerBulkUpdateResponse,
+    CustomerBulkUpdateResultItem
 )
 
 router = APIRouter()
@@ -89,6 +92,33 @@ async def get_customers(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
+
+@router.put("/bulk", response_model=CustomerBulkUpdateResponse)
+async def bulk_update_customers(request: CustomerBulkUpdateRequest):
+    """
+    Mettre à jour plusieurs customers en masse.
+    Chaque item contient un id et les champs à modifier.
+    """
+    try:
+        updates = [
+            customer.dict(exclude_unset=True)
+            for customer in request.customers
+        ]
+
+        results = customer_repository.bulk_update_customers(updates)
+
+        result_items = [CustomerBulkUpdateResultItem(**r) for r in results]
+        total_updated = sum(1 for r in results if r["success"])
+
+        return CustomerBulkUpdateResponse(
+            updated=result_items,
+            total_requested=len(updates),
+            total_updated=total_updated
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
+
 
 @router.get("/{customer_id}", response_model=CustomerResponse)
 async def get_customer(customer_id: int):

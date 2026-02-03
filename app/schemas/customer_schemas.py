@@ -67,3 +67,27 @@ class CustomerListResponse(BaseModel):
     total: int
     page: int
     size: int
+
+
+class CustomerBulkUpdateItem(CustomerBase):
+    """Schema pour un item de mise à jour en masse"""
+    id: int
+
+
+class CustomerBulkUpdateRequest(BaseModel):
+    """Schema pour la requête de mise à jour en masse"""
+    customers: List[CustomerBulkUpdateItem]
+
+
+class CustomerBulkUpdateResultItem(BaseModel):
+    """Schema pour le résultat d'un item de mise à jour en masse"""
+    id: int
+    success: bool
+    error: Optional[str] = None
+
+
+class CustomerBulkUpdateResponse(BaseModel):
+    """Schema pour la réponse de mise à jour en masse"""
+    updated: List[CustomerBulkUpdateResultItem]
+    total_requested: int
+    total_updated: int

@@ -8,15 +8,17 @@ def create(connection: pymysql.connections.Connection,
     try:
         cursor = connection.cursor()
         query = """
-            INSERT INTO orders (customer_id, formula_id, comment, allergy, status)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO orders (customer_id, formula_id, comment, allergy, status, type, responsible)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
         cursor.execute(query, (
             order_data.get('customer_id'),
             order_data.get('formula_id'),
             order_data.get('comment'),
             order_data.get('allergy'),
-            order_data.get('status', 'PENDING')
+            order_data.get('status', 'PENDING'),
+            order_data.get('type'),
+            order_data.get('responsible')
         ))
         connection.commit()
         return cursor.lastrowid
@@ -48,42 +50,73 @@ def get_all(connection: pymysql.connections.Connection,
             search: Optional[str] = None,
             customer_id: Optional[int] = None,
             status: Optional[str] = None,
-            formula_id: Optional[int] = None) -> Tuple[List[Dict], int]:
-    """Récupérer toutes les commandes avec pagination"""
+            formula_id: Optional[int] = None,
+            date_from: Optional[str] = None,
+            date_to: Optional[str] = None,
+            customer_name: Optional[str] = None,
+            order_type: Optional[str] = None,
+            responsible: Optional[int] = None) -> Tuple[List[Dict], int]:
+    """Récupérer toutes les commandes avec pagination et filtres"""
     try:
         cursor = connection.cursor()
 
         where_conditions = []
         params = []
+        needs_join = bool(customer_name)
 
         if search:
-            where_conditions.append("comment LIKE %s")
+            where_conditions.append("orders.comment LIKE %s")
             params.append(f"%{search}%")
 
         if customer_id:
-            where_conditions.append("customer_id = %s")
+            where_conditions.append("orders.customer_id = %s")
             params.append(customer_id)
 
         if status:
-            where_conditions.append("status = %s")
+            where_conditions.append("orders.status = %s")
             params.append(status)
 
         if formula_id:
-            where_conditions.append("formula_id = %s")
+            where_conditions.append("orders.formula_id = %s")
             params.append(formula_id)
 
+        if date_from:
+            where_conditions.append("orders.date >= %s")
+            params.append(date_from)
+
+        if date_to:
+            where_conditions.append("orders.date <= %s")
+            params.append(date_to)
+
+        if order_type:
+            where_conditions.append("orders.type = %s")
+            params.append(order_type)
+
+        if responsible:
+            where_conditions.append("orders.responsible = %s")
+            params.append(responsible)
+
+        if customer_name:
+            where_conditions.append(
+                "(customers.first_name LIKE %s OR customers.last_name LIKE %s "
+                "OR CONCAT(customers.first_name, ' ', customers.last_name) LIKE %s)"
+            )
+            name_param = f"%{customer_name}%"
+            params.extend([name_param, name_param, name_param])
+
         where_clause = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+        join_clause = "LEFT JOIN customers ON orders.customer_id = customers.id" if needs_join else ""
 
         # Compter le total
-        count_query = f"SELECT COUNT(*) as total FROM orders {where_clause}"
+        count_query = f"SELECT COUNT(*) as total FROM orders {join_clause} {where_clause}"
         cursor.execute(count_query, params)
         total = cursor.fetchone()['total']
 
         # Récupérer les résultats paginés
         offset = (page - 1) * size
         query = f"""
-            SELECT * FROM orders {where_clause}
-            ORDER BY id DESC
+            SELECT orders.* FROM orders {join_clause} {where_clause}
+            ORDER BY orders.id DESC
             LIMIT %s OFFSET %s
         """
         params.extend([size, offset])
