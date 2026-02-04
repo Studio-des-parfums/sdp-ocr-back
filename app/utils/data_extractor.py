@@ -72,6 +72,7 @@ class DataExtractor:
         data.date_naissance = self._extract_field_value(
             text, ["date de naissance", "date naissance", "birthday"]
         )
+        data.groupe = self._extract_field_value(text, ["groupe", "group"])
 
         return data.dict()
 
@@ -190,7 +191,7 @@ class DataExtractor:
         for line in text.split('\n'):
             for field in field_names:
                 # Match field name followed by colon, capture until next field or end
-                pattern = rf'{re.escape(field)}\s*:\s*([^:]+?)(?:\s+(?:Tel|Email|Pays|Ville|City|Country|Phone|Nom|Prénom|Date|Profession|First name|Last name):|$)'
+                pattern = rf'{re.escape(field)}\s*:\s*([^:]+?)(?:\s+(?:Tel|Email|Pays|Ville|City|Country|Phone|Nom|Prénom|Date|Profession|First name|Last name|Groupe|Group):|$)'
                 match = re.search(pattern, line, re.IGNORECASE)
                 if match:
                     value = match.group(1).strip()

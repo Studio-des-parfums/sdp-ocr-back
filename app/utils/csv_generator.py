@@ -24,6 +24,7 @@ class CSVGenerator:
         "email",
         "profession",
         "date_naissance",
+        "groupe",
         "notes_de_tete",
         "notes_de_coeur",
         "notes_de_fond",
@@ -70,6 +71,7 @@ class CSVGenerator:
                 "email": self._clean_email(data.get("email")),
                 "profession": self._clean_simple(data.get("profession")),
                 "date_naissance": self._clean_date(data.get("date_naissance")),
+                "groupe": self._clean_simple(data.get("groupe")),
                 "notes_de_tete": self._clean_perfume_notes(data.get("notes_de_tete")),
                 "notes_de_coeur": self._clean_perfume_notes(data.get("notes_de_coeur")),
                 "notes_de_fond": self._clean_perfume_notes(data.get("notes_de_fond")),
@@ -95,7 +97,8 @@ class CSVGenerator:
     def _cut_on_labels(self, v: str) -> str:
         labels = [
             "Pays:", "Ville:", "Tel:", "Email:", "Profession:",
-            "Date:", "Nom:", "Prénom:", "Date de naissance:"
+            "Date:", "Nom:", "Prénom:", "Date de naissance:",
+            "Groupe:", "Group:"
         ]
         for label in labels:
             if label.lower() in v.lower():

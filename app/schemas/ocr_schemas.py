@@ -64,6 +64,10 @@ class MistralDocumentAnnotation(BaseModel):
         None,
         description="Date de naissance. Chercher après 'Date de naissance:', 'Date naissance:' ou 'Birthday:'"
     )
+    groupe: Optional[str] = Field(
+        None,
+        description="Nom du groupe de la personne. Chercher après 'Groupe:' ou 'Group:'"
+    )
 
     # Blank sheet
     month_year: Optional[str] = Field(
@@ -107,6 +111,7 @@ class StudioParfumsData(BaseModel):
     email: Optional[str] = None
     profession: Optional[str] = None
     date_naissance: Optional[str] = None
+    groupe: Optional[str] = None
 
 class ProcessedPage(BaseModel):
     page_number: int

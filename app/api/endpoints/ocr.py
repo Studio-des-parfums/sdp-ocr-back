@@ -15,6 +15,7 @@ from app.utils.csv_generator import csv_generator
 from app.repositories.customer_repository import customer_repository
 from app.repositories.customer_file_repository import customer_file_repository
 from app.repositories.formula_repository import formula_repository
+from app.repositories.group_repository import group_repository
 from app.services.file import file_storage_service
 from app.schemas.ocr_schemas import OCRResponse, ProcessedPage, DocumentType
 
@@ -403,6 +404,22 @@ async def upload_pdf_and_download_csv(file: UploadFile = File(...)):
                                         print("⚠️ Formule non créée (voir logs précédents)")
                                 except Exception as e:
                                     print(f"❌ Erreur création formule/notes pour page {page_number}: {e}")
+
+                                # Gestion du groupe OCR
+                                groupe_name = (extracted_data.get('groupe') or '').strip()
+                                if groupe_name and customer_id:
+                                    try:
+                                        group_id = group_repository.find_or_create_group(groupe_name)
+                                        if group_id:
+                                            assigned = group_repository.assign_customer_to_group(customer_id, group_id)
+                                            if assigned:
+                                                print(f"👥 Customer {customer_id} ajouté au groupe '{groupe_name}' (ID: {group_id})")
+                                            else:
+                                                print(f"👥 Customer {customer_id} déjà dans le groupe '{groupe_name}' (ID: {group_id})")
+                                        else:
+                                            print(f"❌ Erreur création/récupération du groupe '{groupe_name}'")
+                                    except Exception as e:
+                                        print(f"❌ Erreur gestion groupe pour page {page_number}: {e}")
 
                             except Exception as e:
                                 print(f"❌ Erreur sauvegarde fichier page {page_number}: {e}")

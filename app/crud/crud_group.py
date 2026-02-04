@@ -40,6 +40,33 @@ def create(connection: pymysql.connections.Connection, group_data: Dict[str, Any
         cursor.close()
 
 
+def get_by_name(connection: pymysql.connections.Connection, name: str) -> Optional[Dict[str, Any]]:
+    """
+    Recherche un groupe par son nom (case-insensitive, non supprimé)
+
+    Args:
+        connection: Connexion MySQL
+        name: Nom du groupe à chercher
+
+    Returns:
+        Dictionnaire avec les données du groupe ou None
+    """
+    try:
+        cursor = connection.cursor()
+
+        query = "SELECT * FROM `groups` WHERE LOWER(name) = LOWER(%s) AND is_deleted = FALSE LIMIT 1"
+        cursor.execute(query, (name,))
+        result = cursor.fetchone()
+
+        return result
+
+    except Exception as e:
+        print(f"Erreur recherche groupe par nom : {e}")
+        return None
+    finally:
+        cursor.close()
+
+
 def get_by_id(connection: pymysql.connections.Connection, group_id: int,
               include_deleted: bool = False) -> Optional[Dict[str, Any]]:
     """

@@ -227,6 +227,57 @@ class GroupRepository:
         finally:
             connection.close()
 
+    def find_or_create_group(self, group_name: str) -> Optional[int]:
+        """
+        Cherche un groupe par nom. S'il n'existe pas, le crée.
+
+        Args:
+            group_name: Nom du groupe
+
+        Returns:
+            ID du groupe (existant ou nouvellement créé), ou None si erreur
+        """
+        connection = get_connection()
+        if not connection:
+            return None
+
+        try:
+            existing = crud_group.get_by_name(connection, group_name)
+            if existing:
+                print(f"Groupe '{group_name}' trouvé (ID: {existing['id']})")
+                return existing['id']
+
+            group_id = crud_group.create(connection, {
+                'name': group_name,
+                'description': None,
+                'created_by': None
+            })
+            if group_id:
+                print(f"Groupe '{group_name}' créé (ID: {group_id})")
+            return group_id
+        finally:
+            connection.close()
+
+    def assign_customer_to_group(self, customer_id: int, group_id: int) -> bool:
+        """
+        Assigne un customer à un groupe (si pas déjà dedans)
+
+        Args:
+            customer_id: ID du customer
+            group_id: ID du groupe
+
+        Returns:
+            True si ajouté, False si déjà présent ou erreur
+        """
+        connection = get_connection()
+        if not connection:
+            return False
+
+        try:
+            return crud_group.add_customer_to_group(connection, customer_id, group_id, added_by=None)
+        finally:
+            connection.close()
+
     def merge_groups(self, source_group_ids: List[int], new_group_name: str,
                     description: Optional[str], created_by: int) -> Dict[str, Any]:
         """
