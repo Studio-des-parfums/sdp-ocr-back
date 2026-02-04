@@ -14,6 +14,7 @@ class Settings:
     SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD")
     SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL")
     SMTP_FROM_NAME: str = os.getenv("SMTP_FROM_NAME", "SDP OCR")
+    SMTP_CC_EMAIL: str = os.getenv("SMTP_CC_EMAIL", "")
 
     # URL du serveur pour les fichiers statiques
     SERVER_URL: str = os.getenv("SERVER_URL", "http://localhost:8000")

@@ -74,6 +74,7 @@ class OrderUpdate(BaseModel):
 class OrderResponse(OrderBase):
     """Schéma de réponse pour une commande"""
     id: int
+    reference: Optional[str] = None
     status: OrderStatus
     date: Optional[datetime] = None
     desired_date: Optional[datetime] = None

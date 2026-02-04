@@ -1,5 +1,24 @@
 from typing import Dict, Any, Optional, List, Tuple
+from datetime import datetime
 import pymysql
+
+
+def _generate_reference(cursor) -> str:
+    """Générer une référence unique au format AAAAMMxxx-P"""
+    now = datetime.now()
+    year = now.strftime("%Y")
+    month = now.strftime("%m")
+    prefix = f"{year}{month}"
+
+    # Compter les commandes existantes pour ce mois
+    cursor.execute(
+        "SELECT COUNT(*) as cnt FROM orders WHERE reference LIKE %s",
+        (f"{prefix}%",)
+    )
+    count = cursor.fetchone()['cnt']
+    index = count + 1
+
+    return f"{prefix}{index:03d}-P"
 
 
 def create(connection: pymysql.connections.Connection,
@@ -7,9 +26,13 @@ def create(connection: pymysql.connections.Connection,
     """Créer une nouvelle commande"""
     try:
         cursor = connection.cursor()
+
+        # Générer la référence automatiquement
+        reference = _generate_reference(cursor)
+
         query = """
-            INSERT INTO orders (customer_id, formula_id, comment, allergy, status, type, responsible, desired_date)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO orders (customer_id, formula_id, comment, allergy, status, type, responsible, desired_date, reference)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         cursor.execute(query, (
             order_data.get('customer_id'),
@@ -19,7 +42,8 @@ def create(connection: pymysql.connections.Connection,
             order_data.get('status', 'PENDING'),
             order_data.get('type'),
             order_data.get('responsible'),
-            order_data.get('desired_date')
+            order_data.get('desired_date'),
+            reference
         ))
         connection.commit()
         return cursor.lastrowid
@@ -56,18 +80,28 @@ def get_all(connection: pymysql.connections.Connection,
             date_to: Optional[str] = None,
             customer_name: Optional[str] = None,
             order_type: Optional[str] = None,
-            responsible: Optional[int] = None) -> Tuple[List[Dict], int]:
+            responsible: Optional[int] = None,
+            reference: Optional[str] = None) -> Tuple[List[Dict], int]:
     """Récupérer toutes les commandes avec pagination et filtres"""
     try:
         cursor = connection.cursor()
 
         where_conditions = []
         params = []
-        needs_join = bool(customer_name)
+        needs_join = bool(customer_name) or bool(search)
 
         if search:
-            where_conditions.append("orders.comment LIKE %s")
-            params.append(f"%{search}%")
+            where_conditions.append(
+                "(orders.reference LIKE %s "
+                "OR customers.first_name LIKE %s OR customers.last_name LIKE %s "
+                "OR CONCAT(customers.first_name, ' ', customers.last_name) LIKE %s)"
+            )
+            search_param = f"%{search}%"
+            params.extend([search_param, search_param, search_param, search_param])
+
+        if reference:
+            where_conditions.append("orders.reference LIKE %s")
+            params.append(f"%{reference}%")
 
         if customer_id:
             where_conditions.append("orders.customer_id = %s")
@@ -136,7 +170,7 @@ def update(connection: pymysql.connections.Connection,
     try:
         cursor = connection.cursor()
         clean_data = {k: v for k, v in order_data.items()
-                      if v is not None}
+                      if v is not None and k != 'reference'}
         if not clean_data:
             return False
 

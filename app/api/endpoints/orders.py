@@ -7,11 +7,12 @@ from app.schemas.order_schemas import (
 from app.repositories.order_repository import order_repository
 from app.repositories.user_repository import user_repository
 from app.services.email.email_sender_service import email_sender_service
+from app.core.config import settings
 
 router = APIRouter()
 
 
-def _build_order_notification_html(user_first_name, customer_first_name, customer_last_name, order_type, order_date):
+def _build_order_notification_html(user_first_name, customer_first_name, customer_last_name, order_type, order_date, order_reference=None):
     """Construit le HTML de notification d'attribution de commande."""
     return f"""
 <!DOCTYPE html>
@@ -43,6 +44,7 @@ def _build_order_notification_html(user_first_name, customer_first_name, custome
 <tr>
 <td style="padding:20px">
 <h3 style="margin:0 0 15px;font-size:18px;color:#c00000">Informations sur la commande</h3>
+<p style="margin:5px 0;font-size:14px"><strong>Référence :</strong> {order_reference or "Non renseignée"}</p>
 <p style="margin:5px 0;font-size:14px"><strong>Client :</strong> {customer_first_name or ""} {customer_last_name or ""}</p>
 <p style="margin:5px 0;font-size:14px"><strong>Type :</strong> {order_type or "Non renseigné"}</p>
 <p style="margin:5px 0;font-size:14px"><strong>Date :</strong> {order_date or "Non renseignée"}</p>
@@ -105,13 +107,15 @@ async def create_order(order_data: OrderCreate):
                         customer_first_name=customer.get('first_name'),
                         customer_last_name=customer.get('last_name'),
                         order_type=created_order.get('type'),
-                        order_date=str(created_order.get('date', '')) if created_order.get('date') else None
+                        order_date=str(created_order.get('date', '')) if created_order.get('date') else None,
+                        order_reference=created_order.get('reference')
                     )
                     email_sender_service.send_email(
                         to_email=responsible_user['email'],
                         subject="Nouvelle commande attribuée – Le Studio des Parfums",
                         body=html,
-                        is_html=True
+                        is_html=True,
+                        cc=settings.SMTP_CC_EMAIL or None
                     )
             except Exception as e:
                 print(f"Erreur envoi email notification commande: {e}")
@@ -136,7 +140,8 @@ async def get_orders(
     date_to: Optional[str] = Query(None, description="Date de fin (YYYY-MM-DD)"),
     customer_name: Optional[str] = Query(None, description="Filtrer par nom du client"),
     order_type: Optional[str] = Query(None, description="Filtrer par type de commande"),
-    responsible: Optional[int] = Query(None, description="Filtrer par responsable")
+    responsible: Optional[int] = Query(None, description="Filtrer par responsable"),
+    reference: Optional[str] = Query(None, description="Filtrer par référence de commande")
 ):
     """Récupérer toutes les commandes avec pagination et filtres"""
     try:
@@ -144,7 +149,7 @@ async def get_orders(
             page=page, size=size, search=search,
             customer_id=customer_id, status=status, formula_id=formula_id,
             date_from=date_from, date_to=date_to, customer_name=customer_name,
-            order_type=order_type, responsible=responsible
+            order_type=order_type, responsible=responsible, reference=reference
         )
 
         return {
@@ -206,13 +211,15 @@ async def update_order(order_id: int, order_data: OrderUpdate):
                         customer_first_name=customer.get('first_name'),
                         customer_last_name=customer.get('last_name'),
                         order_type=updated_order.get('type'),
-                        order_date=str(updated_order.get('date', '')) if updated_order.get('date') else None
+                        order_date=str(updated_order.get('date', '')) if updated_order.get('date') else None,
+                        order_reference=updated_order.get('reference')
                     )
                     email_sender_service.send_email(
                         to_email=responsible_user['email'],
                         subject="Nouvelle commande attribuée – Le Studio des Parfums",
                         body=html,
-                        is_html=True
+                        is_html=True,
+                        cc=settings.SMTP_CC_EMAIL or None
                     )
             except Exception as e:
                 print(f"Erreur envoi email notification commande: {e}")

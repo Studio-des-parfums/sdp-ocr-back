@@ -26,7 +26,8 @@ class EmailSenderService:
         body: str,
         is_html: bool = False,
         attachments: List[Dict] = None,
-        inline_images: List[Dict] = None
+        inline_images: List[Dict] = None,
+        cc: Optional[str] = None
     ) -> MIMEMultipart:
         """
         Creer un message email avec support des pieces jointes et images inline.
@@ -50,6 +51,8 @@ class EmailSenderService:
         message["Subject"] = subject
         message["From"] = f"{self.from_name} <{self.from_email}>"
         message["To"] = to_email
+        if cc:
+            message["Cc"] = cc
 
         # Ajouter le corps du message
         if inline_images:
@@ -91,7 +94,8 @@ class EmailSenderService:
         body: str,
         is_html: bool = False,
         attachments: List[Dict] = None,
-        inline_images: List[Dict] = None
+        inline_images: List[Dict] = None,
+        cc: Optional[str] = None
     ) -> dict:
         """
         Envoyer un email avec support des pieces jointes et images inline.
@@ -117,13 +121,18 @@ class EmailSenderService:
             message = self._create_message(
                 to_email, subject, body, is_html,
                 attachments=attachments,
-                inline_images=inline_images
+                inline_images=inline_images,
+                cc=cc
             )
+
+            recipients = [to_email]
+            if cc:
+                recipients.append(cc)
 
             with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
                 server.starttls()
                 server.login(self.smtp_user, self.smtp_password)
-                server.sendmail(self.from_email, to_email, message.as_string())
+                server.sendmail(self.from_email, recipients, message.as_string())
 
             return {
                 "success": True,
