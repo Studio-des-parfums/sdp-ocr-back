@@ -8,6 +8,7 @@ import json
 from datetime import datetime, timedelta
 
 from app.core.mistral_client import mistral_ocr_client
+from app.core.logger import get_logger
 from app.utils.pdf_splitter import pdf_splitter
 from app.utils.document_classifier import document_classifier
 from app.utils.data_extractor import data_extractor
@@ -20,6 +21,7 @@ from app.services.file import file_storage_service
 from app.schemas.ocr_schemas import OCRResponse, ProcessedPage, DocumentType
 
 router = APIRouter()
+logger = get_logger(__name__)
 
 GENERATED_DIR = "generated_files"
 
@@ -39,24 +41,24 @@ async def upload_pdf_for_ocr(file: UploadFile = File(...)):
             raise HTTPException(status_code=400, detail="Invalid or empty PDF")
 
         # Split PDF into pages using pikepdf (évite limite 32MB)
-        print(f"Starting PDF splitting for file: {file.filename}")
+        logger.info(f"Début du découpage PDF: {file.filename}")
         try:
-            page_pdfs = pdf_splitter.split_pdf_to_pages(pdf_content, max_pages=5)
+            page_pdfs = pdf_splitter.split_pdf_to_pages(pdf_content)
             if not page_pdfs:
                 raise HTTPException(status_code=400, detail="No pages found in PDF")
         except Exception as e:
-            print(f"Error during PDF splitting: {e}")
+            logger.error(f"Erreur découpage PDF: {e}")
             raise HTTPException(status_code=500, detail=f"Error splitting PDF: {e}")
 
         processed_pages: List[ProcessedPage] = []
         total_blank_sheets = 0
         total_studio_parfums = 0
 
-        print(f"Processing {len(page_pdfs)} pages with Mistral OCR")
+        logger.info(f"Traitement de {len(page_pdfs)} pages avec Mistral OCR")
         for i, page_pdf_bytes in enumerate(page_pdfs):
             page_number = i + 1
             try:
-                print(f"OCR processing page {page_number} ({len(page_pdf_bytes)} bytes)")
+                logger.info(f"[Page {page_number}] OCR en cours ({len(page_pdf_bytes)} bytes)")
 
                 extracted_data = {}
                 raw_text = ""
@@ -72,23 +74,23 @@ async def upload_pdf_for_ocr(file: UploadFile = File(...)):
                         or ann_response.get("document_annotations")
                         or ann_response.get("annotation")
                     )
-                    # Récupérer le markdown depuis la réponse si disponible
                     if "pages" in ann_response and len(ann_response["pages"]) > 0:
                         raw_text = ann_response["pages"][0].get("markdown", "")
-                    
-                    if isinstance(ann, dict):
+
+                    is_schema_echo = isinstance(ann, dict) and ("$defs" in ann or "properties" in ann)
+                    if isinstance(ann, dict) and not is_schema_echo:
                         extracted_data = ann
                         dt = ann.get("document_type")
                         if dt in (DocumentType.BLANK_SHEET.value, DocumentType.STUDIO_PARFUMS.value, DocumentType.UNKNOWN.value):
                             doc_type = DocumentType(dt)
                             confidence = 1.0
-                        # Log utile pour vérifier le mapping côté endpoint
-                        print(f"Page {page_number}: document_annotation={ann}")
-                        print(f"Page {page_number}: extracted structured data via Annotations")
+                        logger.info(f"[Page {page_number}] Annotations extraites: document_type={dt}")
+                    elif is_schema_echo:
+                        logger.warning(f"[Page {page_number}] Mistral a renvoyé le schéma au lieu des données → fallback OCR")
                     else:
-                        print(f"Page {page_number}: annotations present but not a dict, fallback to OCR text")
+                        logger.warning(f"[Page {page_number}] Annotations non exploitables → fallback OCR")
                 except Exception as e:
-                    print(f"Page {page_number}: annotations failed, fallback to OCR text ({e})")
+                    logger.error(f"[Page {page_number}] Échec annotations → fallback OCR: {e}")
 
                 if not extracted_data:
                     ocr_response = await mistral_ocr_client.process_pdf_ocr(page_pdf_bytes)
@@ -96,8 +98,7 @@ async def upload_pdf_for_ocr(file: UploadFile = File(...)):
                     if "pages" in ocr_response and len(ocr_response["pages"]) > 0:
                         raw_text = ocr_response["pages"][0].get("markdown", "")
 
-                    print(f"Page {page_number}: extracted {len(raw_text)} characters (markdown)")
-
+                    logger.info(f"[Page {page_number}] OCR texte: {len(raw_text)} caractères extraits")
                     doc_type, confidence = document_classifier.classify_document(raw_text)
 
                 if doc_type == DocumentType.BLANK_SHEET:
@@ -108,48 +109,38 @@ async def upload_pdf_for_ocr(file: UploadFile = File(...)):
                 if not extracted_data:
                     extracted_data = data_extractor.extract_data(raw_text, doc_type)
 
-                # Extraire les notes de parfum depuis les tableaux pour les formulaires Studio des Parfums
+                # Extraire les notes de parfum depuis les tableaux
                 if doc_type == DocumentType.STUDIO_PARFUMS:
                     try:
-                        # Les tableaux sont disponibles dans ann_response ou ocr_response
                         tables_content = ""
                         response_with_tables = ann_response if ann_response else ocr_response
-                        
-                        # Récupérer les tableaux depuis la réponse
+
                         if response_with_tables and "pages" in response_with_tables and len(response_with_tables["pages"]) > 0:
                             page_data = response_with_tables["pages"][0]
                             if "tables" in page_data and len(page_data["tables"]) > 0:
-                                # Concaténer le contenu de tous les tableaux
                                 tables_content = "\n\n".join([
-                                    table.get("content", "") 
+                                    table.get("content", "")
                                     for table in page_data["tables"]
                                 ])
-                                print(f"📊 Page {page_number}: {len(page_data['tables'])} tableau(x) trouvé(s)")
-                                print(f"📝 Contenu des tableaux ({len(tables_content)} caractères):")
-                                print(tables_content[:500])  # Afficher les 500 premiers caractères
-                        
-                        # Parser les notes depuis le contenu des tableaux
+                                logger.info(f"[Page {page_number}] {len(page_data['tables'])} tableau(x) trouvé(s)")
+
                         if tables_content:
                             perfume_notes = data_extractor.extract_perfume_notes_from_markdown(tables_content)
                             extracted_data.update(perfume_notes)
-                            
-                            # Log de vérification
-                            print(f"✅ Page {page_number}: Notes extraites:")
-                            print(f"  - Notes de tête: {len(perfume_notes.get('notes_de_tete', []))} items")
-                            print(f"  - Notes de cœur: {len(perfume_notes.get('notes_de_coeur', []))} items")
-                            print(f"  - Notes de fond: {len(perfume_notes.get('notes_de_fond', []))} items")
+                            logger.info(
+                                f"[Page {page_number}] Notes extraites: "
+                                f"tête={len(perfume_notes.get('notes_de_tete', []))}, "
+                                f"cœur={len(perfume_notes.get('notes_de_coeur', []))}, "
+                                f"fond={len(perfume_notes.get('notes_de_fond', []))}"
+                            )
                         else:
-                            print(f"⚠️ Page {page_number}: Aucun tableau trouvé dans la réponse API")
-                            
-                    except Exception as e:
-                        print(f"❌ Page {page_number}: Erreur extraction notes de parfum: {e}")
-                        import traceback
-                        traceback.print_exc()
+                            logger.warning(f"[Page {page_number}] Aucun tableau trouvé dans la réponse API")
 
-                # Logging du JSON final pour debug
+                    except Exception as e:
+                        logger.error(f"[Page {page_number}] Erreur extraction notes de parfum: {e}", exc_info=True)
+
                 if doc_type == DocumentType.STUDIO_PARFUMS:
-                    print(f"Page {page_number}: JSON final complet:")
-                    print(json.dumps(extracted_data, indent=2, ensure_ascii=False))
+                    logger.info(f"[Page {page_number}] JSON final: {json.dumps(extracted_data, ensure_ascii=False)}")
 
                 processed_pages.append(
                     ProcessedPage(
@@ -162,8 +153,7 @@ async def upload_pdf_for_ocr(file: UploadFile = File(...)):
                 )
 
             except Exception as e:
-                print(f"Error processing page {page_number}: {e}")
-                print(f"Error type: {type(e)}")
+                logger.error(f"[Page {page_number}] Erreur traitement: {type(e).__name__}: {e}", exc_info=True)
                 processed_pages.append(
                     ProcessedPage(
                         page_number=page_number,
@@ -196,10 +186,7 @@ async def upload_pdf_for_ocr(file: UploadFile = File(...)):
         return response.dict()
 
     except Exception as e:
-        print(f"Global error in endpoint: {e}")
-        print(f"Global error type: {type(e)}")
-        print(f"Global error str: '{str(e)}'")
-        print(f"Global error repr: {repr(e)}")
+        logger.error(f"Erreur globale /upload-pdf: {type(e).__name__}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error processing PDF: {str(e) or repr(e)}")
 
 
@@ -219,37 +206,32 @@ async def upload_pdf_and_download_csv(file: UploadFile = File(...)):
         if not pdf_content or len(pdf_content) < 100:
             raise HTTPException(status_code=400, detail="Invalid or empty PDF")
 
-        # ✅ s'assurer que le dossier existe
         os.makedirs(GENERATED_DIR, exist_ok=True)
 
-        # Split PDF into pages using pikepdf (évite limite 32MB)
-        print(f"Starting PDF splitting for CSV generation: {file.filename}")
+        logger.info(f"Début génération CSV: {file.filename}")
         try:
-            page_pdfs = pdf_splitter.split_pdf_to_pages(pdf_content, max_pages=5)  #static number for test
+            page_pdfs = pdf_splitter.split_pdf_to_pages(pdf_content)  #static number for test
             if not page_pdfs:
                 raise HTTPException(status_code=400, detail="No pages found in PDF")
         except Exception as e:
-            print(f"Error during PDF splitting: {e}")
+            logger.error(f"Erreur découpage PDF: {e}")
             raise HTTPException(status_code=500, detail=f"Error splitting PDF: {e}")
 
         processed_pages = []
 
-        # Monitoring des performances
         start_time = time.time()
         total_pages = len(page_pdfs)
         page_times = []
 
-        print(f"Processing {total_pages} pages for CSV generation")
         estimated_seconds = total_pages * 3.5
-        estimated_minutes = estimated_seconds / 60
-        print(f"📊 Estimation: {estimated_seconds:.0f}s (~{estimated_minutes:.1f} min) - {total_pages} pages at 3.5s/page")
+        logger.info(f"Traitement de {total_pages} pages — estimation: {estimated_seconds:.0f}s (~{estimated_seconds/60:.1f} min)")
 
         for i, page_pdf_bytes in enumerate(page_pdfs):
             page_number = i + 1
             page_start_time = time.time()
 
             try:
-                print(f"[{page_number}/{total_pages}] OCR processing page {page_number} ({len(page_pdf_bytes)} bytes)")
+                logger.info(f"[{page_number}/{total_pages}] OCR en cours ({len(page_pdf_bytes)} bytes)")
 
                 extracted_data = {}
                 raw_text = ""
@@ -266,19 +248,21 @@ async def upload_pdf_and_download_csv(file: UploadFile = File(...)):
                         or ann_response.get("document_annotations")
                         or ann_response.get("annotation")
                     )
-                    # Récupérer le markdown depuis la réponse si disponible
                     if "pages" in ann_response and len(ann_response["pages"]) > 0:
                         raw_text = ann_response["pages"][0].get("markdown", "")
-                    
-                    if isinstance(ann, dict):
+
+                    is_schema_echo = isinstance(ann, dict) and ("$defs" in ann or "properties" in ann)
+                    if isinstance(ann, dict) and not is_schema_echo:
                         extracted_data = ann
                         dt = ann.get("document_type")
                         if dt in (DocumentType.BLANK_SHEET.value, DocumentType.STUDIO_PARFUMS.value, DocumentType.UNKNOWN.value):
                             doc_type = DocumentType(dt)
                             confidence = 1.0
-                        print(f"Page {page_number}: document_annotation={ann}")
+                        logger.info(f"[Page {page_number}] Annotations extraites: document_type={dt}")
+                    elif is_schema_echo:
+                        logger.warning(f"[Page {page_number}] Mistral a renvoyé le schéma au lieu des données → fallback OCR")
                 except Exception as e:
-                    print(f"Page {page_number}: annotations failed, fallback to OCR text ({e})")
+                    logger.error(f"[Page {page_number}] Échec annotations → fallback OCR: {e}")
 
                 # 2) Fallback OCR texte + extraction regex
                 if not extracted_data:
@@ -290,75 +274,62 @@ async def upload_pdf_and_download_csv(file: UploadFile = File(...)):
                     doc_type, confidence = document_classifier.classify_document(raw_text)
                     extracted_data = data_extractor.extract_data(raw_text, doc_type)
 
-                # Extraire les notes de parfum depuis les tableaux pour les formulaires Studio des Parfums
+                # Extraire les notes de parfum depuis les tableaux
                 if doc_type == DocumentType.STUDIO_PARFUMS:
                     try:
-                        # Les tableaux sont disponibles dans ann_response ou ocr_response
                         tables_content = ""
                         response_with_tables = ann_response if ann_response else ocr_response
-                        
-                        # Récupérer les tableaux depuis la réponse
+
                         if response_with_tables and "pages" in response_with_tables and len(response_with_tables["pages"]) > 0:
                             page_data = response_with_tables["pages"][0]
                             if "tables" in page_data and len(page_data["tables"]) > 0:
-                                # Concaténer le contenu de tous les tableaux
                                 tables_content = "\n\n".join([
-                                    table.get("content", "") 
+                                    table.get("content", "")
                                     for table in page_data["tables"]
                                 ])
-                                print(f"📊 Page {page_number}: {len(page_data['tables'])} tableau(x) trouvé(s)")
-                                print(f"📝 Contenu des tableaux ({len(tables_content)} caractères):")
-                                print(tables_content[:500])  # Afficher les 500 premiers caractères
-                        
-                        # Parser les notes depuis le contenu des tableaux
+                                logger.info(f"[Page {page_number}] {len(page_data['tables'])} tableau(x) trouvé(s)")
+
                         if tables_content:
                             perfume_notes = data_extractor.extract_perfume_notes_from_markdown(tables_content)
                             extracted_data.update(perfume_notes)
-                            
-                            # Log de vérification
-                            print(f"✅ Page {page_number}: Notes extraites:")
-                            print(f"  - Notes de tête: {len(perfume_notes.get('notes_de_tete', []))} items")
-                            print(f"  - Notes de cœur: {len(perfume_notes.get('notes_de_coeur', []))} items")
-                            print(f"  - Notes de fond: {len(perfume_notes.get('notes_de_fond', []))} items")
+                            logger.info(
+                                f"[Page {page_number}] Notes extraites: "
+                                f"tête={len(perfume_notes.get('notes_de_tete', []))}, "
+                                f"cœur={len(perfume_notes.get('notes_de_coeur', []))}, "
+                                f"fond={len(perfume_notes.get('notes_de_fond', []))}"
+                            )
                         else:
-                            print(f"⚠️ Page {page_number}: Aucun tableau trouvé dans la réponse API")
-                        
-                        # Logging du JSON final pour debug
-                        print(f"Page {page_number}: JSON final complet (CSV):")
-                        print(json.dumps(extracted_data, indent=2, ensure_ascii=False))
-                            
-                    except Exception as e:
-                        print(f"❌ Page {page_number}: Erreur extraction notes de parfum: {e}")
-                        import traceback
-                        traceback.print_exc()
+                            logger.warning(f"[Page {page_number}] Aucun tableau trouvé dans la réponse API")
 
-                # Si c'est un formulaire Studio des Parfums, insérer en base de données
+                        logger.info(f"[Page {page_number}] JSON final: {json.dumps(extracted_data, ensure_ascii=False)}")
+
+                    except Exception as e:
+                        logger.error(f"[Page {page_number}] Erreur extraction notes de parfum: {e}", exc_info=True)
+
+                # Insertion en base de données
                 customer_id = None
                 customer_review_id = None
                 entity_type = None
 
                 if doc_type == DocumentType.STUDIO_PARFUMS and extracted_data:
                     try:
-                        # Insérer le customer ou customer_review
                         entity_id, entity_type = customer_repository.insert_customer_if_not_exists(extracted_data)
 
                         if entity_id:
                             if entity_type == "customer":
                                 customer_id = entity_id
-                                print(f"✅ Customer créé avec ID: {customer_id} pour page {page_number}")
+                                logger.info(f"[Page {page_number}] Customer créé — ID: {customer_id}")
                             elif entity_type == "customer_review":
                                 customer_review_id = entity_id
-                                print(f"⚠️ Customer review créé avec ID: {customer_review_id} pour page {page_number}")
+                                logger.warning(f"[Page {page_number}] Customer review créé — ID: {customer_review_id}")
 
-                            # Sauvegarder le fichier PDF de cette page + conversion en images
                             try:
                                 pdf_path, image_paths = file_storage_service.save_pdf_and_images(
                                     page_pdf_bytes,
-                                    customer_id,  # None si customer_review
+                                    customer_id,
                                     f"page_{page_number}_{file.filename}"
                                 )
 
-                                # Enregistrer le PDF dans customer_files pour le PDF
                                 file_data = {
                                     'customer_id': customer_id,
                                     'customer_review_id': customer_review_id,
@@ -370,7 +341,6 @@ async def upload_pdf_and_download_csv(file: UploadFile = File(...)):
                                 }
                                 pdf_file_id = customer_file_repository.create_customer_file(file_data)
 
-                                # Enregistrer chaque image dans customer_files
                                 for img_path in image_paths:
                                     img_data = {
                                         'customer_id': customer_id,
@@ -378,16 +348,14 @@ async def upload_pdf_and_download_csv(file: UploadFile = File(...)):
                                         'file_path': img_path,
                                         'file_name': os.path.basename(img_path),
                                         'file_type': 'image/png',
-                                        'file_size': 0,  # On pourrait calculer mais pas critique
+                                        'file_size': 0,
                                         'uploaded_at': datetime.now()
                                     }
                                     customer_file_repository.create_customer_file(img_data)
 
-                                print(f"📁 Fichier PDF + {len(image_paths)} images sauvegardés (file_id: {pdf_file_id})")
+                                logger.info(f"[Page {page_number}] PDF + {len(image_paths)} image(s) sauvegardés (file_id: {pdf_file_id})")
 
-                                # Créer la formule et les notes associées pour ce fichier
                                 try:
-                                    # Extraire la référence depuis les données OCR
                                     reference = (extracted_data.get('identifiant') or '').strip() or None
                                     formula_id, notes_were_corrected = formula_repository.create_formula_with_notes(
                                         customer_id=customer_id,
@@ -397,15 +365,14 @@ async def upload_pdf_and_download_csv(file: UploadFile = File(...)):
                                         reference=reference
                                     )
                                     if formula_id:
-                                        print(f"🧪 Formule créée avec ID: {formula_id} pour file_id: {pdf_file_id}")
+                                        logger.info(f"[Page {page_number}] Formule créée — ID: {formula_id} (file_id: {pdf_file_id})")
                                         if notes_were_corrected:
-                                            print(f"⚠️ Des notes ont été corrigées automatiquement")
+                                            logger.warning(f"[Page {page_number}] Des notes ont été corrigées automatiquement")
                                     else:
-                                        print("⚠️ Formule non créée (voir logs précédents)")
+                                        logger.warning(f"[Page {page_number}] Formule non créée")
                                 except Exception as e:
-                                    print(f"❌ Erreur création formule/notes pour page {page_number}: {e}")
+                                    logger.error(f"[Page {page_number}] Erreur création formule/notes: {e}", exc_info=True)
 
-                                # Gestion du groupe OCR
                                 groupe_name = (extracted_data.get('groupe') or '').strip()
                                 if groupe_name and customer_id:
                                     try:
@@ -413,21 +380,21 @@ async def upload_pdf_and_download_csv(file: UploadFile = File(...)):
                                         if group_id:
                                             assigned = group_repository.assign_customer_to_group(customer_id, group_id)
                                             if assigned:
-                                                print(f"👥 Customer {customer_id} ajouté au groupe '{groupe_name}' (ID: {group_id})")
+                                                logger.info(f"[Page {page_number}] Customer {customer_id} ajouté au groupe '{groupe_name}' (ID: {group_id})")
                                             else:
-                                                print(f"👥 Customer {customer_id} déjà dans le groupe '{groupe_name}' (ID: {group_id})")
+                                                logger.info(f"[Page {page_number}] Customer {customer_id} déjà dans le groupe '{groupe_name}'")
                                         else:
-                                            print(f"❌ Erreur création/récupération du groupe '{groupe_name}'")
+                                            logger.error(f"[Page {page_number}] Erreur création/récupération du groupe '{groupe_name}'")
                                     except Exception as e:
-                                        print(f"❌ Erreur gestion groupe pour page {page_number}: {e}")
+                                        logger.error(f"[Page {page_number}] Erreur gestion groupe: {e}", exc_info=True)
 
                             except Exception as e:
-                                print(f"❌ Erreur sauvegarde fichier page {page_number}: {e}")
+                                logger.error(f"[Page {page_number}] Erreur sauvegarde fichier: {e}", exc_info=True)
                         else:
-                            print(f"Customer non créé pour page {page_number}")
+                            logger.warning(f"[Page {page_number}] Customer non créé (doublon ou données insuffisantes)")
 
                     except Exception as e:
-                        print(f"Erreur insertion customer page {page_number}: {e}")
+                        logger.error(f"[Page {page_number}] Erreur insertion customer: {e}", exc_info=True)
 
                 processed_pages.append({
                     "page_number": page_number,
@@ -440,31 +407,27 @@ async def upload_pdf_and_download_csv(file: UploadFile = File(...)):
                 })
 
             except Exception as e:
-                print(f"Error processing page {page_number} for CSV: {e}")
-                continue  # on ignore la page mais on continue
+                logger.error(f"[Page {page_number}] Erreur générale: {e}", exc_info=True)
+                continue
 
             finally:
-                # Calculer les temps et progression
                 page_duration = time.time() - page_start_time
                 page_times.append(page_duration)
 
-                # Calcul progression et ETA
                 elapsed_time = time.time() - start_time
                 progress_percent = (page_number / total_pages) * 100
                 avg_time_per_page = elapsed_time / page_number
                 remaining_pages = total_pages - page_number
                 eta_seconds = avg_time_per_page * remaining_pages
 
-                # Logs de progression
-                print(f"Page {page_number} processed in {page_duration:.2f}s")
-                print(f"Progress: {progress_percent:.1f}% ({page_number}/{total_pages})")
-
                 if remaining_pages > 0:
                     eta_time = datetime.now() + timedelta(seconds=eta_seconds)
-                    print(f"ETA: {eta_seconds:.0f}s remaining (finish at {eta_time.strftime('%H:%M:%S')})")
-                    print(f"Average: {avg_time_per_page:.2f}s/page")
-
-                print("─" * 50)
+                    logger.info(
+                        f"[Page {page_number}/{total_pages}] {progress_percent:.0f}% — "
+                        f"{page_duration:.1f}s — ETA: {eta_time.strftime('%H:%M:%S')}"
+                    )
+                else:
+                    logger.info(f"[Page {page_number}/{total_pages}] 100% — {page_duration:.1f}s")
 
         csv_content = csv_generator.generate_studio_parfums_csv(processed_pages)
 
@@ -483,25 +446,20 @@ async def upload_pdf_and_download_csv(file: UploadFile = File(...)):
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(csv_content)
 
-        # Calculs finaux de performance
         total_duration = time.time() - start_time
         avg_page_time = sum(page_times) / len(page_times) if page_times else 0
         fastest_page = min(page_times) if page_times else 0
         slowest_page = max(page_times) if page_times else 0
 
-        # Compter les customers créés
         customers_created = sum(
             1 for p in processed_pages
             if p.get("customer_id") is not None
         )
 
-        # Log final
-        print(f"\n{'='*60}")
-        print(f"PROCESSING COMPLETED!")
-        print(f"Total time: {total_duration:.1f}s for {total_pages} pages")
-        print(f"Average: {avg_page_time:.2f}s/page")
-        print(f"Fastest page: {fastest_page:.2f}s | Slowest: {slowest_page:.2f}s")
-        print(f"{'='*60}\n")
+        logger.info(
+            f"TRAITEMENT TERMINÉ — {total_pages} pages en {total_duration:.1f}s "
+            f"(moy: {avg_page_time:.2f}s/page, min: {fastest_page:.2f}s, max: {slowest_page:.2f}s)"
+        )
 
         return {
             "success": True,
@@ -529,10 +487,7 @@ async def upload_pdf_and_download_csv(file: UploadFile = File(...)):
         }
 
     except Exception as e:
-        print(f"Global error in endpoint: {e}")
-        print(f"Global error type: {type(e)}")
-        print(f"Global error str: '{str(e)}'")
-        print(f"Global error repr: {repr(e)}")
+        logger.error(f"Erreur globale /upload-pdf-csv: {type(e).__name__}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error processing PDF: {str(e) or repr(e)}")
 
 

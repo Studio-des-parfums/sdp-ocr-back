@@ -4,6 +4,9 @@ from fastapi.staticfiles import StaticFiles
 import os
 
 from app.core.config import settings
+from app.core.logger import setup_logging
+
+setup_logging()
 from app.api.endpoints import ocr, customers, users, export, groups, login_history, customer_reviews, files, formulas, emails, roles, orders
 from app.database import get_connection
 

@@ -1,12 +1,13 @@
 import httpx
 import asyncio
+import os
 from typing import Optional, Dict, Any
 
 class EmailValidatorService:
     """Service pour valider les emails avec Abstract API"""
 
     def __init__(self):
-        self.api_key = "15dd76ad502a443dbb799de9d1eca131"
+        self.api_key = os.getenv("ABSTRACT_API_KEY")
         self.base_url = "https://emailreputation.abstractapi.com/v1"
 
     async def validate_email(self, email: str) -> bool:
