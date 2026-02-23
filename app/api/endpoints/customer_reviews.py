@@ -43,15 +43,17 @@ async def create_customer_review(customer_review: CustomerReviewCreate):
 async def get_customer_reviews(
     page: int = Query(1, ge=1, description="Numéro de page"),
     size: int = Query(10, ge=1, le=100, description="Taille de la page"),
-    review_type: Optional[str] = Query(None, description="Filtrer par type de review")
+    review_type: Optional[str] = Query(None, description="Filtrer par type de review"),
+    search: Optional[str] = Query(None, description="Recherche sur nom, prénom ou référence de formule")
 ):
     """
-    Récupère tous les customers review avec pagination et filtre optionnel par type
+    Récupère tous les customers review avec pagination et filtres optionnels
     """
     reviews, total = customer_review_repository.get_all_customer_reviews(
         page=page,
         size=size,
-        review_type=review_type
+        review_type=review_type,
+        search=search
     )
 
     # Calculer le nombre total de pages

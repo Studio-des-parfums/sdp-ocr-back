@@ -85,15 +85,17 @@ def get_by_id(connection: pymysql.connections.Connection, review_id: int) -> Opt
 
 
 def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int = 10,
-           review_type: Optional[str] = None) -> Tuple[List[Dict[str, Any]], int]:
+           review_type: Optional[str] = None,
+           search: Optional[str] = None) -> Tuple[List[Dict[str, Any]], int]:
     """
-    Récupère tous les customer_reviews avec pagination et filtre optionnel par type
+    Récupère tous les customer_reviews avec pagination et filtres optionnels
 
     Args:
         connection: Connexion MySQL
         page: Numéro de page
         size: Taille de page
         review_type: Filtre par type de review
+        search: Recherche sur last_name, first_name ou reference (formule)
 
     Returns:
         Tuple (liste des customer_reviews, total)
@@ -101,26 +103,48 @@ def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int
     try:
         cursor = connection.cursor()
 
-        # Construire la requête avec filtre optionnel
-        where_clause = ""
+        conditions = []
         params = []
 
         if review_type:
-            where_clause = "WHERE type = %s"
+            conditions.append("cr.type = %s")
             params.append(review_type)
 
-        # Compter le total
-        count_query = f"SELECT COUNT(*) as total FROM customers_review {where_clause}"
+        if search:
+            like = f"%{search}%"
+            conditions.append("(cr.last_name LIKE %s OR cr.first_name LIKE %s OR f.reference LIKE %s)")
+            params.extend([like, like, like])
+
+        # Construire la clause WHERE
+        where_clause = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+
+        # JOIN formula uniquement si on filtre par reference
+        join_clause = ""
+        if search:
+            join_clause = """
+                LEFT JOIN customer_files cf ON cf.customer_review_id = cr.id
+                LEFT JOIN formula f ON f.file_id = cf.id
+            """
+
+        # Compter le total (DISTINCT pour éviter les doublons dus au JOIN)
+        count_query = f"""
+            SELECT COUNT(DISTINCT cr.id) as total
+            FROM customers_review cr
+            {join_clause}
+            {where_clause}
+        """
         cursor.execute(count_query, params)
         total = cursor.fetchone()['total']
 
         # Récupérer les résultats paginés
         offset = (page - 1) * size
         query = f"""
-            SELECT id, last_name, first_name, phone, email, job, country, city,
-                   verified_email, verified_domain, verified_phone, type
-            FROM customers_review {where_clause}
-            ORDER BY id DESC
+            SELECT DISTINCT cr.id, cr.last_name, cr.first_name, cr.phone, cr.email, cr.job,
+                   cr.country, cr.city, cr.verified_email, cr.verified_domain, cr.verified_phone, cr.type
+            FROM customers_review cr
+            {join_clause}
+            {where_clause}
+            ORDER BY cr.id DESC
             LIMIT %s OFFSET %s
         """
         params.extend([size, offset])

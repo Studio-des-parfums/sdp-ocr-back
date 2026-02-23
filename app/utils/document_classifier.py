@@ -4,17 +4,30 @@ from app.schemas.ocr_schemas import DocumentType
 
 class DocumentClassifier:
     def __init__(self):
+        # Mots-clés principaux (mention exacte du studio)
         self.studio_parfums_keywords = [
             "LE STUDIO DES PARFUMS",
             "STUDIO DES PARFUMS",
             "STUDIO PARFUMS"
         ]
 
+        # Indicateurs spécifiques au formulaire parfumeur (résistants aux fautes OCR)
+        self.studio_parfums_indicators = [
+            "notes de tête",
+            "notes de tete",
+            "notes de coeur",
+            "notes de cœur",
+            "notes de fond",
+            "votre parfum",
+            "date de naissance",
+            "origine contact",
+            "rgpd",
+        ]
+
+        # Mots-clés spécifiques aux feuilles de statistiques (pas présents dans les formulaires)
         self.blank_sheet_keywords = [
             "fiches manquantes",
             "doublons",
-            "tel",
-            "mail"
         ]
 
     def classify_document(self, text: str) -> Tuple[DocumentType, float]:
@@ -42,16 +55,18 @@ class DocumentClassifier:
         """Calculate confidence score for Studio des Parfums document"""
         score = 0.0
 
+        # Keyword principal (+0.8 si présent)
         for keyword in self.studio_parfums_keywords:
             if keyword.lower() in text:
                 score += 0.8
                 break
 
-        # Additional indicators
-        if "parfum" in text:
-            score += 0.2
-        if "studio" in text:
-            score += 0.2
+        # Indicateurs spécifiques au formulaire (+0.2 chacun, max 0.6)
+        indicator_score = 0.0
+        for indicator in self.studio_parfums_indicators:
+            if indicator in text:
+                indicator_score += 0.2
+        score += min(indicator_score, 0.6)
 
         return min(score, 1.0)
 
@@ -63,22 +78,15 @@ class DocumentClassifier:
         for keyword in self.blank_sheet_keywords:
             if keyword in text:
                 found_keywords += 1
-                score += 0.25
+                score += 0.4
 
-        # Check for month/year pattern at the top
-        month_year_patterns = [
-            r'\b(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\s+\d{4}\b',
-            r'\b\d{1,2}/\d{4}\b',
-            r'\b\d{1,2}-\d{4}\b'
-        ]
+        # Mois en toutes lettres + année (ex: "janvier 2024") — spécifique aux feuilles de stats
+        month_pattern = r'\b(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\s+\d{4}\b'
+        if re.search(month_pattern, text, re.IGNORECASE):
+            score += 0.3
 
-        for pattern in month_year_patterns:
-            if re.search(pattern, text, re.IGNORECASE):
-                score += 0.3
-                break
-
-        # Bonus if multiple fields detected
-        if found_keywords >= 3:
+        # Bonus si les deux mots-clés sont présents
+        if found_keywords >= 2:
             score += 0.2
 
         return min(score, 1.0)

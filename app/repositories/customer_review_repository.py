@@ -116,14 +116,16 @@ class CustomerReviewRepository:
             connection.close()
 
     def get_all_customer_reviews(self, page: int = 1, size: int = 10,
-                                 review_type: Optional[str] = None) -> Tuple[List[Dict[str, Any]], int]:
+                                 review_type: Optional[str] = None,
+                                 search: Optional[str] = None) -> Tuple[List[Dict[str, Any]], int]:
         """
-        Récupère tous les customer_reviews avec pagination et filtre optionnel par type
+        Récupère tous les customer_reviews avec pagination et filtres optionnels
 
         Args:
             page: Numéro de page
             size: Taille de page
             review_type: Filtre par type de review
+            search: Recherche sur last_name, first_name ou reference (formule)
 
         Returns:
             Tuple (liste des customer_reviews, total)
@@ -134,7 +136,7 @@ class CustomerReviewRepository:
 
         try:
             # 1) Récupération de base depuis customers_review
-            reviews, total = crud_customer_review.get_all(connection, page, size, review_type)
+            reviews, total = crud_customer_review.get_all(connection, page, size, review_type, search)
 
             # 2) Pour chaque review, récupérer les formules + notes associées
             def _get_notes(table_name: str, formula_id: int) -> List[Dict[str, Any]]:
