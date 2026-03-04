@@ -1,6 +1,7 @@
 import re
+import os
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query, File, UploadFile
 from fastapi.responses import Response
 from typing import Optional
 
@@ -105,6 +106,50 @@ async def get_file_content(file_id: int):
                 'Content-Disposition': f'inline; filename="{file["file_name"]}"'
             }
         )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
+
+
+@router.post("/files/{file_id}/restore")
+async def restore_file(file_id: int, file: UploadFile = File(...)):
+    """
+    Re-uploade un fichier manquant vers S3 en utilisant le chemin déjà enregistré en BDD.
+    Utile pour restaurer les fichiers perdus avant la migration S3.
+    Si c'est un PDF, régénère aussi l'image associée.
+    """
+    try:
+        db_file = customer_file_repository.get_customer_file_by_id(file_id)
+        if not db_file:
+            raise HTTPException(status_code=404, detail=f"Fichier {file_id} non trouvé en BDD")
+
+        file_bytes = await file.read()
+        file_path = db_file['file_path']
+
+        # Écrire directement au chemin enregistré en BDD
+        file_storage_service._write(file_path, file_bytes)
+
+        # Si c'est un PDF, régénérer l'image associée
+        regenerated_images = []
+        if db_file.get('file_type') == 'application/pdf':
+            try:
+                images = file_storage_service.convert_pdf_to_images(file_bytes)
+                base = os.path.splitext(file_path)[0]
+                for i, (img_bytes, ext) in enumerate(images):
+                    img_path = f"{base}_page_{i+1}.{ext}"
+                    file_storage_service._write(img_path, img_bytes)
+                    regenerated_images.append(img_path)
+            except Exception as e:
+                print(f"⚠️ Impossible de régénérer l'image: {e}")
+
+        return {
+            "success": True,
+            "file_id": file_id,
+            "restored_path": file_path,
+            "regenerated_images": regenerated_images,
+        }
 
     except HTTPException:
         raise

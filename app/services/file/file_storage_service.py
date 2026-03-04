@@ -134,10 +134,9 @@ class FileStorageService:
 
     def save_file_temporary(self, file_bytes: bytes, original_filename: str) -> Tuple[str, str]:
         filename = self._generate_filename(original_filename)
-        relative_path = f"{self.PENDING_DIR}/{filename}"
-        self._write(relative_path, file_bytes)
-        print(f"📁 Fichier sauvegardé temporairement: {relative_path}")
-        return relative_path, filename
+        self._write(filename, file_bytes)
+        print(f"📁 Fichier sauvegardé: {filename}")
+        return filename, filename
 
     def save_file_for_customer(
         self,
@@ -146,33 +145,13 @@ class FileStorageService:
         original_filename: str,
     ) -> Tuple[str, str]:
         filename = self._generate_filename(original_filename)
-        relative_path = f"{self.CUSTOMERS_DIR}/{customer_id}/{filename}"
-        self._write(relative_path, file_bytes)
-        print(f"📁 Fichier sauvegardé pour customer {customer_id}: {relative_path}")
-        return relative_path, filename
+        self._write(filename, file_bytes)
+        print(f"📁 Fichier sauvegardé: {filename}")
+        return filename, filename
 
     def move_file_to_customer(self, temp_relative_path: str, customer_id: int) -> str:
-        filename = os.path.basename(temp_relative_path)
-        new_relative_path = f"{self.CUSTOMERS_DIR}/{customer_id}/{filename}"
-
-        if STORAGE_BACKEND == "s3":
-            s3 = _get_s3_client()
-            s3.copy_object(
-                Bucket=S3_BUCKET,
-                CopySource={"Bucket": S3_BUCKET, "Key": self._s3_key(temp_relative_path)},
-                Key=self._s3_key(new_relative_path),
-            )
-            s3.delete_object(Bucket=S3_BUCKET, Key=self._s3_key(temp_relative_path))
-        else:
-            temp_full_path = os.path.join(self.BASE_STORAGE_DIR, temp_relative_path)
-            if not os.path.exists(temp_full_path):
-                raise FileNotFoundError(f"Fichier temporaire non trouvé: {temp_full_path}")
-            new_full_path = os.path.join(self.BASE_STORAGE_DIR, new_relative_path)
-            os.makedirs(os.path.dirname(new_full_path), exist_ok=True)
-            shutil.move(temp_full_path, new_full_path)
-
-        print(f"📦 Fichier déplacé: {temp_relative_path} → {new_relative_path}")
-        return new_relative_path
+        # Plus de déplacement nécessaire, tous les fichiers sont à la racine
+        return temp_relative_path
 
     # ------------------------------------------------------------------
     # Conversion PDF → images
@@ -201,19 +180,10 @@ class FileStorageService:
         original_filename: str,
         customer_review_id: Optional[int] = None,
     ) -> Tuple[str, List[str]]:
-        # Choisir le dossier selon l'entité disponible (customer > review > pending)
-        entity_id = customer_id or customer_review_id
-        if entity_id is not None:
-            folder = self.CUSTOMERS_DIR if customer_id else self.REVIEWS_DIR
-            filename = self._generate_filename(original_filename)
-            base_prefix = f"{folder}/{entity_id}"
-            pdf_path = f"{base_prefix}/{filename}"
-            self._write(pdf_path, pdf_bytes)
-            pdf_filename = filename
-            print(f"📁 Fichier sauvegardé dans {base_prefix}: {pdf_path}")
-        else:
-            pdf_path, pdf_filename = self.save_file_temporary(pdf_bytes, original_filename)
-            base_prefix = self.PENDING_DIR
+        # Tous les fichiers à la racine du bucket, sans sous-dossiers
+        pdf_filename = self._generate_filename(original_filename)
+        self._write(pdf_filename, pdf_bytes)
+        print(f"📁 PDF sauvegardé: {pdf_filename}")
 
         images = self.convert_pdf_to_images(pdf_bytes)
         image_paths = []
@@ -221,12 +191,11 @@ class FileStorageService:
 
         for i, (img_bytes, ext) in enumerate(images):
             img_filename = f"{base_filename}_page_{i+1}.{ext}"
-            img_relative_path = f"{base_prefix}/{img_filename}"
-            self._write(img_relative_path, img_bytes)
-            image_paths.append(img_relative_path)
+            self._write(img_filename, img_bytes)
+            image_paths.append(img_filename)
 
         print(f"✅ PDF + {len(image_paths)} images sauvegardées")
-        return pdf_path, image_paths
+        return pdf_filename, image_paths
 
     # ------------------------------------------------------------------
     # Rotation manuelle (demandée par le front)
@@ -256,22 +225,20 @@ class FileStorageService:
 
     def get_pdf_path_from_image(self, image_relative_path: str) -> Optional[str]:
         try:
-            directory = "/".join(image_relative_path.replace("\\", "/").split("/")[:-1])
+            # Tous les fichiers sont à la racine : on extrait juste le nom de base
             filename = os.path.basename(image_relative_path)
             match = re.match(r"(.+)_page_\d+\.\w+$", filename)
             if match:
-                pdf_relative_path = f"{directory}/{match.group(1)}.pdf"
-                # Vérifier existence
+                pdf_path = f"{match.group(1)}.pdf"
                 if STORAGE_BACKEND == "s3":
                     try:
-                        _get_s3_client().head_object(Bucket=S3_BUCKET, Key=self._s3_key(pdf_relative_path))
-                        return pdf_relative_path
+                        _get_s3_client().head_object(Bucket=S3_BUCKET, Key=pdf_path)
+                        return pdf_path
                     except ClientError:
                         return None
                 else:
-                    full_path = os.path.join(self.BASE_STORAGE_DIR, pdf_relative_path)
-                    if os.path.exists(full_path):
-                        return pdf_relative_path
+                    if os.path.exists(os.path.join(self.BASE_STORAGE_DIR, pdf_path)):
+                        return pdf_path
             return None
         except Exception as e:
             print(f"❌ Erreur recherche PDF: {e}")
