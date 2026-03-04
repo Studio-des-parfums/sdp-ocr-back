@@ -327,7 +327,8 @@ async def upload_pdf_and_download_csv(file: UploadFile = File(...)):
                                 pdf_path, image_paths = file_storage_service.save_pdf_and_images(
                                     page_pdf_bytes,
                                     customer_id,
-                                    f"page_{page_number}_{file.filename}"
+                                    f"page_{page_number}_{file.filename}",
+                                    customer_review_id=customer_review_id,
                                 )
 
                                 file_data = {

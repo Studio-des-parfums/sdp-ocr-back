@@ -37,6 +37,7 @@ class FileStorageService:
 
     BASE_STORAGE_DIR = "files"
     CUSTOMERS_DIR = "customers"
+    REVIEWS_DIR = "reviews"
     PENDING_DIR = "pending"
 
     def __init__(self):
@@ -198,10 +199,18 @@ class FileStorageService:
         pdf_bytes: bytes,
         customer_id: Optional[int],
         original_filename: str,
+        customer_review_id: Optional[int] = None,
     ) -> Tuple[str, List[str]]:
-        if customer_id is not None:
-            pdf_path, pdf_filename = self.save_file_for_customer(pdf_bytes, customer_id, original_filename)
-            base_prefix = f"{self.CUSTOMERS_DIR}/{customer_id}"
+        # Choisir le dossier selon l'entité disponible (customer > review > pending)
+        entity_id = customer_id or customer_review_id
+        if entity_id is not None:
+            folder = self.CUSTOMERS_DIR if customer_id else self.REVIEWS_DIR
+            filename = self._generate_filename(original_filename)
+            base_prefix = f"{folder}/{entity_id}"
+            pdf_path = f"{base_prefix}/{filename}"
+            self._write(pdf_path, pdf_bytes)
+            pdf_filename = filename
+            print(f"📁 Fichier sauvegardé dans {base_prefix}: {pdf_path}")
         else:
             pdf_path, pdf_filename = self.save_file_temporary(pdf_bytes, original_filename)
             base_prefix = self.PENDING_DIR
