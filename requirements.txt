@@ -16,3 +16,4 @@ Pillow==12.1.0
 rapidfuzz
 email-validator
 weasyprint==62.3
+boto3==1.34.0
