@@ -4,7 +4,7 @@ from typing import Optional, Tuple, List
 from datetime import datetime
 from pathlib import Path
 from pdf2image import convert_from_bytes
-from PIL import Image, ImageOps
+from PIL import Image
 import io
 
 
@@ -144,14 +144,11 @@ class FileStorageService:
             Liste de tuples (image_bytes, extension) pour chaque page
         """
         try:
-            # Convertir le PDF en images (poppler applique déjà le /Rotate PDF)
+            # Convertir le PDF en images
             images = convert_from_bytes(pdf_bytes, dpi=dpi, fmt='png')
 
             result = []
             for i, image in enumerate(images):
-                # Corriger automatiquement la rotation EXIF (scans/photos embarqués)
-                image = ImageOps.exif_transpose(image)
-
                 # Convertir l'image PIL en bytes
                 img_byte_arr = io.BytesIO()
                 image.save(img_byte_arr, format='PNG')
@@ -297,37 +294,6 @@ class FileStorageService:
         except Exception as e:
             print(f"❌ Erreur recherche PDF: {e}")
             return None
-
-    def rotate_image(self, relative_path: str, degrees: int) -> bool:
-        """
-        Tourne physiquement une image et écrase le fichier stocké.
-
-        Args:
-            relative_path: Chemin relatif de l'image
-            degrees: Angle de rotation (90, 180, 270)
-
-        Returns:
-            True si succès, False sinon
-        """
-        if degrees % 90 != 0:
-            raise ValueError("L'angle doit être un multiple de 90")
-
-        try:
-            full_path = os.path.join(self.BASE_STORAGE_DIR, relative_path)
-            if not os.path.exists(full_path):
-                return False
-
-            image = Image.open(full_path)
-            # expand=True pour que les rotations 90/270 conservent les bonnes dimensions
-            rotated = image.rotate(-degrees, expand=True)
-            rotated.save(full_path)
-
-            print(f"🔄 Image tournée de {degrees}°: {relative_path}")
-            return True
-
-        except Exception as e:
-            print(f"❌ Erreur rotation image: {e}")
-            return False
 
     def get_pdf_thumbnail(self, relative_path: str, dpi: int = 150) -> Optional[bytes]:
         """

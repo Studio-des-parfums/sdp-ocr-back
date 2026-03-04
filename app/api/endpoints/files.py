@@ -1,6 +1,6 @@
 import re
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 from typing import Optional
 
@@ -105,37 +105,6 @@ async def get_file_content(file_id: int):
                 'Content-Disposition': f'inline; filename="{file["file_name"]}"'
             }
         )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
-
-
-@router.patch("/files/{file_id}/rotate")
-async def rotate_file(file_id: int, degrees: int = Query(..., description="Angle de rotation : 90, 180 ou 270")):
-    """
-    Tourne physiquement une image stockée (90°, 180° ou 270° dans le sens horaire).
-    Écrase le fichier — action irréversible.
-    """
-    if degrees not in (90, 180, 270):
-        raise HTTPException(status_code=400, detail="L'angle doit être 90, 180 ou 270")
-
-    try:
-        file = customer_file_repository.get_customer_file_by_id(file_id)
-
-        if not file:
-            raise HTTPException(status_code=404, detail=f"Fichier {file_id} non trouvé")
-
-        if not file.get('file_type', '').startswith('image/'):
-            raise HTTPException(status_code=400, detail="La rotation n'est applicable qu'aux images")
-
-        success = file_storage_service.rotate_image(file['file_path'], degrees)
-
-        if not success:
-            raise HTTPException(status_code=500, detail="Erreur lors de la rotation")
-
-        return {"success": True, "file_id": file_id, "degrees": degrees}
 
     except HTTPException:
         raise
