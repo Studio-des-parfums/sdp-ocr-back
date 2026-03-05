@@ -44,7 +44,8 @@ async def get_customer_reviews(
     page: int = Query(1, ge=1, description="Numéro de page"),
     size: int = Query(10, ge=1, le=100, description="Taille de la page"),
     review_type: Optional[str] = Query(None, description="Filtrer par type de review"),
-    search: Optional[str] = Query(None, description="Recherche sur nom, prénom ou référence de formule")
+    search: Optional[str] = Query(None, description="Recherche sur nom, prénom ou référence de formule"),
+    v2: bool = Query(False, description="Filtrer par version du formulaire (true=v2, false=v1)")
 ):
     """
     Récupère tous les customers review avec pagination et filtres optionnels
@@ -53,7 +54,8 @@ async def get_customer_reviews(
         page=page,
         size=size,
         review_type=review_type,
-        search=search
+        search=search,
+        v2=v2
     )
 
     # Calculer le nombre total de pages

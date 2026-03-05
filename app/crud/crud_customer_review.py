@@ -86,7 +86,8 @@ def get_by_id(connection: pymysql.connections.Connection, review_id: int) -> Opt
 
 def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int = 10,
            review_type: Optional[str] = None,
-           search: Optional[str] = None) -> Tuple[List[Dict[str, Any]], int]:
+           search: Optional[str] = None,
+           v2: bool = False) -> Tuple[List[Dict[str, Any]], int]:
     """
     Récupère tous les customer_reviews avec pagination et filtres optionnels
 
@@ -96,6 +97,7 @@ def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int
         size: Taille de page
         review_type: Filtre par type de review
         search: Recherche sur last_name, first_name ou reference (formule)
+        v2: Filtre par version du formulaire
 
     Returns:
         Tuple (liste des customer_reviews, total)
@@ -103,8 +105,8 @@ def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int
     try:
         cursor = connection.cursor()
 
-        conditions = []
-        params = []
+        conditions = ["cr.v2 = %s"]
+        params = [v2]
 
         if review_type:
             conditions.append("cr.type = %s")
