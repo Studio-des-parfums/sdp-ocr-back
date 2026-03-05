@@ -1,0 +1,214 @@
+2026-02-23 11:28:41 [INFO] app.api.endpoints.ocr: Début génération CSV: 202201_compressed.pdf
+2026-02-23 11:28:42 [INFO] app.api.endpoints.ocr: Traitement de 10 pages — estimation: 35s (~0.6 min)
+2026-02-23 11:28:42 [INFO] app.api.endpoints.ocr: [1/10] OCR en cours (88013 bytes)
+2026-02-23 11:28:55 [ERROR] app.api.endpoints.ocr: [Page 1] Échec annotations → fallback OCR: OCR annotations API error 502: <!DOCTYPE html>
+<!--[if lt IE 7]> <html class="no-js ie6 oldie" lang="en-US"> <![endif]-->
+<!--[if IE 7]>    <html class="no-js ie7 oldie" lang="en-US"> <![endif]-->
+<!--[if IE 8]>    <html class="no-js ie8 oldie" lang="en-US"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en-US"> <!--<![endif]-->
+<head>
+
+<title> | 502: Bad gateway</title>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="stylesheet" id="cf_styles-css" href="/cdn-cgi/styles/main.css" />
+</head>
+<body>
+<div id="cf-wrapper">
+    <div id="cf-error-details" class="p-0">
+        <header class="mx-auto pt-10 lg:pt-6 lg:px-8 w-240 lg:w-full mb-8">
+            <h1 class="inline-block sm:block sm:mb-2 font-light text-60 lg:text-4xl text-black-dark leading-tight mr-2">
+                <span class="inline-block">Bad gateway</span>
+                <span class="code-label">Error code 502</span>
+            </h1>
+            <div>
+                Visit <a href="https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&utm_campaign=api.mistral.ai" target="_blank" rel="noopener noreferrer">cloudflare.com</a> for more information.
+            </div>
+            <div class="mt-3">2026-02-23 10:28:55 UTC</div>
+        </header>
+        <div class="my-8 bg-gradient-gray">
+            <div class="w-240 lg:w-full mx-auto">
+                <div class="clearfix md:px-8">
+                    <div id="cf-browser-status" class=" relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center">
+  <div class="relative mb-10 md:m-0">
+    
+    <span class="cf-icon-browser block md:hidden h-20 bg-center bg-no-repeat"></span>
+    <span class="cf-icon-ok w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4"></span>
+    
+  </div>
+  <span class="md:block w-full truncate">You</span>
+  <h3 class="md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3">
+  
+    Browser
+  
+  </h3>
+  
+  <span class="leading-1.3 text-2xl text-green-success">Working</span>
+  
+</div>
+                    <div id="cf-cloudflare-status" class=" relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center">
+  <div class="relative mb-10 md:m-0">
+    <a href="https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&#38;utm_campaign=api.mistral.ai" target="_blank" rel="noopener noreferrer">
+    <span class="cf-icon-cloud block md:hidden h-20 bg-center bg-no-repeat"></span>
+    <span class="cf-icon-ok w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4"></span>
+    </a>
+  </div>
+  <span class="md:block w-full truncate">Marseille</span>
+  <h3 class="md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3">
+  <a href="https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&utm_campaign=api.mistral.ai" target="_blank" rel="noopener noreferrer">
+    Cloudflare
+  </a>
+  </h3>
+  
+  <span class="leading-1.3 text-2xl text-green-success">Working</span>
+  
+</div>
+                    <div id="cf-host-status" class="cf-error-source relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center">
+  <div class="relative mb-10 md:m-0">
+    
+    <span class="cf-icon-server block md:hidden h-20 bg-center bg-no-repeat"></span>
+    <span class="cf-icon-error w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4"></span>
+    
+  </div>
+  <span class="md:block w-full truncate">api.mistral.ai</span>
+  <h3 class="md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3">
+  
+    Host
+  
+  </h3>
+  
+  <span class="leading-1.3 text-2xl text-red-error">Error</span>
+  
+</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="w-240 lg:w-full mx-auto mb-8 lg:px-8">
+            <div class="clearfix">
+                <div class="w-1/2 md:w-full float-left pr-6 md:pb-10 md:pr-0 leading-relaxed">
+                    <h2 class="text-3xl font-normal leading-1.3 mb-4">What happened?</h2>
+                    <p>The web server reported a bad gateway error.</p>
+                </div>
+                <div class="w-1/2 md:w-full float-left leading-relaxed">
+                    <h2 class="text-3xl font-normal leading-1.3 mb-4">What can I do?</h2>
+                    <p class="mb-6">Please try again in a few minutes.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="cf-error-footer cf-wrapper w-240 lg:w-full py-10 sm:py-4 sm:px-8 mx-auto text-center sm:text-left border-solid border-0 border-t border-gray-300">
+    <p class="text-13">
+      <span class="cf-footer-item sm:block sm:mb-1">Cloudflare Ray ID: <strong class="font-semibold">9d2609b4ce26aead</strong></span>
+      <span class="cf-footer-separator sm:hidden">&bull;</span>
+      <span id="cf-footer-item-ip" class="cf-footer-item hidden sm:block sm:mb-1">
+        Your IP:
+        <button type="button" id="cf-footer-ip-reveal" class="cf-footer-ip-reveal-btn">Click to reveal</button>
+        <span class="hidden" id="cf-footer-ip">2001:863:372:2181:9005:cfa0:52fc:3b79</span>
+        <span class="cf-footer-separator sm:hidden">&bull;</span>
+      </span>
+      <span class="cf-footer-item sm:block sm:mb-1"><span>Performance &amp; security by</span> <a rel="noopener noreferrer" href="https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&#38;utm_campaign=api.mistral.ai" id="brand_link" target="_blank">Cloudflare</a></span>
+      
+    </p>
+    <script>(function(){function d(){var b=a.getElementById("cf-footer-item-ip"),c=a.getElementById("cf-footer-ip-reveal");b&&"classList"in b&&(b.classList.remove("hidden"),c.addEventListener("click",function(){c.classList.add("hidden");a.getElementById("cf-footer-ip").classList.remove("hidden")}))}var a=document;document.addEventListener&&a.addEventListener("DOMContentLoaded",d)})();</script>
+  </div><!-- /.error-footer -->
+
+    </div>
+</div>
+</body>
+</html>
+2026-02-23 11:28:57 [INFO] app.api.endpoints.ocr: [Page 1/10] 10% — 15.9s — ETA: 11:31:21
+2026-02-23 11:28:57 [INFO] app.api.endpoints.ocr: [2/10] OCR en cours (227064 bytes)
+2026-02-23 11:29:04 [INFO] app.api.endpoints.ocr: [Page 2] Annotations extraites: document_type=studio_parfums
+2026-02-23 11:29:04 [INFO] app.api.endpoints.ocr: [Page 2] 1 tableau(x) trouvé(s)
+2026-02-23 11:29:04 [INFO] app.api.endpoints.ocr: [Page 2] Notes extraites: tête=6, cœur=5, fond=8
+2026-02-23 11:29:04 [INFO] app.api.endpoints.ocr: [Page 2] JSON final: {"document_type": "studio_parfums", "identifiant": "062201001", "genre": "Mlle", "nom": "Gvignon", "prenom": "Aymane", "date": "02/01/2022", "ville": "Noisy le Grand", "pays": "France", "tel": "06 66 954514", "email": "aymane.gvignon@yahoo.fr", "profession": "Web Analyste", "date_naissance": "12/09/1997", "notes_de_tete": [{"essence": "---", "quantite_ml": "---"}, {"essence": "Poire Sichean", "quantite_ml": "1"}, {"essence": "Cardamme Ginger", "quantite_ml": "1"}, {"essence": "Gingerbe", "quantite_ml": "1"}, {"essence": "Lauride Jauvage", "quantite_ml": "1"}, {"essence": "Pamplemousse", "quantite_ml": "1"}], "notes_de_coeur": [{"essence": "Noto Gauzelle", "quantite_ml": "1"}, {"essence": "Safranel", "quantite_ml": "1"}, {"essence": "Ocelle", "quantite_ml": "1"}, {"essence": "Noto Morine", "quantite_ml": "2"}, {"essence": "Mugout Mugui", "quantite_ml": "1"}], "notes_de_fond": [{"essence": "Ambre vert", "quantite_ml": "1 + 1"}, {"essence": "Seulal", "quantite_ml": "1"}, {"essence": "Seulal Tude", "quantite_ml": "1"}, {"essence": "Ambre douse", "quantite_ml": "1 + 1"}, {"essence": "Bois bronches", "quantite_ml": "2 + 2"}, {"essence": "Ambre Oronbal", "quantite_ml": "2"}, {"essence": "Accord Muac", "quantite_ml": "2 + 1"}, {"essence": "Maux Blanc", "quantite_ml": "5"}]}
+2026-02-23 11:29:08 [WARNING] app.api.endpoints.ocr: [Page 2] Customer review créé — ID: 88
+2026-02-23 11:29:10 [INFO] app.api.endpoints.ocr: [Page 2] PDF + 1 image(s) sauvegardés (file_id: 83)
+2026-02-23 11:29:14 [INFO] app.api.endpoints.ocr: [Page 2] Formule créée — ID: 24 (file_id: 83)
+2026-02-23 11:29:14 [WARNING] app.api.endpoints.ocr: [Page 2] Des notes ont été corrigées automatiquement
+2026-02-23 11:29:14 [INFO] app.api.endpoints.ocr: [Page 2/10] 20% — 16.1s — ETA: 11:31:22
+2026-02-23 11:29:14 [INFO] app.api.endpoints.ocr: [3/10] OCR en cours (229689 bytes)
+2026-02-23 11:29:37 [WARNING] app.api.endpoints.ocr: [Page 3] Mistral a renvoyé le schéma au lieu des données → fallback OCR
+2026-02-23 11:29:41 [INFO] app.api.endpoints.ocr: [Page 3] 1 tableau(x) trouvé(s)
+2026-02-23 11:29:41 [INFO] app.api.endpoints.ocr: [Page 3] Notes extraites: tête=6, cœur=6, fond=8
+2026-02-23 11:29:41 [INFO] app.api.endpoints.ocr: [Page 3] JSON final: {"title_detected": true, "identifiant": null, "genre": "Mr", "nom": "FRANZ", "prenom": null, "date": "2/01/2022", "ville": "Pauter", "pays": "FRANCE", "tel": "06 16 48 62 52", "email": "paulde. franz @guaut.com", "profession": null, "date_naissance": "18/12/1990", "groupe": null, "notes_de_tete": [{"essence": "---", "quantite_ml": "---"}, {"essence": "Bergamote Ginger", "quantite_ml": null}, {"essence": "Fruit de cassis", "quantite_ml": "1"}, {"essence": "Bergamote V", "quantite_ml": "2"}, {"essence": "Rose verte V", "quantite_ml": "1"}, {"essence": "Caudamome Ginger V", "quantite_ml": "1"}], "notes_de_coeur": [{"essence": "fleux de pêche V", "quantite_ml": "1"}, {"essence": "fleux de tigré", "quantite_ml": "1"}, {"essence": "génarium V", "quantite_ml": "1"}, {"essence": "saharaal V", "quantite_ml": "1"}, {"essence": "rose fruits cerise V", "quantite_ml": "1 + 1"}, {"essence": "pizzeria V", "quantite_ml": "1"}], "notes_de_fond": [{"essence": "oud d'or V", "quantite_ml": "2 + 1"}, {"essence": "ambre vert V", "quantite_ml": "1"}, {"essence": "lancea V", "quantite_ml": "2"}, {"essence": "tothes cerise V", "quantite_ml": "1"}, {"essence": "crise", "quantite_ml": "2 + 1"}, {"essence": "bouquet fleuri V", "quantite_ml": "2"}, {"essence": "garden musé", "quantite_ml": "5"}, {"essence": "Rois frosts", "quantite_ml": "+ 2"}]}
+2026-02-23 11:29:46 [WARNING] app.api.endpoints.ocr: [Page 3] Customer review créé — ID: 89
+2026-02-23 11:29:50 [INFO] app.api.endpoints.ocr: [Page 3] PDF + 1 image(s) sauvegardés (file_id: 85)
+2026-02-23 11:29:53 [INFO] app.api.endpoints.ocr: [Page 3] Formule créée — ID: 25 (file_id: 85)
+2026-02-23 11:29:53 [WARNING] app.api.endpoints.ocr: [Page 3] Des notes ont été corrigées automatiquement
+2026-02-23 11:29:53 [INFO] app.api.endpoints.ocr: [Page 3/10] 30% — 39.3s — ETA: 11:32:39
+2026-02-23 11:29:53 [INFO] app.api.endpoints.ocr: [4/10] OCR en cours (208537 bytes)
+2026-02-23 11:30:17 [WARNING] app.api.endpoints.ocr: [Page 4] Mistral a renvoyé le schéma au lieu des données → fallback OCR
+2026-02-23 11:30:21 [INFO] app.api.endpoints.ocr: [Page 4] 1 tableau(x) trouvé(s)
+2026-02-23 11:30:21 [INFO] app.api.endpoints.ocr: [Page 4] Notes extraites: tête=4, cœur=2, fond=0
+2026-02-23 11:30:21 [INFO] app.api.endpoints.ocr: [Page 4] JSON final: {"title_detected": true, "identifiant": "202201003", "genre": "Mr", "nom": null, "prenom": null, "date": "02/01/2022", "ville": null, "pays": null, "tel": null, "email": "Cailo. Baichouh@gmail.com", "profession": null, "date_naissance": null, "groupe": null, "notes_de_tete": [{"essence": "---", "quantite_ml": "---"}, {"essence": "The vent", "quantite_ml": "1 + 1"}, {"essence": "Rose vante", "quantite_ml": "1"}, {"essence": "Bergamote", "quantite_ml": "1"}], "notes_de_coeur": [{"essence": "ion", "quantite_ml": "2 √"}, {"essence": "poo été complété", "quantite_ml": "1 √"}], "notes_de_fond": []}
+2026-02-23 11:30:24 [WARNING] app.api.endpoints.ocr: [Page 4] Customer review créé — ID: 90
+2026-02-23 11:30:26 [INFO] app.api.endpoints.ocr: [Page 4] PDF + 1 image(s) sauvegardés (file_id: 87)
+2026-02-23 11:30:27 [INFO] app.api.endpoints.ocr: [Page 4] Formule créée — ID: 26 (file_id: 87)
+2026-02-23 11:30:27 [WARNING] app.api.endpoints.ocr: [Page 4] Des notes ont été corrigées automatiquement
+2026-02-23 11:30:27 [INFO] app.api.endpoints.ocr: [Page 4/10] 40% — 34.4s — ETA: 11:33:06
+2026-02-23 11:30:27 [INFO] app.api.endpoints.ocr: [5/10] OCR en cours (213837 bytes)
+2026-02-23 11:30:36 [INFO] app.api.endpoints.ocr: [Page 5] Annotations extraites: document_type=studio_parfums
+2026-02-23 11:30:36 [INFO] app.api.endpoints.ocr: [Page 5] 1 tableau(x) trouvé(s)
+2026-02-23 11:30:36 [INFO] app.api.endpoints.ocr: [Page 5] Notes extraites: tête=5, cœur=4, fond=7
+2026-02-23 11:30:36 [INFO] app.api.endpoints.ocr: [Page 5] JSON final: {"document_type": "studio_parfums", "identifiant": "2022 01004", "genre": "Mr", "nom": "PAINCAL", "prenom": "JEREMY", "date": "02/01/22", "ville": "Noisy le grand", "pays": "France", "tel": "06 99 417161", "email": "jeremy.paincal@gmail.com", "profession": "bach en immobilier", "date_naissance": "24/06/1934", "fiches_manquantes": null, "doublons": null, "tel_list": null, "mail_list": null, "notes_de_tete": [{"essence": "---", "quantite_ml": "---"}, {"essence": "Cordomone ginger", "quantite_ml": "1"}, {"essence": "Lotus", "quantite_ml": "1"}, {"essence": "citron amer", "quantite_ml": "1"}, {"essence": "thi west", "quantite_ml": "1"}], "notes_de_coeur": [{"essence": "Note cumelle", "quantite_ml": "1"}, {"essence": "Note morne", "quantite_ml": "1"}, {"essence": "Accord lavande", "quantite_ml": "2"}, {"essence": "figue", "quantite_ml": "2"}], "notes_de_fond": [{"essence": "Ambre Vest", "quantite_ml": "1 + 2"}, {"essence": "Cuir", "quantite_ml": "1"}, {"essence": "Musc Blanc", "quantite_ml": "5 + 2"}, {"essence": "Ambrine", "quantite_ml": "3 + 2"}, {"essence": "Bois Ambré", "quantite_ml": "2 + 1"}, {"essence": "Bois de coch emise", "quantite_ml": "1"}, {"essence": "♂", "quantite_ml": null}]}
+2026-02-23 11:30:38 [WARNING] app.api.endpoints.ocr: [Page 5] Customer review créé — ID: 91
+2026-02-23 11:30:41 [INFO] app.api.endpoints.ocr: [Page 5] PDF + 1 image(s) sauvegardés (file_id: 89)
+2026-02-23 11:30:43 [INFO] app.api.endpoints.ocr: [Page 5] Formule créée — ID: 27 (file_id: 89)
+2026-02-23 11:30:43 [WARNING] app.api.endpoints.ocr: [Page 5] Des notes ont été corrigées automatiquement
+2026-02-23 11:30:43 [INFO] app.api.endpoints.ocr: [Page 5/10] 50% — 15.8s — ETA: 11:32:44
+2026-02-23 11:30:43 [INFO] app.api.endpoints.ocr: [6/10] OCR en cours (229611 bytes)
+2026-02-23 11:31:10 [WARNING] app.api.endpoints.ocr: [Page 6] Mistral a renvoyé le schéma au lieu des données → fallback OCR
+2026-02-23 11:31:16 [INFO] app.api.endpoints.ocr: [Page 6] 1 tableau(x) trouvé(s)
+2026-02-23 11:31:16 [INFO] app.api.endpoints.ocr: [Page 6] Notes extraites: tête=5, cœur=5, fond=7
+2026-02-23 11:31:16 [INFO] app.api.endpoints.ocr: [Page 6] JSON final: {"title_detected": true, "identifiant": "202201005", "genre": "Mr", "nom": "TOHOIAGA 29.12.1995", "prenom": "Gianluca Elena", "date": null, "ville": "Thiais (94", "pays": null, "tel": null, "email": "gtomoiafa3@gmail.com", "profession": "Employee du Banque", "date_naissance": "29.12.1995", "groupe": null, "notes_de_tete": [{"essence": "---", "quantite_ml": "---"}, {"essence": "Grenadier", "quantite_ml": "1 /"}, {"essence": "Rose Vette", "quantite_ml": "1 /"}, {"essence": "Cotton", "quantite_ml": "1 /"}, {"essence": "Bambour", "quantite_ml": "1 /"}], "notes_de_coeur": [{"essence": "Unquet (jusque)", "quantite_ml": "2 /"}, {"essence": "Rose d'orpest", "quantite_ml": "1 /"}, {"essence": "D'icone (jyghelle)", "quantite_ml": "1 /"}, {"essence": "Lyllybell", "quantite_ml": "1 /"}, {"essence": "Nure", "quantite_ml": "1 /"}], "notes_de_fond": [{"essence": "Ambracine", "quantite_ml": "2 / +2"}, {"essence": "Cilas", "quantite_ml": "1 / +1"}, {"essence": "Nure blanc", "quantite_ml": "1 2 /"}, {"essence": "Ambre Vert", "quantite_ml": "1 /"}, {"essence": "Santel Emole", "quantite_ml": "1 /"}, {"essence": "Quet d'or", "quantite_ml": "2 / +1"}, {"essence": "Nure Floral", "quantite_ml": "5 / +2"}]}
+2026-02-23 11:31:18 [WARNING] app.api.endpoints.ocr: [Page 6] Customer review créé — ID: 92
+2026-02-23 11:31:20 [INFO] app.api.endpoints.ocr: [Page 6] PDF + 1 image(s) sauvegardés (file_id: 91)
+2026-02-23 11:31:23 [INFO] app.api.endpoints.ocr: [Page 6] Formule créée — ID: 28 (file_id: 91)
+2026-02-23 11:31:23 [WARNING] app.api.endpoints.ocr: [Page 6] Des notes ont été corrigées automatiquement
+2026-02-23 11:31:23 [INFO] app.api.endpoints.ocr: [Page 6/10] 60% — 39.9s — ETA: 11:33:10
+2026-02-23 11:31:23 [INFO] app.api.endpoints.ocr: [7/10] OCR en cours (214822 bytes)
+2026-02-23 11:31:29 [INFO] app.api.endpoints.ocr: [Page 7] Annotations extraites: document_type=studio_parfums
+2026-02-23 11:31:29 [INFO] app.api.endpoints.ocr: [Page 7] 1 tableau(x) trouvé(s)
+2026-02-23 11:31:29 [INFO] app.api.endpoints.ocr: [Page 7] Notes extraites: tête=5, cœur=5, fond=6
+2026-02-23 11:31:29 [INFO] app.api.endpoints.ocr: [Page 7] JSON final: {"document_type": "studio_parfums", "identifiant": "22201006", "genre": "Mlle", "nom": "FRANZE", "prenom": "fustue", "date": "210112022", "ville": "Paris", "pays": "France", "tel": "06 82 68 3943", "email": "justue284@hotmail.com", "profession": "Doctorante", "date_naissance": "18/12/1990", "groupe": null, "month_year": null, "fiches_manquantes": null, "doublons": null, "tel_list": null, "mail_list": null, "notes_de_tete": [{"essence": "---", "quantite_ml": "---"}, {"essence": "Geranium sausage", "quantite_ml": "1"}, {"essence": "Note verte", "quantite_ml": "1"}, {"essence": "Lotus -", "quantite_ml": "1"}, {"essence": "Leugrente", "quantite_ml": "1"}], "notes_de_coeur": [{"essence": "Rose d'orant", "quantite_ml": "1"}, {"essence": "Blume", "quantite_ml": "1"}, {"essence": "Fleur de tiaie", "quantite_ml": "1"}, {"essence": "Nugget musqué", "quantite_ml": "2"}, {"essence": "Safronade", "quantite_ml": "1"}], "notes_de_fond": [{"essence": "Red d'or.", "quantite_ml": "2 + 1"}, {"essence": "Santel", "quantite_ml": "1 + 1"}, {"essence": "Ambre verte", "quantite_ml": "2"}, {"essence": "Iris.", "quantite_ml": "2 + 1"}, {"essence": "viagine.", "quantite_ml": "1"}, {"essence": "Nui floral", "quantite_ml": "5 + 4"}]}
+2026-02-23 11:31:32 [WARNING] app.api.endpoints.ocr: [Page 7] Customer review créé — ID: 93
+2026-02-23 11:31:35 [INFO] app.api.endpoints.ocr: [Page 7] PDF + 1 image(s) sauvegardés (file_id: 93)
+2026-02-23 11:31:38 [INFO] app.api.endpoints.ocr: [Page 7] Formule créée — ID: 29 (file_id: 93)
+2026-02-23 11:31:38 [WARNING] app.api.endpoints.ocr: [Page 7] Des notes ont été corrigées automatiquement
+2026-02-23 11:31:38 [INFO] app.api.endpoints.ocr: [Page 7/10] 70% — 14.8s — ETA: 11:32:53
+2026-02-23 11:31:38 [INFO] app.api.endpoints.ocr: [8/10] OCR en cours (227364 bytes)
+2026-02-23 11:31:43 [INFO] app.api.endpoints.ocr: [Page 8] Annotations extraites: document_type=studio_parfums
+2026-02-23 11:31:43 [INFO] app.api.endpoints.ocr: [Page 8] 1 tableau(x) trouvé(s)
+2026-02-23 11:31:43 [INFO] app.api.endpoints.ocr: [Page 8] Notes extraites: tête=6, cœur=5, fond=8
+2026-02-23 11:31:43 [INFO] app.api.endpoints.ocr: [Page 8] JSON final: {"document_type": "studio_parfums", "identifiant": "2201007", "genre": "Mr", "nom": "SABOUi", "prenom": "Edile", "date": "2/07/2022", "ville": "THCAIS", "pays": "France", "tel": "0751661585", "email": "esadaoui1@", "profession": "Employé de l'unique", "date_naissance": "13/07/1955", "fiches_manquantes": null, "doublons": null, "tel_list": null, "mail_list": null, "notes_de_tete": [{"essence": "---", "quantite_ml": "---"}, {"essence": "Grice Bang", "quantite_ml": "1 ☑"}, {"essence": "OZONE", "quantite_ml": "1 ☑"}, {"essence": "Carolamone GINGER", "quantite_ml": "1 ☑"}, {"essence": "BAUBOU", "quantite_ml": "1 ☑"}, {"essence": "Danyanou", "quantite_ml": "1 ☑"}], "notes_de_coeur": [{"essence": "Egye", "quantite_ml": "2 ☑"}, {"essence": "Nuria Note", "quantite_ml": "2 ☑"}, {"essence": "Nure", "quantite_ml": "1 ☑"}, {"essence": "Jouguille", "quantite_ml": "1 ☑"}, {"essence": "~~Mugui mure~~", "quantite_ml": "+1"}], "notes_de_fond": [{"essence": "Tuboune", "quantite_ml": "1 ☑"}, {"essence": "Bois apice", "quantite_ml": "2 ☑"}, {"essence": "Nure Blanc", "quantite_ml": "5 ☑ + 2 ☑"}, {"essence": "Bois' Cibre", "quantite_ml": "1 ☑"}, {"essence": "Bois Ambre", "quantite_ml": "2 ☑"}, {"essence": "Bouquet fleuri", "quantite_ml": "1 ☑ + 1 ☑"}, {"essence": "Tombe", "quantite_ml": "2 ☑ + 1 ☑"}, {"essence": "Picard mus", "quantite_ml": "+2 ☑"}]}
+2026-02-23 11:31:44 [WARNING] app.api.endpoints.ocr: [Page 8] Customer review créé — ID: 94
+2026-02-23 11:31:47 [INFO] app.api.endpoints.ocr: [Page 8] PDF + 1 image(s) sauvegardés (file_id: 95)
+2026-02-23 11:31:49 [INFO] app.api.endpoints.ocr: [Page 8] Formule créée — ID: 30 (file_id: 95)
+2026-02-23 11:31:49 [WARNING] app.api.endpoints.ocr: [Page 8] Des notes ont été corrigées automatiquement
+2026-02-23 11:31:49 [INFO] app.api.endpoints.ocr: [Page 8/10] 80% — 11.7s — ETA: 11:32:36
+2026-02-23 11:31:49 [INFO] app.api.endpoints.ocr: [9/10] OCR en cours (217739 bytes)
+2026-02-23 11:31:56 [INFO] app.api.endpoints.ocr: [Page 9] Annotations extraites: document_type=studio_parfums
+2026-02-23 11:31:56 [INFO] app.api.endpoints.ocr: [Page 9] 1 tableau(x) trouvé(s)
+2026-02-23 11:31:56 [INFO] app.api.endpoints.ocr: [Page 9] Notes extraites: tête=0, cœur=0, fond=9
+2026-02-23 11:31:56 [INFO] app.api.endpoints.ocr: [Page 9] JSON final: {"document_type": "studio_parfums", "identifiant": "2022 01008", "genre": "Ms", "nom": "Arte", "prenom": "Tracie", "date": "1-3-21", "ville": "Detroit", "pays": "USA", "tel": "1 313 408 3 421", "profession": null, "date_naissance": "7/3/71", "groupe": null, "month_year": null, "fiches_manquantes": null, "doublons": null, "tel_list": null, "mail_list": null, "notes_de_tete": [], "notes_de_coeur": [], "notes_de_fond": [{"essence": "Base Notes", "quantite_ml": "Qty en ml"}, {"essence": "Myrcne - Encens", "quantite_ml": "1/2"}, {"essence": "Santal", "quantite_ml": "+1/3"}, {"essence": "Music Blanc", "quantite_ml": "+1/2"}, {"essence": "Oud D'or", "quantite_ml": "1"}, {"essence": "Coco Des Ikes", "quantite_ml": "+1/2"}, {"essence": "Bos De Cochenne", "quantite_ml": "1"}, {"essence": "Chocolat - Santal", "quantite_ml": "+1/2"}, {"essence": "Hoehn", "quantite_ml": "1"}]}
+2026-02-23 11:31:57 [WARNING] app.api.endpoints.ocr: [Page 9] Customer review créé — ID: 95
+2026-02-23 11:31:59 [INFO] app.api.endpoints.ocr: [Page 9] PDF + 1 image(s) sauvegardés (file_id: 97)
+2026-02-23 11:32:00 [INFO] app.api.endpoints.ocr: [Page 9] Formule créée — ID: 31 (file_id: 97)
+2026-02-23 11:32:00 [WARNING] app.api.endpoints.ocr: [Page 9] Des notes ont été corrigées automatiquement
+2026-02-23 11:32:00 [INFO] app.api.endpoints.ocr: [Page 9/10] 90% — 10.8s — ETA: 11:32:22
+2026-02-23 11:32:00 [INFO] app.api.endpoints.ocr: [10/10] OCR en cours (218494 bytes)
+2026-02-23 11:32:06 [INFO] app.api.endpoints.ocr: [Page 10] Annotations extraites: document_type=studio_parfums
+2026-02-23 11:32:06 [INFO] app.api.endpoints.ocr: [Page 10] 1 tableau(x) trouvé(s)
+2026-02-23 11:32:06 [INFO] app.api.endpoints.ocr: [Page 10] Notes extraites: tête=0, cœur=0, fond=9
+2026-02-23 11:32:06 [INFO] app.api.endpoints.ocr: [Page 10] JSON final: {"document_type": "studio_parfums", "identifiant": "202201009", "genre": null, "nom": "BATES", "prenom": "BELINDA", "date": "1/3/2022", "ville": "MICHIGAN", "pays": "USA", "tel": "+1 313.942.7777", "email": "BTECH-99@YAHOO.COM", "profession": null, "date_naissance": "5-1 7777", "groupe": null, "month_year": null, "fiches_manquantes": null, "doublons": null, "tel_list": null, "mail_list": null, "notes_de_tete": [], "notes_de_coeur": [], "notes_de_fond": [{"essence": "Base Notes", "quantite_ml": "Qty en ml"}, {"essence": "myrche enens", "quantite_ml": "1"}, {"essence": "bouquet fleuri", "quantite_ml": "2 + 1"}, {"essence": "lilas", "quantite_ml": "1 + 1"}, {"essence": "iris", "quantite_ml": "1 + 1"}, {"essence": "bein, paine", "quantite_ml": "1 + 1"}, {"essence": "sand", "quantite_ml": "2 + 1"}, {"essence": "Huse, Blarie", "quantite_ml": "5 + 1"}, {"essence": "Note preline", "quantite_ml": "+ 1"}]}
+2026-02-23 11:32:08 [WARNING] app.api.endpoints.ocr: [Page 10] Customer review créé — ID: 96
+2026-02-23 11:32:10 [INFO] app.api.endpoints.ocr: [Page 10] PDF + 1 image(s) sauvegardés (file_id: 99)
+2026-02-23 11:32:12 [INFO] app.api.endpoints.ocr: [Page 10] Formule créée — ID: 32 (file_id: 99)
+2026-02-23 11:32:12 [WARNING] app.api.endpoints.ocr: [Page 10] Des notes ont été corrigées automatiquement
+2026-02-23 11:32:12 [INFO] app.api.endpoints.ocr: [Page 10/10] 100% — 11.3s
+2026-02-23 11:32:12 [INFO] app.api.endpoints.ocr: TRAITEMENT TERMINÉ — 10 pages en 210.0s (moy: 21.00s/page, min: 10.84s, max: 39.94s)

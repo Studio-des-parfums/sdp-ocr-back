@@ -42,6 +42,7 @@ class CustomerReviewBase(BaseModel):
     verified_domain: Optional[str] = None
     verified_phone: Optional[str] = None
     type: str
+    v2: bool = False
 
 class CustomerReviewCreate(CustomerReviewBase):
     """

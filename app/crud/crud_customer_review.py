@@ -68,7 +68,7 @@ def get_by_id(connection: pymysql.connections.Connection, review_id: int) -> Opt
 
         query = """
             SELECT id, last_name, first_name, phone, email, job, country, city,
-                   verified_email, verified_domain, verified_phone, type
+                   verified_email, verified_domain, verified_phone, type, v2
             FROM customers_review
             WHERE id = %s
         """
@@ -140,7 +140,7 @@ def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int
         offset = (page - 1) * size
         query = f"""
             SELECT DISTINCT cr.id, cr.last_name, cr.first_name, cr.phone, cr.email, cr.job,
-                   cr.country, cr.city, cr.verified_email, cr.verified_domain, cr.verified_phone, cr.type
+                   cr.country, cr.city, cr.verified_email, cr.verified_domain, cr.verified_phone, cr.type, cr.v2
             FROM customers_review cr
             {join_clause}
             {where_clause}

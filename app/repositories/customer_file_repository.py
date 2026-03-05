@@ -1,4 +1,5 @@
 from typing import Dict, Any, Optional, List
+import pymysql.cursors
 from app.database import get_connection
 from app.crud import crud_customer_file
 
@@ -162,6 +163,34 @@ class CustomerFileRepository:
                 customer_review_id,
                 customer_id
             )
+        finally:
+            connection.close()
+
+    def get_all_pdf_files(self) -> List[Dict[str, Any]]:
+        """Récupère tous les customer_files de type PDF"""
+        connection = get_connection()
+        if not connection:
+            return []
+        try:
+            cursor = connection.cursor(pymysql.cursors.DictCursor)
+            cursor.execute(
+                "SELECT id, file_path, file_name, file_type FROM customer_files WHERE file_type = 'application/pdf'"
+            )
+            return cursor.fetchall()
+        finally:
+            connection.close()
+
+    def get_all_image_files(self) -> List[Dict[str, Any]]:
+        """Récupère tous les customer_files de type image"""
+        connection = get_connection()
+        if not connection:
+            return []
+        try:
+            cursor = connection.cursor(pymysql.cursors.DictCursor)
+            cursor.execute(
+                "SELECT id, file_path, file_name, file_type FROM customer_files WHERE file_type LIKE 'image/%'"
+            )
+            return cursor.fetchall()
         finally:
             connection.close()
 

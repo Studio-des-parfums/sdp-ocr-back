@@ -113,6 +113,149 @@ async def get_file_content(file_id: int):
         raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
 
 
+@router.post("/files/restore-bulk")
+async def restore_bulk(zip_file: UploadFile = File(...)):
+    """
+    Restaure tous les fichiers en masse depuis un ZIP de PDFs multi-pages originaux.
+
+    Format attendu des fichiers dans le ZIP : "202512 de 001 à 005.pdf"
+    Format en BDD : "1771856562_page_1_202512_de_001_à_005.pdf"
+
+    Pour chaque PDF dans le ZIP :
+    1. Normalise le nom (espaces → underscores, sans extension)
+    2. Découpe le PDF page par page
+    3. Pour chaque page i, cherche en BDD le fichier dont le nom correspond
+       au pattern `*_page_{i}_{nom_normalisé}.pdf`
+    4. Écrit le PDF de la page au file_path BDD dans S3
+    5. Régénère l'image PNG associée
+    """
+    import zipfile
+    import io as _io
+    import unicodedata
+    from app.utils.pdf_splitter import pdf_splitter
+
+    def fix_zip_filename(name: str) -> str:
+        """Corrige les noms de fichiers macOS mal décodés (CP437 au lieu d'UTF-8)"""
+        try:
+            # macOS stocke en UTF-8 NFD sans flag UTF-8 → Python lit en CP437
+            # On annule : NFC → encode CP437 → decode UTF-8
+            return unicodedata.normalize('NFC', name).encode('cp437').decode('utf-8')
+        except (UnicodeDecodeError, UnicodeEncodeError):
+            return name
+
+    def normalize(s: str) -> str:
+        """NFD + espaces→underscores pour comparaison uniforme"""
+        return unicodedata.normalize('NFD', s).replace(' ', '_')
+
+    try:
+        zip_bytes = await zip_file.read()
+        zip_buf = _io.BytesIO(zip_bytes)
+
+        if not zipfile.is_zipfile(zip_buf):
+            raise HTTPException(status_code=400, detail="Le fichier envoyé n'est pas un ZIP valide")
+
+        # Construire l'index BDD : (nom_original_normalisé, page_num) → db_record
+        # Index PDF : (nom_original_normalisé, page_num) → db_record
+        # file_name format en BDD : "{timestamp}_page_{page}_{original_name}.pdf"
+        all_pdfs = customer_file_repository.get_all_pdf_files()
+        db_index = {}
+        pattern = re.compile(r'^\d+_page_(\d+)_(.+)\.pdf$')
+        for row in all_pdfs:
+            m = pattern.match(row['file_name'])
+            if m:
+                page_num = int(m.group(1))
+                original_name = normalize(m.group(2))
+                db_index[(original_name, page_num)] = row
+
+        # Index images : file_name (sans extension) → db_record
+        # file_name format en BDD : "{pdf_basename}_page_1.png"
+        all_images = customer_file_repository.get_all_image_files()
+        img_index = {os.path.splitext(row['file_name'])[0]: row for row in all_images}
+
+        print(f"📋 Index BDD — {len(db_index)} PDFs, {len(img_index)} images")
+
+        restored, skipped, errors = [], [], []
+
+        zip_buf.seek(0)
+        with zipfile.ZipFile(zip_buf, 'r') as zf:
+            pdf_entries = [
+                n for n in zf.namelist()
+                if n.lower().endswith('.pdf') and not os.path.basename(n).startswith('._')
+            ]
+            print(f"📦 ZIP reçu — {len(pdf_entries)} PDFs originaux à traiter")
+
+            for entry in pdf_entries:
+                filename = fix_zip_filename(os.path.basename(entry))
+                if not filename:
+                    continue
+
+                # Normaliser le nom : NFD + espaces→underscores, retirer .pdf
+                normalized_name = normalize(os.path.splitext(filename)[0])
+                print(f"🔍 ZIP clé: {repr(normalized_name)} bytes={normalized_name.encode('utf-8')}")
+
+                try:
+                    pdf_bytes_orig = zf.read(entry)
+
+                    # Découper le PDF page par page
+                    pages = pdf_splitter.split_pdf_to_pages(pdf_bytes_orig)
+                    print(f"   {len(pages)} page(s) extraite(s)")
+
+                    for i, page_pdf_bytes in enumerate(pages):
+                        page_num = i + 1
+                        key = (normalized_name, page_num)
+                        db_file = db_index.get(key)
+
+                        if not db_file:
+                            skipped.append(f"{filename} page {page_num}")
+                            print(f"   ⚠️ Page {page_num} — aucune correspondance en BDD pour clé {key}")
+                            continue
+
+                        file_path = db_file['file_path']
+                        try:
+                            # Écrire le PDF de la page au chemin BDD
+                            file_storage_service._write(file_path, page_pdf_bytes)
+                            customer_file_repository.update_customer_file(db_file['id'], {'new_url': True})
+
+                            # Régénérer l'image PNG et écrire au chemin BDD de l'image
+                            images = file_storage_service.convert_pdf_to_images(page_pdf_bytes)
+                            pdf_basename = os.path.splitext(db_file['file_name'])[0]
+                            for j, (img_bytes, ext) in enumerate(images):
+                                img_key = f"{pdf_basename}_page_{j+1}"
+                                img_db = img_index.get(img_key)
+                                if img_db:
+                                    file_storage_service._write(img_db['file_path'], img_bytes)
+                                    customer_file_repository.update_customer_file(img_db['id'], {'new_url': True})
+                                    print(f"   🖼️ Image restaurée → {img_db['file_path']}")
+                                else:
+                                    # Fallback : écrire au chemin dérivé du PDF
+                                    base = os.path.splitext(file_path)[0]
+                                    file_storage_service._write(f"{base}_page_{j+1}.{ext}", img_bytes)
+
+                            restored.append(file_path)
+                            print(f"   ✅ Page {page_num} restaurée → {file_path}")
+
+                        except Exception as e:
+                            errors.append({"file": f"{filename} page {page_num}", "error": str(e)})
+                            print(f"   ❌ Erreur page {page_num}: {e}")
+
+                except Exception as e:
+                    errors.append({"file": filename, "error": str(e)})
+                    print(f"❌ Erreur sur {filename}: {e}")
+
+        return {
+            "success": True,
+            "restored": len(restored),
+            "skipped": len(skipped),
+            "errors": len(errors),
+            "error_details": errors,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
+
+
 @router.post("/files/{file_id}/restore")
 async def restore_file(file_id: int, file: UploadFile = File(...)):
     """

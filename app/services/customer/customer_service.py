@@ -12,13 +12,14 @@ class CustomerBusinessService:
     Service pour la logique métier des customers (validation, règles business)
     """
 
-    def insert_customer_if_not_exists(self, extracted_data: Dict[str, Any]) -> Tuple[Optional[int], str]:
+    def insert_customer_if_not_exists(self, extracted_data: Dict[str, Any], v2: bool = False) -> Tuple[Optional[int], str]:
         """
         Insère un customer dans la base pour chaque PDF traité (peu importe les données)
         Gère la détection de doublons, corrections d'email/phone et l'insertion dans customers_review si nécessaire
 
         Args:
             extracted_data: Données extraites de l'OCR
+            v2: Indique si le formulaire est de type v2 (défaut False)
 
         Returns:
             Tuple (ID du customer/review inséré, type d'entité: "customer" ou "customer_review")
@@ -34,23 +35,27 @@ class CustomerBusinessService:
         if not connection:
             return None, "error"
 
+        def _review_data():
+            """Retourne customer_data enrichi avec v2 pour insertion dans customers_review"""
+            return {**customer_data, 'v2': v2}
+
         try:
             # Si erreur sur le numéro de téléphone, mettre dans customers_review
             if phone_error:
                 print(f"Customer avec erreur de numéro → customers_review (type: {phone_error})")
-                review_id = crud_customer_review.create(connection, customer_data, phone_error)
+                review_id = crud_customer_review.create(connection, _review_data(), phone_error)
                 return review_id, "customer_review"
 
             # Si l'email a été corrigé, mettre dans customers_review avec type "Modifié"
             if was_email_corrected:
                 print(f"Customer avec email corrigé → customers_review (type: Modifié)")
-                review_id = crud_customer_review.create(connection, customer_data, "Modifié")
+                review_id = crud_customer_review.create(connection, _review_data(), "Modifié")
                 return review_id, "customer_review"
 
             # Si des notes ont été corrigées, mettre dans customers_review
             if notes_were_corrected:
                 print(f"Customer avec notes corrigées → customers_review (type: Modifié - Note)")
-                review_id = crud_customer_review.create(connection, customer_data, "Modifié - Note")
+                review_id = crud_customer_review.create(connection, _review_data(), "Modifié - Note")
                 return review_id, "customer_review"
 
             # Vérifier si le customer existe déjà (seulement si on a email ou téléphone)
@@ -63,7 +68,7 @@ class CustomerBusinessService:
                 if duplicate_type:
                     print(f"Customer doublon détecté : {duplicate_type}")
                     # Insérer dans customers_review avec le type de doublon
-                    review_id = crud_customer_review.create(connection, customer_data, duplicate_type)
+                    review_id = crud_customer_review.create(connection, _review_data(), duplicate_type)
                     return review_id, "customer_review"
 
             # Insérer le customer TOUJOURS (même complètement vide)

@@ -9,18 +9,19 @@ class CustomerRepository:
     Repository pour gérer l'accès aux données customers (Data Access Layer)
     """
 
-    def insert_customer_if_not_exists(self, extracted_data: Dict[str, Any]) -> Tuple[Optional[int], str]:
+    def insert_customer_if_not_exists(self, extracted_data: Dict[str, Any], v2: bool = False) -> Tuple[Optional[int], str]:
         """
         Insère un customer dans la base pour chaque PDF traité (peu importe les données)
         Délègue à customer_business_service
 
         Args:
             extracted_data: Données extraites de l'OCR
+            v2: Indique si le formulaire est de type v2 (défaut False)
 
         Returns:
             Tuple (ID du customer/review inséré, type d'entité: "customer" ou "customer_review")
         """
-        return customer_business_service.insert_customer_if_not_exists(extracted_data)
+        return customer_business_service.insert_customer_if_not_exists(extracted_data, v2=v2)
 
     def create_customer(self, customer_data: Dict[str, Any]) -> Optional[int]:
         """
