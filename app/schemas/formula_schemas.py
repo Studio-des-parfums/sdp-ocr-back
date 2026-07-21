@@ -42,7 +42,7 @@ class FormulaBase(BaseModel):
     Schéma de base pour une formule
     """
     customer_id: Optional[int] = None
-    file_id: int
+    file_id: Optional[int] = None
     customer_review_id: Optional[int] = None
     comment: Optional[str] = None
     reference: Optional[str] = None
@@ -52,8 +52,9 @@ class FormulaBase(BaseModel):
 
 class FormulaCreate(FormulaBase):
     """
-    Schéma pour créer une formule avec ses notes
+    Schéma pour créer une formule avec ses notes (issue d'une fiche scannée)
     """
+    file_id: int
     top_notes: List[NoteCreate] = []
     heart_notes: List[NoteCreate] = []
     base_notes: List[NoteCreate] = []

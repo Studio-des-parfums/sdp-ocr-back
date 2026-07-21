@@ -18,7 +18,7 @@ class FormulaWithNotes(BaseModel):
     """
     id: int
     customer_id: Optional[int] = None
-    file_id: int
+    file_id: Optional[int] = None
     reference: Optional[str] = None
     perfume_name: Optional[str] = None
     top_notes: List[NoteSchema] = []
