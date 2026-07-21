@@ -11,6 +11,8 @@ geoip2==4.7.0
 dnspython==2.8.0
 pymysql
 DBUtils
+alembic==1.18.5
+SQLAlchemy==2.0.51
 pdf2image==1.17.0
 Pillow==12.1.0
 rapidfuzz

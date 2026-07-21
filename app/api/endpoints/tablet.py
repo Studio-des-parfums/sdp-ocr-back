@@ -1,12 +1,19 @@
-from fastapi import APIRouter, HTTPException
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Query
 
 from app.schemas.tablet_schemas import (
+    CustomerSearchResult,
+    FormulaDetail,
+    FormulaHistoryItem,
+    FormulaReuseResponse,
     NoteCatalogItem,
     NotesCatalogResponse,
     TabletSubmissionCreate,
     TabletSubmissionResponse,
 )
 from app.repositories.tablet_submission_repository import tablet_submission_repository
+from app.repositories.tablet_customer_repository import tablet_customer_repository
 from app.utils.note_corrector import NoteCorrector
 
 router = APIRouter()
@@ -49,3 +56,49 @@ async def create_tablet_submission(submission: TabletSubmissionCreate):
         raise HTTPException(status_code=500, detail=error)
 
     return TabletSubmissionResponse(**result)
+
+
+@router.get("/customers/search", response_model=CustomerSearchResult)
+async def search_customer(
+    email: Optional[str] = Query(None),
+    phone: Optional[str] = Query(None),
+):
+    """
+    Retrouve un client par email (prioritaire) ou téléphone, pour la tablette.
+    Retourne 404 si aucun client ne correspond.
+    """
+    if not email and not phone:
+        raise HTTPException(status_code=422, detail="Email ou téléphone requis")
+
+    customer = tablet_customer_repository.search_by_contact(email, phone)
+    if not customer:
+        raise HTTPException(status_code=404, detail="Aucun client trouvé")
+
+    return CustomerSearchResult(**customer)
+
+
+@router.get("/customers/{customer_id}/formulas", response_model=list[FormulaHistoryItem])
+async def get_customer_formula_history(customer_id: int):
+    """Historique des formules d'un client, de la plus récente à la plus ancienne."""
+    formulas = tablet_customer_repository.get_formula_history(customer_id)
+    return [FormulaHistoryItem(**f) for f in formulas]
+
+
+@router.get("/formulas/{formula_id}", response_model=FormulaDetail)
+async def get_formula_detail(formula_id: int):
+    """Détail complet d'une formule (notes tête/cœur/fond incluses)."""
+    formula = tablet_customer_repository.get_formula_detail(formula_id)
+    if not formula:
+        raise HTTPException(status_code=404, detail="Formule introuvable")
+
+    return FormulaDetail(**formula)
+
+
+@router.post("/formulas/{formula_id}/reuse", response_model=FormulaReuseResponse)
+async def reuse_formula(formula_id: int):
+    """Incrémente le compteur de réutilisation d'une formule existante."""
+    result = tablet_customer_repository.reuse_formula(formula_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Formule introuvable")
+
+    return FormulaReuseResponse(**result)

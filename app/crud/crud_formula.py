@@ -91,7 +91,7 @@ def get_by_id(
         cursor = connection.cursor()
 
         query = """
-            SELECT id, customer_id, file_id, customer_review_id, comment, reference, perfume_name, date
+            SELECT id, customer_id, file_id, customer_review_id, comment, reference, perfume_name, date, quantity, source, reuse_count
             FROM formula
             WHERE id = %s
         """
@@ -102,6 +102,81 @@ def get_by_id(
 
     except Exception as e:
         print(f"Erreur récupération formula {formula_id} : {e}")
+        return None
+    finally:
+        if cursor is not None:
+            cursor.close()
+
+
+def get_by_customer_id(
+    connection: pymysql.connections.Connection,
+    customer_id: int,
+) -> list[dict]:
+    """
+    Récupère l'historique des formules d'un client, triées des plus récentes aux plus anciennes.
+
+    Args:
+        connection: Connexion MySQL
+        customer_id: ID du client
+
+    Returns:
+        Liste de dictionnaires (peut être vide)
+    """
+    cursor = None
+    try:
+        cursor = connection.cursor()
+
+        query = """
+            SELECT id, perfume_name, date, quantity, reuse_count
+            FROM formula
+            WHERE customer_id = %s
+            ORDER BY date DESC, id DESC
+        """
+        cursor.execute(query, (customer_id,))
+        return cursor.fetchall() or []
+
+    except Exception as e:
+        print(f"Erreur récupération formules du customer {customer_id} : {e}")
+        return []
+    finally:
+        if cursor is not None:
+            cursor.close()
+
+
+def increment_reuse_count(
+    connection: pymysql.connections.Connection,
+    formula_id: int,
+) -> Optional[int]:
+    """
+    Incrémente le compteur de réutilisation d'une formule.
+
+    Args:
+        connection: Connexion MySQL
+        formula_id: ID de la formule
+
+    Returns:
+        Nouvelle valeur de reuse_count ou None si erreur/formule inconnue
+    """
+    cursor = None
+    try:
+        cursor = connection.cursor()
+
+        cursor.execute(
+            "UPDATE formula SET reuse_count = reuse_count + 1 WHERE id = %s",
+            (formula_id,),
+        )
+        connection.commit()
+
+        if cursor.rowcount == 0:
+            return None
+
+        cursor.execute("SELECT reuse_count FROM formula WHERE id = %s", (formula_id,))
+        row = cursor.fetchone()
+        return row["reuse_count"] if row else None
+
+    except Exception as e:
+        print(f"Erreur incrémentation reuse_count formula {formula_id} : {e}")
+        connection.rollback()
         return None
     finally:
         if cursor is not None:
