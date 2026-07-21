@@ -45,13 +45,14 @@ async def create_customer(customer: CustomerCreate):
 async def get_customers(
     page: int = Query(1, ge=1, description="Numéro de page"),
     size: int = Query(10, ge=1, le=100, description="Taille de page"),
-    search: Optional[str] = Query(None, description="Recherche dans nom, email, téléphone, ville, référence de formule")
+    search: Optional[str] = Query(None, description="Recherche dans nom, email, téléphone, ville, référence de formule"),
+    v2: bool = Query(False, description="Filtrer par version du formulaire (true=v2, false=v1)")
 ):
     """
     Récupérer tous les customers avec pagination et recherche
     """
     try:
-        customers, total = customer_repository.get_all_customers(page, size, search)
+        customers, total = customer_repository.get_all_customers(page, size, search, v2)
 
         customer_responses = []
         for customer in customers:

@@ -1,5 +1,4 @@
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException
-from fastapi.responses import Response, FileResponse
 from typing import List, Dict, Any
 import asyncio
 import os
@@ -13,7 +12,6 @@ from app.core.logger import get_logger
 from app.utils.pdf_splitter import pdf_splitter
 from app.utils.document_classifier import document_classifier
 from app.utils.data_extractor import data_extractor
-from app.utils.csv_generator import csv_generator
 from app.repositories.customer_repository import customer_repository
 from app.repositories.customer_file_repository import customer_file_repository
 from app.repositories.formula_repository import formula_repository
@@ -23,8 +21,6 @@ from app.schemas.ocr_schemas import OCRResponse, ProcessedPage, DocumentType
 
 router = APIRouter()
 logger = get_logger(__name__)
-
-GENERATED_DIR = "generated_files"
 
 # ======================================================================
 # JOBS EN MÉMOIRE
@@ -250,21 +246,14 @@ async def _process_pdf_job(job_id: str, pdf_content: bytes, filename: str, v2: b
                 else:
                     logger.info(f"[Job {job_id}] [{page_number}/{total_pages}] 100% — {page_duration:.1f}s")
 
-        csv_content = csv_generator.generate_studio_parfums_csv(processed_pages)
+        total_studio_parfums = sum(
+            1 for p in processed_pages if p.get("document_type") == DocumentType.STUDIO_PARFUMS.value
+        )
 
-        if not csv_content.strip() or csv_content.count("\n") <= 1:
+        if total_studio_parfums == 0:
             job['status'] = 'error'
             job['error'] = 'No Studio des Parfums forms found in this PDF'
             return
-
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        unique_id = str(uuid.uuid4())[:8]
-        base_name = filename.replace(".pdf", "").replace(" ", "_")
-        csv_filename = f"studio_parfums_{base_name}_{timestamp}_{unique_id}.csv"
-
-        file_path = os.path.join(GENERATED_DIR, csv_filename)
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(csv_content)
 
         total_duration = time.time() - start_time
         avg_page_time = sum(page_times) / len(page_times) if page_times else 0
@@ -278,11 +267,7 @@ async def _process_pdf_job(job_id: str, pdf_content: bytes, filename: str, v2: b
         job['status'] = 'completed'
         job['result'] = {
             "success": True,
-            "filename": csv_filename,
-            "download_url": f"/api/v1/ocr/download/{csv_filename}",
-            "total_studio_parfums_found": sum(
-                1 for p in processed_pages if p.get("document_type") == DocumentType.STUDIO_PARFUMS.value
-            ),
+            "total_studio_parfums_found": total_studio_parfums,
             "customers_created": customers_created,
             "customers_skipped": sum(
                 1 for p in processed_pages
@@ -513,49 +498,6 @@ async def get_job_status(job_id: str):
 async def list_jobs():
     return [{"job_id": jid, **{k: v for k, v in job.items() if k != "result"}} for jid, job in _jobs.items()]
 
-
-# ======================================================================
-# DOWNLOAD CSV
-# ======================================================================
-
-@router.get("/download/{filename}")
-async def download_csv(filename: str):
-    file_path = os.path.join(GENERATED_DIR, filename)
-
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="File not found")
-
-    if not filename.endswith(".csv"):
-        raise HTTPException(status_code=400, detail="Invalid file type")
-
-    return FileResponse(
-        path=file_path,
-        filename=filename,
-        media_type="text/csv; charset=utf-8"
-    )
-
-
-# ======================================================================
-# LIST FILES
-# ======================================================================
-
-@router.get("/list-files")
-async def list_generated_files():
-    if not os.path.exists(GENERATED_DIR):
-        return {"files": []}
-
-    files = []
-    for f in os.listdir(GENERATED_DIR):
-        if f.endswith(".csv"):
-            files.append({
-                "filename": f,
-                "download_url": f"/api/v1/ocr/download/{f}",
-                "created": datetime.fromtimestamp(
-                    os.path.getctime(os.path.join(GENERATED_DIR, f))
-                ).strftime("%Y-%m-%d %H:%M:%S"),
-            })
-
-    return {"files": files}
 
 
 # ======================================================================

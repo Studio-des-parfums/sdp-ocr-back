@@ -129,7 +129,7 @@ def get_by_phone(connection: pymysql.connections.Connection, phone: str) -> Opti
 
 
 def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int = 10,
-            search: Optional[str] = None) -> Tuple[List[Dict[str, Any]], int]:
+            search: Optional[str] = None, v2: bool = False) -> Tuple[List[Dict[str, Any]], int]:
     """
     Récupère tous les customers avec pagination et recherche
 
@@ -138,6 +138,7 @@ def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int
         page: Numéro de page
         size: Taille de page
         search: Terme de recherche (nom, email, téléphone, ville, référence de formule)
+        v2: Filtre par version du formulaire
 
     Returns:
         Tuple (liste des customers, total)
@@ -145,20 +146,21 @@ def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int
     try:
         cursor = connection.cursor()
 
-        # Construire la requête avec recherche
-        where_clause = ""
-        params = []
+        conditions = ["customers.v2 = %s"]
+        params = [v2]
 
         if search:
-            where_clause = """
-                WHERE customers.first_name LIKE %s OR customers.last_name LIKE %s
+            search_param = f"%{search}%"
+            conditions.append("""
+                (customers.first_name LIKE %s OR customers.last_name LIKE %s
                 OR customers.email LIKE %s OR customers.phone LIKE %s OR customers.city LIKE %s
                 OR customers.id IN (
                     SELECT formula.customer_id FROM formula WHERE formula.reference LIKE %s
-                )
-            """
-            search_param = f"%{search}%"
-            params = [search_param] * 6
+                ))
+            """)
+            params.extend([search_param] * 6)
+
+        where_clause = "WHERE " + " AND ".join(conditions)
 
         # Compter le total
         count_query = f"SELECT COUNT(*) as total FROM customers {where_clause}"

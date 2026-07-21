@@ -1,5 +1,7 @@
 import re
 import os
+import traceback
+import urllib.parse
 
 from fastapi import APIRouter, HTTPException, Query, File, UploadFile
 from fastapi.responses import Response
@@ -8,6 +10,9 @@ from typing import Optional
 from app.repositories.customer_file_repository import customer_file_repository
 from app.services.file import file_storage_service
 from app.schemas.customer_file_schemas import CustomerFileResponse, CustomerFileListResponse
+from app.core.logger import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -103,13 +108,14 @@ async def get_file_content(file_id: int):
             content=file_bytes,
             media_type=media_type,
             headers={
-                'Content-Disposition': f'inline; filename="{file["file_name"]}"'
+                'Content-Disposition': f"inline; filename*=UTF-8''{urllib.parse.quote(file['file_name'])}"
             }
         )
 
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Erreur get_file_content file_id={file_id}: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
 
 
@@ -345,7 +351,7 @@ async def download_file(file_id: int):
             content=file_bytes,
             media_type=media_type,
             headers={
-                'Content-Disposition': f'attachment; filename="{file_name}"'
+                'Content-Disposition': f"attachment; filename*=UTF-8''{urllib.parse.quote(file_name)}"
             }
         )
 
@@ -407,7 +413,7 @@ async def get_formula_file_content(formula_id: int):
             content=file_bytes,
             media_type=media_type,
             headers={
-                'Content-Disposition': f'inline; filename="{file["file_name"]}"'
+                'Content-Disposition': f"inline; filename*=UTF-8''{urllib.parse.quote(file['file_name'])}"
             }
         )
 
@@ -446,7 +452,7 @@ async def get_formula_file_thumbnail(formula_id: int):
                 content=file_bytes,
                 media_type=file.get('file_type', 'image/jpeg'),
                 headers={
-                    'Content-Disposition': f'inline; filename="{file["file_name"]}"'
+                    'Content-Disposition': f"inline; filename*=UTF-8''{urllib.parse.quote(file['file_name'])}"
                 }
             )
 
@@ -464,7 +470,7 @@ async def get_formula_file_thumbnail(formula_id: int):
                 content=thumbnail_bytes,
                 media_type='image/png',
                 headers={
-                    'Content-Disposition': f'inline; filename="thumbnail_{file["file_name"]}.png"'
+                    'Content-Disposition': f"inline; filename*=UTF-8''thumbnail_{urllib.parse.quote(file['file_name'])}.png"
                 }
             )
 

@@ -5,11 +5,13 @@ import pymysql
 def create(
     connection: pymysql.connections.Connection,
     customer_id: Optional[int],
-    file_id: int,
+    file_id: Optional[int],
     customer_review_id: Optional[int] = None,
     reference: Optional[str] = None,
     perfume_name: Optional[str] = None,
     date: Optional[str] = None,
+    quantity: Optional[str] = None,
+    source: Optional[str] = None,
 ) -> Optional[int]:
     """
     Crée une nouvelle formule liée à un customer (ou customer_review) et à un fichier.
@@ -17,11 +19,13 @@ def create(
     Args:
         connection: Connexion MySQL
         customer_id: ID du customer (peut être None si review)
-        file_id: ID du fichier source (customer_files.id)
+        file_id: ID du fichier source (customer_files.id), None pour le flux tablette
         customer_review_id: ID du customer_review (peut être None si customer)
         reference: Référence/identifiant de la formule
         perfume_name: Nom du parfum
         date: Date extraite du formulaire OCR
+        quantity: Quantité choisie (10ml, 30ml, 50ml, 100ml, Brume)
+        source: Origine de la formule ('ocr' ou 'tablet')
 
     Returns:
         ID de la formule créée ou None si erreur
@@ -30,11 +34,29 @@ def create(
     try:
         cursor = connection.cursor()
 
-        query = """
-            INSERT INTO formula (customer_id, file_id, customer_review_id, reference, perfume_name, date)
-            VALUES (%s, %s, %s, %s, %s, %s)
+        # Colonnes optionnelles (quantity/source) insérées seulement si fournies,
+        # pour rester compatible avec une base sans ces colonnes
+        data = {
+            "customer_id": customer_id,
+            "file_id": file_id,
+            "customer_review_id": customer_review_id,
+            "reference": reference,
+            "perfume_name": perfume_name,
+            "date": date,
+        }
+        if quantity is not None:
+            data["quantity"] = quantity
+        if source is not None:
+            data["source"] = source
+
+        columns = list(data.keys())
+        placeholders = ["%s"] * len(columns)
+
+        query = f"""
+            INSERT INTO formula ({', '.join(columns)})
+            VALUES ({', '.join(placeholders)})
         """
-        cursor.execute(query, (customer_id, file_id, customer_review_id, reference, perfume_name, date))
+        cursor.execute(query, list(data.values()))
 
         connection.commit()
         formula_id = cursor.lastrowid

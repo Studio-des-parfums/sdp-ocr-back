@@ -111,7 +111,7 @@ class CustomerRepository:
             connection.close()
 
     def get_all_customers(self, page: int = 1, size: int = 10,
-                         search: Optional[str] = None) -> Tuple[List[Dict[str, Any]], int]:
+                         search: Optional[str] = None, v2: bool = False) -> Tuple[List[Dict[str, Any]], int]:
         """
         Récupère tous les customers avec pagination, recherche, et enrichissement avec formules et notes
 
@@ -129,7 +129,7 @@ class CustomerRepository:
 
         try:
             # 1) Récupération de base depuis customers
-            customers, total = crud_customer.get_all(connection, page, size, search)
+            customers, total = crud_customer.get_all(connection, page, size, search, v2)
 
             # 2) Pour chaque customer, récupérer les formules + notes associées
             def _get_notes(table_name: str, formula_id: int) -> List[Dict[str, Any]]:

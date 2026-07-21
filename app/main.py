@@ -7,7 +7,7 @@ from app.core.config import settings
 from app.core.logger import setup_logging
 
 setup_logging()
-from app.api.endpoints import ocr, customers, users, export, groups, login_history, customer_reviews, files, formulas, emails, roles, orders
+from app.api.endpoints import ocr, customers, users, export, groups, login_history, customer_reviews, files, formulas, emails, roles, orders, tablet
 from app.database import get_connection
 
 app = FastAPI(
@@ -54,6 +54,7 @@ app.include_router(formulas.router, prefix="/api/v1/formulas", tags=["Formulas"]
 app.include_router(emails.router, prefix="/api/v1/emails", tags=["Emails"])
 app.include_router(roles.router, prefix="/api/v1/roles", tags=["Roles"])
 app.include_router(orders.router, prefix="/api/v1/orders", tags=["Orders"])
+app.include_router(tablet.router, prefix="/api/v1/tablet", tags=["Tablet"])
 
 @app.get("/")
 async def root():
