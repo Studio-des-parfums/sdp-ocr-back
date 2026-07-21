@@ -137,6 +137,7 @@ class TabletSubmissionRepository:
             "has_allergy": submission.has_allergy,
             "liability_accepted": submission.liability_accepted,
             "rgpd_consent": submission.rgpd_consent,
+            "date": datetime.now().strftime("%Y-%m-%d"),
         }
 
 
