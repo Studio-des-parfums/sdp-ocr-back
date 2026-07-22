@@ -219,6 +219,50 @@ def get_by_reference(
             cursor.close()
 
 
+def generate_tablet_reference(
+    connection: pymysql.connections.Connection,
+    year_month: str,
+) -> str:
+    """
+    Génère la prochaine référence tablette au même format que les références OCR
+    (suite de chiffres commençant par '20'), sur le préfixe année+mois donné.
+
+    Args:
+        connection: Connexion MySQL
+        year_month: Préfixe 'YYMM' (ex: '2607' pour juillet 2026)
+
+    Returns:
+        Référence au format '20{YYMM}{NNNNN}' (ex: '20260700001')
+    """
+    prefix = f"20{year_month}"
+    cursor = None
+    try:
+        cursor = connection.cursor()
+
+        query = """
+            SELECT reference
+            FROM formula
+            WHERE reference LIKE %s
+            ORDER BY reference DESC
+            LIMIT 1
+        """
+        cursor.execute(query, (f"{prefix}%",))
+        result = cursor.fetchone()
+
+        last_sequence = 0
+        if result and result.get("reference"):
+            suffix = result["reference"][len(prefix):]
+            if suffix.isdigit():
+                last_sequence = int(suffix)
+
+        next_sequence = last_sequence + 1
+        return f"{prefix}{next_sequence:05d}"
+
+    finally:
+        if cursor is not None:
+            cursor.close()
+
+
 def delete(
     connection: pymysql.connections.Connection,
     formula_id: int,

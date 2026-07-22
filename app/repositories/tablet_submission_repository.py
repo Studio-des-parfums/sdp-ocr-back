@@ -71,11 +71,14 @@ class TabletSubmissionRepository:
 
             # 2) Créer la formule (pas de fiche scannée → file_id None)
             now = datetime.now()
+            reference = crud_formula.generate_tablet_reference(
+                connection, now.strftime("%y%m")
+            )
             formula_id = crud_formula.create(
                 connection,
                 customer_id=customer_id,
                 file_id=None,
-                reference=f"TAB-{now:%Y%m%d%H%M%S}",
+                reference=reference,
                 perfume_name=submission.perfume_name,
                 date=now.strftime("%Y-%m-%d"),
                 quantity=submission.quantity,
