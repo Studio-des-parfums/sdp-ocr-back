@@ -48,6 +48,8 @@ class FormulaBase(BaseModel):
     reference: Optional[str] = None
     perfume_name: Optional[str] = None
     date: Optional[str] = None
+    quantity: Optional[str] = None
+    source: Optional[str] = None
 
 
 class FormulaCreate(FormulaBase):
