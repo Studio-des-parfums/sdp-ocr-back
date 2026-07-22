@@ -30,7 +30,7 @@ class TabletCustomerRepository:
             if email:
                 customer = crud_customer.get_by_email(connection, email)
             if not customer and phone:
-                customer = crud_customer.get_by_phone(connection, phone)
+                customer = crud_customer.get_by_phone_normalized(connection, phone)
             return customer
         finally:
             connection.close()

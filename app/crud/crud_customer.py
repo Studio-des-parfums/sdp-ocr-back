@@ -128,6 +128,48 @@ def get_by_phone(connection: pymysql.connections.Connection, phone: str) -> Opti
         cursor.close()
 
 
+def get_by_phone_normalized(connection: pymysql.connections.Connection, phone: str) -> Optional[Dict[str, Any]]:
+    """
+    Récupère un customer par téléphone en ignorant tout caractère non numérique
+    (espaces, tirets, points) des deux côtés de la comparaison.
+
+    Utile car les numéros sont stockés formatés (ex: "06 66 69 48 31") mais
+    peuvent être saisis sans formatage (ex: "0666694831").
+
+    Args:
+        connection: Connexion MySQL
+        phone: Téléphone du customer, formaté ou non
+
+    Returns:
+        Dictionnaire avec les données du customer ou None
+    """
+    import re
+    digits_only = re.sub(r"\D", "", phone or "")
+    if not digits_only:
+        return None
+
+    try:
+        cursor = connection.cursor()
+
+        query = """
+            SELECT * FROM customers
+            WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                phone, ' ', ''), '-', ''), '.', ''), '(', ''), ')', ''
+            ) = %s
+            LIMIT 1
+        """
+        cursor.execute(query, (digits_only,))
+        result = cursor.fetchone()
+
+        return result
+
+    except Exception as e:
+        print(f"Erreur récupération customer par téléphone normalisé : {e}")
+        return None
+    finally:
+        cursor.close()
+
+
 def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int = 10,
             search: Optional[str] = None, v2: bool = False) -> Tuple[List[Dict[str, Any]], int]:
     """
