@@ -175,6 +175,23 @@ class CustomerRepository:
             connection.close()
 
 
+    def get_analytics(self) -> Dict[str, Any]:
+        """
+        Récupère les statistiques d'analyse des clients (évolution mensuelle,
+        répartition par mois/année, taux de rétention, top pays)
+
+        Returns:
+            Dictionnaire avec les statistiques d'analyse
+        """
+        connection = get_connection()
+        if not connection:
+            return {}
+
+        try:
+            return crud_customer.get_analytics(connection)
+        finally:
+            connection.close()
+
     def bulk_update_customers(self, updates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Met à jour plusieurs customers en masse

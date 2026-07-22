@@ -121,6 +121,18 @@ async def bulk_update_customers(request: CustomerBulkUpdateRequest):
         raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
 
 
+@router.get("/stats/analytics")
+async def get_customers_analytics():
+    """
+    Statistiques d'analyse des clients : évolution mensuelle, répartition
+    par mois/année, taux de rétention (>= 2 formules), top 5 pays
+    """
+    try:
+        return customer_repository.get_analytics()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
+
+
 @router.get("/{customer_id}", response_model=CustomerResponse)
 async def get_customer(customer_id: int):
     """

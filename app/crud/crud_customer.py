@@ -345,6 +345,110 @@ def check_duplicate_email(connection: pymysql.connections.Connection, email: str
         cursor.close()
 
 
+def get_analytics(connection: pymysql.connections.Connection) -> Dict[str, Any]:
+    """
+    Calcule les statistiques d'analyse des clients :
+    - Total clients ce mois-ci vs mois dernier
+    - Répartition par mois pour l'année en cours
+    - Répartition par année (toutes années)
+    - Taux de rétention (clients avec >= 2 formules)
+    - Top 5 pays par nombre de clients
+
+    Args:
+        connection: Connexion MySQL
+
+    Returns:
+        Dictionnaire avec les statistiques d'analyse
+    """
+    try:
+        cursor = connection.cursor()
+
+        # Clients ce mois-ci vs mois dernier
+        cursor.execute("""
+            SELECT
+                SUM(CASE WHEN YEAR(created_at) = YEAR(CURDATE()) AND MONTH(created_at) = MONTH(CURDATE()) THEN 1 ELSE 0 END) AS current_month,
+                SUM(CASE WHEN YEAR(created_at) = YEAR(CURDATE() - INTERVAL 1 MONTH) AND MONTH(created_at) = MONTH(CURDATE() - INTERVAL 1 MONTH) THEN 1 ELSE 0 END) AS last_month
+            FROM customers
+        """)
+        month_row = cursor.fetchone() or {}
+        current_month = month_row.get('current_month') or 0
+        last_month = month_row.get('last_month') or 0
+
+        # Répartition par mois pour l'année en cours
+        cursor.execute("""
+            SELECT MONTH(created_at) AS month, COUNT(*) AS total
+            FROM customers
+            WHERE YEAR(created_at) = YEAR(CURDATE())
+            GROUP BY MONTH(created_at)
+            ORDER BY month ASC
+        """)
+        by_month = cursor.fetchall() or []
+
+        # Répartition par année (toutes années)
+        cursor.execute("""
+            SELECT YEAR(created_at) AS year, COUNT(*) AS total
+            FROM customers
+            WHERE created_at IS NOT NULL
+            GROUP BY YEAR(created_at)
+            ORDER BY year ASC
+        """)
+        by_year = cursor.fetchall() or []
+
+        # Taux de rétention : clients avec au moins 2 formules
+        cursor.execute("SELECT COUNT(*) AS total FROM customers")
+        total_customers = (cursor.fetchone() or {}).get('total') or 0
+
+        cursor.execute("""
+            SELECT COUNT(*) AS total FROM (
+                SELECT customer_id
+                FROM formula
+                WHERE customer_id IS NOT NULL
+                GROUP BY customer_id
+                HAVING COUNT(*) >= 2
+            ) AS retained
+        """)
+        retained_customers = (cursor.fetchone() or {}).get('total') or 0
+
+        retention_rate = round((retained_customers / total_customers) * 100, 2) if total_customers > 0 else 0
+
+        # Top 5 pays par nombre de clients
+        cursor.execute("""
+            SELECT country, COUNT(*) AS total
+            FROM customers
+            WHERE country IS NOT NULL AND country != ''
+            GROUP BY country
+            ORDER BY total DESC
+            LIMIT 5
+        """)
+        top_countries = cursor.fetchall() or []
+
+        return {
+            "current_month_customers": current_month,
+            "last_month_customers": last_month,
+            "customers_by_month": by_month,
+            "customers_by_year": by_year,
+            "total_customers": total_customers,
+            "retained_customers": retained_customers,
+            "retention_rate": retention_rate,
+            "top_countries": top_countries,
+        }
+
+    except Exception as e:
+        print(f"Erreur récupération analytics customers : {e}")
+        return {
+            "current_month_customers": 0,
+            "last_month_customers": 0,
+            "customers_by_month": [],
+            "customers_by_year": [],
+            "total_customers": 0,
+            "retained_customers": 0,
+            "retention_rate": 0,
+            "top_countries": [],
+        }
+    finally:
+        cursor.close()
+
+
 def check_duplicate_phone(connection: pymysql.connections.Connection, phone: str) -> bool:
     """
     Vérifie si un téléphone existe déjà
