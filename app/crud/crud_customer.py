@@ -374,6 +374,23 @@ def get_analytics(connection: pymysql.connections.Connection) -> Dict[str, Any]:
         current_month = month_row.get('current_month') or 0
         last_month = month_row.get('last_month') or 0
 
+        # Année effective d'un customer : created_at si présent, sinon l'année
+        # de référence de sa première formule (les customers plus anciens
+        # n'ont pas toujours de created_at renseigné)
+        year_expr = """
+            COALESCE(
+                YEAR(customers.created_at),
+                (
+                    SELECT CAST(LEFT(formula.reference, 4) AS UNSIGNED)
+                    FROM formula
+                    WHERE formula.customer_id = customers.id
+                        AND formula.reference REGEXP '^[0-9]{4}'
+                    ORDER BY formula.id ASC
+                    LIMIT 1
+                )
+            )
+        """
+
         # Répartition par mois pour l'année en cours
         cursor.execute("""
             SELECT MONTH(created_at) AS month, COUNT(*) AS total
@@ -385,11 +402,11 @@ def get_analytics(connection: pymysql.connections.Connection) -> Dict[str, Any]:
         by_month = cursor.fetchall() or []
 
         # Répartition par année (toutes années)
-        cursor.execute("""
-            SELECT YEAR(created_at) AS year, COUNT(*) AS total
+        cursor.execute(f"""
+            SELECT {year_expr} AS year, COUNT(*) AS total
             FROM customers
-            WHERE created_at IS NOT NULL
-            GROUP BY YEAR(created_at)
+            GROUP BY year
+            HAVING year IS NOT NULL
             ORDER BY year ASC
         """)
         by_year = cursor.fetchall() or []
