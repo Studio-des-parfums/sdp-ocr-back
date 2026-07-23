@@ -1,4 +1,3 @@
-import json
 from typing import Optional
 import pymysql
 
@@ -99,13 +98,12 @@ def upsert_answer(
     cursor = None
     try:
         cursor = connection.cursor()
-        json_value = json.dumps(answer_value)
         query = """
             INSERT INTO session_answers (session_id, question_key, answer_value, updated_at)
             VALUES (%s, %s, %s, NOW())
             ON DUPLICATE KEY UPDATE answer_value = %s, updated_at = NOW()
         """
-        cursor.execute(query, (session_id, question_key, json_value, json_value))
+        cursor.execute(query, (session_id, question_key, answer_value, answer_value))
         cursor.execute("UPDATE sessions SET updated_at = NOW() WHERE id = %s", (session_id,))
         connection.commit()
         return True, ""
