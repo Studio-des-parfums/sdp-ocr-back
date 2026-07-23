@@ -94,16 +94,17 @@ async def get_session_detail(session_id: int):
 @router.put("/sessions/{session_id}/answers")
 async def update_session_answers(session_id: int, payload: SessionAnswersUpdate):
     for entry in payload.answers:
-        session_repository.upsert_answer(session_id, entry.question_key, str(entry.answer_value))
+        ok, err = session_repository.upsert_answer(session_id, entry.question_key, str(entry.answer_value))
+        if not ok:
+            raise HTTPException(status_code=500, detail=f"Erreur mise a jour reponse: {err}")
     return {"status": "updated"}
 
 
 @router.post("/sessions/{session_id}/answer")
 async def update_single_answer(session_id: int, payload: SingleAnswerUpdate):
-    ok = session_repository.upsert_answer(session_id, payload.question_key, str(payload.answer_value))
+    ok, err = session_repository.upsert_answer(session_id, payload.question_key, str(payload.answer_value))
     if not ok:
-        raise HTTPException(status_code=500, detail="Erreur mise a jour reponse")
-    # Broadcast temps réel aux superviseurs connectés
+        raise HTTPException(status_code=500, detail=f"Erreur mise a jour reponse: {err}")
     msg = json.dumps({"question_key": payload.question_key, "answer_value": payload.answer_value})
     await manager.broadcast(session_id, msg)
     return {"status": "updated"}

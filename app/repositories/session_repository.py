@@ -51,12 +51,17 @@ def upsert_answer(
     session_id: int,
     question_key: str,
     answer_value: str,
-) -> bool:
+) -> tuple[bool, str]:
     conn = get_connection()
     if not conn:
-        return False
+        return False, "Pas de connexion BDD"
     try:
-        return crud_session.upsert_answer(conn, session_id, question_key, answer_value)
+        ok = crud_session.upsert_answer(conn, session_id, question_key, answer_value)
+        if not ok:
+            return False, "Echec requete upsert_answer"
+        return True, ""
+    except Exception as e:
+        return False, str(e)
     finally:
         conn.close()
 
