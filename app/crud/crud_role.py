@@ -10,8 +10,8 @@ def create(connection: pymysql.connections.Connection,
         query = """
             INSERT INTO roles (name, csv_download_limit, email_sending, pdf_extraction_limit,
                                customers_access, customers_edit, access_to_extraction, 
-                               customers_review_access, formula_edit, full_access)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                               customers_review_access, formula_edit, full_access, devices_access)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         cursor.execute(query, (
             role_data.get('name'),
@@ -23,7 +23,8 @@ def create(connection: pymysql.connections.Connection,
             role_data.get('access_to_extraction', False),
             role_data.get('customers_review_access', False),
             role_data.get('formula_edit', False),
-            role_data.get('full_access', False)
+            role_data.get('full_access', False),
+            role_data.get('devices_access', False)
         ))
         connection.commit()
         return cursor.lastrowid

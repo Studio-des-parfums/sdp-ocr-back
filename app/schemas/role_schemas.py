@@ -14,6 +14,7 @@ class RoleBase(BaseModel):
     customers_review_access: bool = False
     formula_edit: bool = False
     full_access: bool = False
+    devices_access: bool = False
 
 
 class RoleCreate(RoleBase):
