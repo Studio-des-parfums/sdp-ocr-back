@@ -94,7 +94,7 @@ def upsert_answer(
     session_id: int,
     question_key: str,
     answer_value: str,
-) -> bool:
+) -> tuple[bool, str]:
     cursor = None
     try:
         cursor = connection.cursor()
@@ -106,11 +106,12 @@ def upsert_answer(
         cursor.execute(query, (session_id, question_key, answer_value, answer_value))
         cursor.execute("UPDATE sessions SET updated_at = NOW() WHERE id = %s", (session_id,))
         connection.commit()
-        return True
+        return True, ""
     except Exception as e:
-        print(f"Erreur upsert answer {session_id}/{question_key} : {e}")
+        msg = f"Erreur upsert answer {session_id}/{question_key} : {e}"
+        print(msg)
         connection.rollback()
-        return False
+        return False, msg
     finally:
         if cursor:
             cursor.close()

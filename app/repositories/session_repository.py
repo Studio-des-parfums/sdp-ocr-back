@@ -56,10 +56,7 @@ def upsert_answer(
     if not conn:
         return False, "Pas de connexion BDD"
     try:
-        ok = crud_session.upsert_answer(conn, session_id, question_key, answer_value)
-        if not ok:
-            return False, "Echec requete upsert_answer"
-        return True, ""
+        return crud_session.upsert_answer(conn, session_id, question_key, answer_value)
     except Exception as e:
         return False, str(e)
     finally:
