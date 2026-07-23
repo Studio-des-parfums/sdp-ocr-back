@@ -6,6 +6,7 @@ from app.schemas.device_schemas import (
     DeviceRegisterResponse,
     DeviceVerifyRequest,
     DeviceVerifyResponse,
+    DeviceRenameRequest,
     DeviceResponse,
 )
 
@@ -64,3 +65,11 @@ async def reject_device(device_id: int):
     if not ok:
         raise HTTPException(status_code=404, detail="Appareil introuvable")
     return {"status": "rejected"}
+
+
+@router.patch("/devices/{device_id}/rename")
+async def rename_device(device_id: int, payload: DeviceRenameRequest):
+    ok = device_repository.rename_device(device_id, payload.device_name)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Appareil introuvable")
+    return {"status": "renamed", "device_name": payload.device_name}

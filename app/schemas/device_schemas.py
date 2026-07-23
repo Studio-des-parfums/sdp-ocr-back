@@ -25,6 +25,10 @@ class DeviceVerifyResponse(BaseModel):
     status: Optional[str] = None
 
 
+class DeviceRenameRequest(BaseModel):
+    device_name: str
+
+
 class DeviceResponse(BaseModel):
     id: int
     device_id: str

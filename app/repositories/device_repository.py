@@ -55,3 +55,13 @@ def reject_device(device_id: int) -> bool:
         return crud_device.reject(conn, device_id)
     finally:
         conn.close()
+
+
+def rename_device(device_id: int, device_name: str) -> bool:
+    conn = get_connection()
+    if not conn:
+        return False
+    try:
+        return crud_device.rename(conn, device_id, device_name)
+    finally:
+        conn.close()

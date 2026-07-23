@@ -90,6 +90,23 @@ def approve(connection: pymysql.connections.Connection, device_id: int) -> bool:
             cursor.close()
 
 
+def rename(connection: pymysql.connections.Connection, device_id: int, device_name: str) -> bool:
+    cursor = None
+    try:
+        cursor = connection.cursor()
+        query = "UPDATE devices SET device_name = %s WHERE id = %s"
+        cursor.execute(query, (device_name, device_id))
+        connection.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        print(f"Erreur renommage appareil {device_id} : {e}")
+        connection.rollback()
+        return False
+    finally:
+        if cursor:
+            cursor.close()
+
+
 def reject(connection: pymysql.connections.Connection, device_id: int) -> bool:
     cursor = None
     try:
