@@ -170,12 +170,23 @@ def get_by_phone_normalized(connection: pymysql.connections.Connection, phone: s
         cursor.close()
 
 
+EMPTY_FIELDS_COLUMNS = {
+    "email": "customers.email",
+    "phone": "customers.phone",
+    "first_name": "customers.first_name",
+    "last_name": "customers.last_name",
+    "country": "customers.country",
+    "city": "customers.city",
+}
+
+
 def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int = 10,
             search: Optional[str] = None, v2: bool = False,
             country: Optional[str] = None,
             year: Optional[str] = None,
             month: Optional[str] = None,
-            verified: Optional[str] = None) -> Tuple[List[Dict[str, Any]], int]:
+            verified: Optional[str] = None,
+            empty_fields: Optional[List[str]] = None) -> Tuple[List[Dict[str, Any]], int]:
     """
     Récupère tous les customers avec pagination et recherche
 
@@ -189,6 +200,8 @@ def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int
         year: Filtre par année (created_at ou référence de formule)
         month: Filtre par mois (1-12, basé sur created_at)
         verified: Filtre email vérifié ("true" ou "false")
+        empty_fields: Liste de champs (parmi email, phone, first_name, last_name,
+            country, city) pour lesquels au moins un doit être vide (NULL ou '')
 
     Returns:
         Tuple (liste des customers, total)
@@ -227,6 +240,12 @@ def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int
         if verified is not None:
             conditions.append("customers.verified_email = %s")
             params.append(1 if verified == 'true' else 0)
+
+        if empty_fields:
+            columns = [EMPTY_FIELDS_COLUMNS[f] for f in empty_fields if f in EMPTY_FIELDS_COLUMNS]
+            if columns:
+                empty_conditions = " OR ".join(f"({col} IS NULL OR {col} = '')" for col in columns)
+                conditions.append(f"({empty_conditions})")
 
         if search:
             search_param = f"%{search}%"

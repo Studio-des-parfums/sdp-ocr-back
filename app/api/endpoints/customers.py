@@ -50,14 +50,17 @@ async def get_customers(
     country: Optional[str] = Query(None, description="Filtrer par pays"),
     year: Optional[str] = Query(None, description="Filtrer par année (création ou référence)"),
     month: Optional[str] = Query(None, description="Filtrer par mois (1-12)"),
-    verified: Optional[str] = Query(None, description="Filtrer par email vérifié (true/false)")
+    verified: Optional[str] = Query(None, description="Filtrer par email vérifié (true/false)"),
+    empty_fields: Optional[str] = Query(None, description="Champs vides à filtrer, séparés par des virgules (email,phone,first_name,last_name,country,city). Retourne les clients pour qui AU MOINS UN des champs sélectionnés est vide.")
 ):
     """
     Récupérer tous les customers avec pagination et filtres
     """
     try:
+        empty_fields_list = [f.strip() for f in empty_fields.split(",") if f.strip()] if empty_fields else None
         customers, total = customer_repository.get_all_customers(page, size, search, v2,
-                                                                 country, year, month, verified)
+                                                                 country, year, month, verified,
+                                                                 empty_fields_list)
 
         customer_responses = []
         for customer in customers:
