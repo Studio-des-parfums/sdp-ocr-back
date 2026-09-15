@@ -25,6 +25,8 @@ class TabletSubmissionCreate(BaseModel):
     quantity: Optional[str] = None
     perfume_name: Optional[str] = None
     supervisor_id: Optional[int] = None
+    atelier_id: Optional[int] = None
+    atelier_name: Optional[str] = None
     top_notes: List[TabletNote] = []
     heart_notes: List[TabletNote] = []
     base_notes: List[TabletNote] = []

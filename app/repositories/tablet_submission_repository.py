@@ -84,6 +84,8 @@ class TabletSubmissionRepository:
                 quantity=submission.quantity,
                 source="tablet",
                 supervisor_id=submission.supervisor_id,
+                atelier_id=submission.atelier_id,
+                atelier_name=submission.atelier_name,
             )
             if not formula_id:
                 return None, "Échec de la création de la formule"

@@ -14,6 +14,8 @@ def create(
     source: Optional[str] = None,
     supervisor_id: Optional[int] = None,
     box_type: Optional[str] = None,
+    atelier_id: Optional[int] = None,
+    atelier_name: Optional[str] = None,
 ) -> Optional[int]:
     """
     Crée une nouvelle formule liée à un customer (ou customer_review) et à un fichier.
@@ -29,6 +31,8 @@ def create(
         quantity: Quantité choisie (10ml, 30ml, 50ml, 100ml, Brume)
         source: Origine de la formule ('ocr' ou 'tablet')
         box_type: Coffret utilisé (optionnel)
+        atelier_id: ID de l'atelier choisi côté tablette (référentiel sdp-dashboard, optionnel)
+        atelier_name: Nom traduit de l'atelier au moment de la soumission (optionnel)
 
     Returns:
         ID de la formule créée ou None si erreur
@@ -55,6 +59,10 @@ def create(
             data["supervisor_id"] = supervisor_id
         if box_type is not None:
             data["box_type"] = box_type
+        if atelier_id is not None:
+            data["atelier_id"] = atelier_id
+        if atelier_name is not None:
+            data["atelier_name"] = atelier_name
 
         columns = list(data.keys())
         placeholders = ["%s"] * len(columns)
@@ -100,7 +108,7 @@ def get_by_id(
         query = """
             SELECT f.id, f.customer_id, f.file_id, f.customer_review_id, f.comment,
                    f.reference, f.perfume_name, f.date, f.quantity, f.source, f.reuse_count,
-                   f.supervisor_id, f.box_type,
+                   f.supervisor_id, f.box_type, f.atelier_id, f.atelier_name,
                    CONCAT(u.first_name, ' ', u.last_name) AS supervisor_name
             FROM formula f
             LEFT JOIN users u ON u.id = f.supervisor_id

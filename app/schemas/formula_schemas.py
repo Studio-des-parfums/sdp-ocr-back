@@ -52,6 +52,8 @@ class FormulaBase(BaseModel):
     source: Optional[str] = None
     supervisor_id: Optional[int] = None
     box_type: Optional[str] = None
+    atelier_id: Optional[int] = None
+    atelier_name: Optional[str] = None
 
 
 class FormulaCreate(FormulaBase):
