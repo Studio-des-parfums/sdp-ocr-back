@@ -1,4 +1,5 @@
 import urllib.parse
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
@@ -10,7 +11,9 @@ from app.schemas.formula_schemas import (
 )
 from app.repositories.formula_repository import formula_repository
 from app.repositories.customer_repository import customer_repository
+from app.repositories.customer_file_repository import customer_file_repository
 from app.services.pdf.formula_sheet_pdf_service import generate_formula_sheet_pdf
+from app.services.file.file_storage_service import file_storage_service
 
 router = APIRouter()
 
@@ -63,6 +66,70 @@ async def get_formula_pdf(formula_id: int):
             "Content-Disposition": f"attachment; filename*=UTF-8''{safe_filename}"
         },
     )
+
+
+@router.post("/{formula_id}/pdf", response_model=FormulaResponse)
+async def generate_and_persist_formula_pdf(formula_id: int):
+    """
+    Génère la fiche formule en PDF et l'associe définitivement à la formule
+    (comme un document scanné classique), afin de ne plus avoir à la
+    régénérer à chaque fois.
+
+    Sert pour les formules qui n'ont aucun document/fiche associé
+    (ex: formules créées digitalement).
+    """
+    formula = formula_repository.get_formula_by_id(formula_id)
+    if not formula:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Formule avec ID {formula_id} non trouvée"
+        )
+
+    if formula.get("file_id"):
+        raise HTTPException(
+            status_code=409,
+            detail="Cette formule a déjà une fiche associée"
+        )
+
+    customer = {}
+    if formula.get("customer_id"):
+        customer = customer_repository.get_customer_by_id(formula["customer_id"]) or {}
+
+    pdf_bytes = generate_formula_sheet_pdf(customer, formula)
+
+    reference = formula.get("reference") or f"formule-{formula_id}"
+    original_filename = f"fiche-{reference}.pdf"
+
+    file_path, _ = file_storage_service.save_file_for_customer(
+        pdf_bytes,
+        formula.get("customer_id"),
+        original_filename,
+    )
+
+    file_id = customer_file_repository.create_customer_file({
+        "customer_id": formula.get("customer_id"),
+        "customer_review_id": None,
+        "file_path": file_path,
+        "file_name": original_filename,
+        "file_type": "application/pdf",
+        "file_size": len(pdf_bytes),
+        "uploaded_at": datetime.now(),
+    })
+
+    if not file_id:
+        raise HTTPException(
+            status_code=500,
+            detail="Erreur lors de l'enregistrement du fichier"
+        )
+
+    if not formula_repository.set_file_id(formula_id, file_id):
+        raise HTTPException(
+            status_code=500,
+            detail="Erreur lors de l'association du fichier à la formule"
+        )
+
+    updated_formula = formula_repository.get_formula_by_id(formula_id)
+    return FormulaResponse(**updated_formula)
 
 
 @router.put("/{formula_id}/notes", response_model=FormulaResponse)

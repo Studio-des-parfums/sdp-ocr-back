@@ -1,101 +1,78 @@
 """
 Génération de la "fiche formule" en PDF.
 
-Reprend le design de la pyramide olfactive utilisé pour l'email
-(app/api/endpoints/emails.py::_build_pyramid_html) : encadré du nom du
-parfum, image de la pyramide, colonnes de notes avec pourcentages,
-footer Studio des Parfums.
+Reproduit la mise en page de la fiche papier physique remplie en institut
+(en-tête "Le Studio des Parfums", bloc infos client, ligne "Votre Parfum"
+avec la taille du flacon, puis les 3 tableaux quadrillés Notes de
+tête/cœur/fond avec les paliers 30/50/100 ml), afin qu'une fiche générée
+pour une formule créée digitalement soit visuellement cohérente avec les
+fiches scannées.
 
 Utilisé notamment pour les formules qui n'ont aucune fiche/document
 associé (ex: formules créées digitalement) afin de fournir un
 téléchargement de remplacement reprenant la même charte graphique.
 """
-import os
-import base64
 from io import BytesIO
 from typing import Optional
 
 from weasyprint import HTML
 from weasyprint.text.fonts import FontConfiguration
 
-STATIC_PATH = os.path.join(os.path.dirname(__file__), "../../static/images")
-PYRAMID_IMAGE_PATH = os.path.join(STATIC_PATH, "pyramide.png")
+
+def _checkbox(checked: bool) -> str:
+    return "☒" if checked else "☐"
 
 
-def get_pyramid_image_base64() -> Optional[str]:
-    try:
-        if os.path.exists(PYRAMID_IMAGE_PATH):
-            with open(PYRAMID_IMAGE_PATH, "rb") as img_file:
-                return base64.b64encode(img_file.read()).decode("utf-8")
-    except Exception as e:
-        print(f"Erreur lecture image pyramide: {e}")
-    return None
-
-
-def _parse_quantity(note: dict) -> float:
-    try:
-        return float(str(note.get("quantity") or "0").replace(",", "."))
-    except (ValueError, TypeError):
-        return 0.0
-
-
-def _sum_quantities(notes: list) -> float:
-    return sum(_parse_quantity(n) for n in notes)
-
-
-def _format_notes_html(notes: list) -> str:
-    """Affiche TOUTES les notes de la catégorie avec leur quantité en ml."""
-    if not notes:
-        return "<p style='margin:0;color:#999;font-size:13px'>—</p>"
+def _format_notes_rows(notes: list, min_rows: int = 7) -> str:
+    """Une ligne par note (nom + quantité en ml), complétée par des lignes vides
+    pour conserver la hauteur du tableau papier."""
     rows = ""
     for n in notes:
-        qty = n.get("quantity")
-        qty_html = f"<span style='color:#888'>{qty} ml</span>" if qty else ""
+        qty = n.get("quantity") or ""
         rows += (
-            "<div style='display:flex;justify-content:space-between;"
-            "border-bottom:1px dotted #e5e5e5;padding:3px 0;font-size:13px'>"
-            f"<span>{n.get('name', '')}</span>{qty_html}"
-            "</div>"
+            "<tr>"
+            f"<td class='note-name'>{n.get('name', '')}</td>"
+            f"<td class='note-qty'>{qty}</td>"
+            "</tr>"
         )
+    for _ in range(max(0, min_rows - len(notes))):
+        rows += "<tr><td class='note-name'>&nbsp;</td><td class='note-qty'></td></tr>"
     return rows
 
 
-def _percentages(top_notes: list, heart_notes: list, base_notes: list) -> dict:
-    total_top = _sum_quantities(top_notes)
-    total_heart = _sum_quantities(heart_notes)
-    total_base = _sum_quantities(base_notes)
-    grand_total = total_top + total_heart + total_base
-
-    if grand_total > 0:
-        return {
-            "top": round(total_top / grand_total * 100),
-            "heart": round(total_heart / grand_total * 100),
-            "base": round(total_base / grand_total * 100),
-            "total_ml": grand_total,
-        }
-    return {"top": 0, "heart": 0, "base": 0, "total_ml": 0}
+def _size_rows(selected_size: Optional[str]) -> str:
+    sizes = [("30", "6 - 8"), ("50", "12 - 16"), ("100", "20 - 30")]
+    rows = ""
+    for ml, usage in sizes:
+        is_selected = selected_size == ml
+        rows += (
+            "<tr>"
+            f"<td class='size-ml'>{ml} ml</td>"
+            f"<td class='size-usage'>{usage}</td>"
+            f"<td class='size-check'>{_checkbox(is_selected)}</td>"
+            "</tr>"
+        )
+    return rows
 
 
 def generate_formula_sheet_html(customer: dict, formula: dict) -> str:
     top_notes = formula.get("top_notes") or []
     heart_notes = formula.get("heart_notes") or []
     base_notes = formula.get("base_notes") or []
-    pct = _percentages(top_notes, heart_notes, base_notes)
 
-    pyramid_b64 = get_pyramid_image_base64()
-    if pyramid_b64:
-        pyramid_img_tag = f"""
-            <img src="data:image/png;base64,{pyramid_b64}"
-                 alt="Pyramide olfactive"
-                 style="width:100%;max-width:220px;height:auto;display:block;margin:0 auto;">
-        """
-    else:
-        pyramid_img_tag = "<div style='width:220px;height:280px;background:#f0f0f0;margin:0 auto'></div>"
+    last_name = customer.get("last_name") or customer.get("nom") or ""
+    first_name = customer.get("first_name") or customer.get("prenom") or ""
+    email = customer.get("email") or ""
+    phone = customer.get("phone") or ""
+    job = customer.get("job") or ""
+    city = customer.get("city") or ""
+    country = customer.get("country") or ""
 
-    customer_name = f"{customer.get('last_name', '') or customer.get('nom', '')} {customer.get('first_name', '') or customer.get('prenom', '')}".strip()
-    perfume_name = formula.get("perfume_name") or "Non renseigné"
+    perfume_name = formula.get("perfume_name") or ""
     reference = formula.get("reference") or f"Formule #{formula.get('id', '')}"
     date = formula.get("date") or ""
+    quantity = str(formula.get("quantity") or "").strip()
+    selected_size = quantity if quantity in ("30", "50", "100") else None
 
     return f"""
 <!DOCTYPE html>
@@ -105,94 +82,206 @@ def generate_formula_sheet_html(customer: dict, formula: dict) -> str:
 <style>
     @page {{
         size: A4;
-        margin: 1.8cm;
+        margin: 1.4cm;
     }}
+    * {{ box-sizing: border-box; }}
     body {{
         margin: 0;
         padding: 0;
         background: #ffffff;
         font-family: 'Helvetica Neue', Arial, sans-serif;
-        color: #333;
+        color: #1a1a1a;
+        font-size: 12px;
+    }}
+    table {{ border-collapse: collapse; width: 100%; }}
+
+    .header {{
+        text-align: center;
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+        border-bottom: 2px solid #1a1a1a;
+    }}
+    .header .brand {{
+        font-size: 26px;
+        letter-spacing: 2px;
+        font-weight: bold;
+        margin: 0;
+    }}
+    .header .brand-sub {{
+        font-size: 12px;
+        letter-spacing: 4px;
+        color: #555;
+        margin: 2px 0 0;
+    }}
+    .header .reference {{
+        position: absolute;
+        top: 0;
+        right: 0;
+        font-size: 11px;
+        color: #555;
+    }}
+    .header-wrap {{ position: relative; }}
+
+    .info-table td {{
+        border: 1px solid #999;
+        padding: 5px 8px;
+        vertical-align: top;
+        font-size: 11.5px;
+    }}
+    .info-table .label {{
+        color: #555;
+        margin-right: 4px;
+    }}
+    .civility span {{ margin-right: 14px; }}
+
+    .parfum-bar {{
+        margin: 14px 0 10px;
+        text-align: center;
+        border: 2px solid #1a1a1a;
+        padding: 8px;
+    }}
+    .parfum-bar .title {{
+        font-size: 13px;
+        letter-spacing: 3px;
+        font-weight: bold;
+        margin-right: 16px;
+    }}
+    .parfum-bar .name {{
+        font-size: 15px;
+        font-weight: bold;
+    }}
+
+    .notes-section {{
+        display: table;
+        width: 100%;
+        margin-bottom: 10px;
+    }}
+    .notes-block {{
+        border: 1px solid #1a1a1a;
+    }}
+    .notes-block + .notes-block {{ margin-top: 10px; }}
+    .notes-block .block-title {{
+        background: #eee;
+        font-weight: bold;
+        font-size: 12px;
+        padding: 5px 8px;
+        border-bottom: 1px solid #1a1a1a;
+    }}
+    .notes-block table td, .notes-block table th {{
+        border-bottom: 1px dotted #bbb;
+        padding: 4px 8px;
+        font-size: 11.5px;
+    }}
+    .notes-block table th {{
+        text-align: left;
+        color: #555;
+        font-weight: normal;
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid #1a1a1a;
+    }}
+    .note-name {{ width: 75%; }}
+    .note-qty {{ width: 25%; color: #555; }}
+
+    .size-box {{
+        border: 1px solid #1a1a1a;
+        margin-top: 4px;
+    }}
+    .size-box .block-title {{
+        background: #eee;
+        font-weight: bold;
+        font-size: 11px;
+        padding: 5px 8px;
+        border-bottom: 1px solid #1a1a1a;
+    }}
+    .size-box table td {{
+        border-bottom: 1px dotted #bbb;
+        padding: 4px 8px;
+        font-size: 11px;
+    }}
+    .size-check {{ text-align: center; width: 20%; }}
+
+    .footer {{
+        margin-top: 18px;
+        padding-top: 10px;
+        border-top: 2px solid #1a1a1a;
+        text-align: center;
+        font-size: 10.5px;
+        color: #555;
     }}
 </style>
 </head>
 <body>
 
-<table width="100%" cellpadding="0" cellspacing="0">
-<tr><td style="font-size:15px;line-height:1.6">
-
-<p style="text-align:center;font-size:11px;letter-spacing:2px;color:#999;text-transform:uppercase;margin:0 0 6px">
-    Fiche formule
-</p>
-
-<p>Bonjour {customer_name},</p>
-
-<p>Voici la pyramide olfactive de votre création.</p>
-
-<div style="margin:20px 0;text-align:center">
-    <span style="font-size:22px;font-weight:bold;color:#c00000;border:2px solid #c00000;padding:10px 18px;display:inline-block">
-        {perfume_name}
-    </span>
+<div class="header-wrap">
+    <div class="reference">
+        Réf. <strong>{reference}</strong>{f" — {date}" if date else ""}
+    </div>
+    <div class="header">
+        <p class="brand">LE STUDIO DES PARFUMS</p>
+        <p class="brand-sub">PARIS</p>
+    </div>
 </div>
 
-<p>
-Cette composition {f"a été créée le {date} et " if date else ""}est enregistrée sous la référence
-<strong>{reference}</strong>.
-</p>
-
-</td></tr>
-
-<tr><td height="20"></td></tr>
-
-<tr><td>
-<table width="100%" cellpadding="0" cellspacing="0">
+<table class="info-table">
 <tr>
-
-<td width="42%" valign="top" align="center">
-{pyramid_img_tag}
-<p style="margin-top:14px;font-size:13px;color:#666">
-    Total formule : <strong style="color:#333">{pct['total_ml']:.2f} ml</strong>
-</p>
-</td>
-
-<td width="58%" valign="top" style="padding-left:25px">
-
-<h3 style="margin:0 0 8px;font-size:15px;border-bottom:1px solid #ddd;padding-bottom:4px">
-    Notes de tête — {pct['top']}%
-</h3>
-{_format_notes_html(top_notes)}
-
-<h3 style="margin:16px 0 8px;font-size:15px;border-bottom:1px solid #ddd;padding-bottom:4px">
-    Notes de cœur — {pct['heart']}%
-</h3>
-{_format_notes_html(heart_notes)}
-
-<h3 style="margin:16px 0 8px;font-size:15px;border-bottom:1px solid #ddd;padding-bottom:4px">
-    Notes de fond — {pct['base']}%
-</h3>
-{_format_notes_html(base_notes)}
-
-</td>
-
+    <td width="55%">
+        <span class="label">Nom :</span><strong>{last_name}</strong><br>
+        <span class="label">Prénom :</span><strong>{first_name}</strong><br>
+        <span class="label">Profession :</span>{job}
+    </td>
+    <td width="45%">
+        <span class="label">Tél :</span>{phone}<br>
+        <span class="label">Email :</span>{email}<br>
+        <span class="label">Ville :</span>{city} &nbsp; <span class="label">Pays :</span>{country}
+    </td>
 </tr>
 </table>
-</td></tr>
 
-<tr><td style="padding-top:30px">
-<p style="color:#c00000;font-weight:bold;text-align:center">
-    Nous vous rappelons que vous pouvez recommander dès que vous le souhaitez.
-</p>
-</td></tr>
+<div class="parfum-bar">
+    <span class="title">VOTRE PARFUM</span>
+    <span class="name">{perfume_name}</span>
+</div>
 
-<tr><td style="padding-top:24px;font-size:12px;color:#666;text-align:center">
-<hr style="border:none;border-top:2px solid #333;margin-bottom:15px">
-<strong>Le Studio des Parfums – Paris</strong><br>
-23 rue du Bourg Tibourg – 75004 Paris<br>
-Tél : +33 (0)1 40 29 90 84<br>
-www.studiodesparfums-paris.fr
-</td></tr>
+<div class="notes-section">
+    <div class="notes-block">
+        <div class="block-title">Notes de tête</div>
+        <table>
+            <tr><th class="note-name">Note</th><th class="note-qty">Qté en ml</th></tr>
+            {_format_notes_rows(top_notes)}
+        </table>
+    </div>
 
-</table>
+    <div class="notes-block">
+        <div class="block-title">Notes de cœur</div>
+        <table>
+            <tr><th class="note-name">Note</th><th class="note-qty">Qté en ml</th></tr>
+            {_format_notes_rows(heart_notes)}
+        </table>
+    </div>
+
+    <div class="notes-block">
+        <div class="block-title">Notes de fond</div>
+        <table>
+            <tr><th class="note-name">Note</th><th class="note-qty">Qté en ml</th></tr>
+            {_format_notes_rows(base_notes)}
+        </table>
+    </div>
+
+    <div class="size-box">
+        <div class="block-title">Taille du flacon</div>
+        <table>
+            <tr><td class="size-ml"><strong>Contenance</strong></td><td class="size-usage"><strong>Qté utile</strong></td><td class="size-check"></td></tr>
+            {_size_rows(selected_size)}
+        </table>
+    </div>
+</div>
+
+<div class="footer">
+    <strong>Le Studio des Parfums – Paris</strong><br>
+    23 rue du Bourg Tibourg – 75004 Paris — Tél : +33 (0)1 40 29 90 84 — www.studiodesparfums-paris.fr
+</div>
 
 </body>
 </html>
