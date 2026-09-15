@@ -116,7 +116,8 @@ class CustomerRepository:
                          country: Optional[str] = None,
                          year: Optional[str] = None,
                          month: Optional[str] = None,
-                         verified: Optional[str] = None) -> Tuple[List[Dict[str, Any]], int]:
+                         verified: Optional[str] = None,
+                         empty_fields: Optional[List[str]] = None) -> Tuple[List[Dict[str, Any]], int]:
         """
         Récupère les customers avec pagination et recherche (sans formules/notes,
         non utilisées par la liste, pour éviter le N+1 sur chaque page)
@@ -129,6 +130,7 @@ class CustomerRepository:
             year: Filtre par année
             month: Filtre par mois (1-12)
             verified: Filtre email vérifié ("true" ou "false")
+            empty_fields: Champs pour lesquels au moins un doit être vide (email, phone, first_name, last_name, country, city)
 
         Returns:
             Tuple (liste des customers, total)
@@ -139,7 +141,7 @@ class CustomerRepository:
 
         try:
             customers, total = crud_customer.get_all(connection, page, size, search, v2,
-                                                     country, year, month, verified)
+                                                     country, year, month, verified, empty_fields)
             return customers, total
         finally:
             connection.close()

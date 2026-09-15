@@ -180,6 +180,26 @@ class FormulaRepository:
         finally:
             connection.close()
 
+    def set_file_id(self, formula_id: int, file_id: int) -> bool:
+        """
+        Associe un fichier (customer_files.id) à une formule.
+
+        Args:
+            formula_id: ID de la formule
+            file_id: ID du fichier à associer
+
+        Returns:
+            True si succès, False sinon
+        """
+        connection = get_connection()
+        if not connection:
+            return False
+
+        try:
+            return crud_formula.update(connection, formula_id, file_id=file_id)
+        finally:
+            connection.close()
+
     def update_formula_notes(
         self,
         formula_id: int,
