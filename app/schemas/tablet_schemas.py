@@ -79,6 +79,8 @@ class FormulaDetail(FormulaHistoryItem):
     heart_notes: List[TabletNote] = []
     base_notes: List[TabletNote] = []
     booster_notes: List[TabletNote] = []
+    atelier_id: Optional[int] = None
+    atelier_name: Optional[str] = None
 
 
 class FormulaReuseResponse(BaseModel):
