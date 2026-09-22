@@ -30,6 +30,7 @@ app.add_middleware(
     allow_origins=[
         "https://sdp-ocr-front.vercel.app",
         "https://master.d2ee6u027rjr9i.amplifyapp.com",
+        "https://aglae-app.vercel.app",
         "http://localhost:3000",
         "http://localhost:5173",
         "http://localhost:5174",
