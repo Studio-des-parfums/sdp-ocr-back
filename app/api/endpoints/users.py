@@ -373,19 +373,51 @@ async def get_user_quotas(user_id: int):
         raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
 
 
+def _resolve_or_create_user_id(user_id: int, email: Optional[str], first_name: Optional[str], last_name: Optional[str]) -> int:
+    """
+    Les comptes du dashboard principal (sdp-dashboard-back) et ceux de ce backend
+    OCR vivent dans deux bases séparées, avec des ids auto-incrémentés indépendants :
+    un même utilisateur peut donc avoir un id différent de part et d'autre. On
+    résout/crée l'utilisateur ici par email (identifiant stable entre les deux
+    systèmes) plutôt que de dépendre de l'id transmis par le front.
+    """
+    if user_repository.get_user_by_id(user_id):
+        return user_id
+
+    if not email:
+        raise HTTPException(status_code=404, detail=f"User avec ID {user_id} non trouvé")
+
+    existing = user_repository.get_user_by_email(email)
+    if existing:
+        return existing["id"]
+
+    new_id = user_repository.create_user({
+        "first_name": first_name or email.split("@")[0],
+        "last_name": last_name or "",
+        "email": email,
+        "phone": "",
+        "job": "",
+        "role_id": None,
+        "is_online": True,
+        "team": "",
+    })
+    if not new_id:
+        raise HTTPException(status_code=500, detail="Impossible de créer l'utilisateur côté OCR")
+    return new_id
+
+
 @router.post("/{user_id}/quotas/csv/consume")
-async def consume_csv_quota(user_id: int):
+async def consume_csv_quota(
+    user_id: int,
+    email: Optional[str] = Query(None),
+    first_name: Optional[str] = Query(None),
+    last_name: Optional[str] = Query(None),
+):
     """
     Consommer un quota CSV pour l'utilisateur
     """
     try:
-        existing_user = user_repository.get_user_by_id(user_id)
-        if not existing_user:
-            raise HTTPException(
-                status_code=404,
-                detail=f"User avec ID {user_id} non trouvé"
-            )
-
+        user_id = _resolve_or_create_user_id(user_id, email, first_name, last_name)
         success = user_repository.consume_csv_quota(user_id)
 
         if not success:
@@ -407,18 +439,17 @@ async def consume_csv_quota(user_id: int):
 
 
 @router.post("/{user_id}/quotas/pdf/consume")
-async def consume_pdf_quota(user_id: int):
+async def consume_pdf_quota(
+    user_id: int,
+    email: Optional[str] = Query(None),
+    first_name: Optional[str] = Query(None),
+    last_name: Optional[str] = Query(None),
+):
     """
     Consommer un quota PDF pour l'utilisateur
     """
     try:
-        existing_user = user_repository.get_user_by_id(user_id)
-        if not existing_user:
-            raise HTTPException(
-                status_code=404,
-                detail=f"User avec ID {user_id} non trouvé"
-            )
-
+        user_id = _resolve_or_create_user_id(user_id, email, first_name, last_name)
         success = user_repository.consume_pdf_quota(user_id)
 
         if not success:
