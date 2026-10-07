@@ -7,7 +7,8 @@ from app.crud import (
     crud_user,
     crud_group,
     crud_login_history,
-    crud_customer_review
+    crud_customer_review,
+    crud_ocr_job
 )
 
 __all__ = [
@@ -15,5 +16,6 @@ __all__ = [
     'crud_user',
     'crud_group',
     'crud_login_history',
-    'crud_customer_review'
+    'crud_customer_review',
+    'crud_ocr_job'
 ]

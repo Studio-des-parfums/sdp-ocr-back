@@ -1,5 +1,5 @@
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException
-from typing import List, Dict, Any
+from typing import List
 import asyncio
 import os
 import uuid
@@ -16,6 +16,7 @@ from app.repositories.customer_repository import customer_repository
 from app.repositories.customer_file_repository import customer_file_repository
 from app.repositories.formula_repository import formula_repository
 from app.repositories.group_repository import group_repository
+from app.repositories.ocr_job_repository import ocr_job_repository
 from app.services.file import file_storage_service
 from app.schemas.ocr_schemas import OCRResponse, ProcessedPage, DocumentType
 
@@ -23,27 +24,25 @@ router = APIRouter()
 logger = get_logger(__name__)
 
 # ======================================================================
-# JOBS EN MÉMOIRE
+# JOBS OCR
 # ======================================================================
-
-# Structure : job_id → { status, progress, total_pages, filename, result, error, created_at }
-_jobs: Dict[str, Dict[str, Any]] = {}
+# L'état des jobs est persisté en base (table ocr_jobs) via ocr_job_repository,
+# pas gardé en mémoire : un job de plusieurs minutes doit rester consultable par
+# /jobs/{job_id} même si le process redémarre (déploiement, crash) ou si la
+# requête de polling est routée vers un autre réplica que celui qui traite le job.
 
 
 async def _process_pdf_job(job_id: str, pdf_content: bytes, filename: str, v2: bool) -> None:
-    """Traitement OCR complet en tâche de fond. Met à jour _jobs[job_id] au fil du traitement."""
-    job = _jobs[job_id]
+    """Traitement OCR complet en tâche de fond. Met à jour le job en base au fil du traitement."""
     try:
         try:
             page_pdfs = pdf_splitter.split_pdf_to_pages(pdf_content)
             if not page_pdfs:
-                job['status'] = 'error'
-                job['error'] = 'No pages found in PDF'
+                ocr_job_repository.update_job(job_id, {'status': 'error', 'error': 'No pages found in PDF'})
                 return
         except Exception as e:
             logger.error(f"[Job {job_id}] Erreur découpage PDF: {e}")
-            job['status'] = 'error'
-            job['error'] = f'Error splitting PDF: {e}'
+            ocr_job_repository.update_job(job_id, {'status': 'error', 'error': f'Error splitting PDF: {e}'})
             return
 
         processed_pages = []
@@ -51,8 +50,7 @@ async def _process_pdf_job(job_id: str, pdf_content: bytes, filename: str, v2: b
         total_pages = len(page_pdfs)
         page_times = []
 
-        job['status'] = 'processing'
-        job['total_pages'] = total_pages
+        ocr_job_repository.update_job(job_id, {'status': 'processing', 'total_pages': total_pages})
 
         estimated_seconds = total_pages * 3.5
         logger.info(f"[Job {job_id}] {total_pages} pages — estimation: {estimated_seconds:.0f}s (~{estimated_seconds/60:.1f} min)")
@@ -131,7 +129,14 @@ async def _process_pdf_job(job_id: str, pdf_content: bytes, filename: str, v2: b
 
                 if doc_type == DocumentType.STUDIO_PARFUMS and extracted_data:
                     try:
-                        entity_id, entity_type = customer_repository.insert_customer_if_not_exists(extracted_data, v2=v2)
+                        # Déporté sur un thread : cette fonction enchaîne des appels réseau
+                        # bloquants (DNS, AbstractAPI email/téléphone) qui, exécutés en
+                        # synchrone dans la coroutine, gèleraient la boucle asyncio et
+                        # empêcheraient uvicorn de répondre au polling GET /jobs/{job_id}
+                        # pendant ce temps.
+                        entity_id, entity_type = await asyncio.to_thread(
+                            customer_repository.insert_customer_if_not_exists, extracted_data, v2
+                        )
 
                         if entity_id:
                             if entity_type == "customer":
@@ -237,7 +242,7 @@ async def _process_pdf_job(job_id: str, pdf_content: bytes, filename: str, v2: b
                 remaining_pages = total_pages - page_number
                 eta_seconds = avg_time_per_page * remaining_pages
 
-                job['progress'] = page_number
+                ocr_job_repository.update_job(job_id, {'progress': page_number})
 
                 if remaining_pages > 0:
                     eta_time = datetime.now() + timedelta(seconds=eta_seconds)
@@ -253,8 +258,7 @@ async def _process_pdf_job(job_id: str, pdf_content: bytes, filename: str, v2: b
         )
 
         if total_studio_parfums == 0:
-            job['status'] = 'error'
-            job['error'] = 'No Studio des Parfums forms found in this PDF'
+            ocr_job_repository.update_job(job_id, {'status': 'error', 'error': 'No Studio des Parfums forms found in this PDF'})
             return
 
         total_duration = time.time() - start_time
@@ -266,8 +270,7 @@ async def _process_pdf_job(job_id: str, pdf_content: bytes, filename: str, v2: b
             f"(moy: {avg_page_time:.2f}s/page)"
         )
 
-        job['status'] = 'completed'
-        job['result'] = {
+        result = {
             "success": True,
             "total_studio_parfums_found": total_studio_parfums,
             "customers_created": customers_created,
@@ -285,11 +288,11 @@ async def _process_pdf_job(job_id: str, pdf_content: bytes, filename: str, v2: b
                 "pages_per_minute": round(60 / avg_page_time, 1) if avg_page_time > 0 else 0,
             }
         }
+        ocr_job_repository.update_job(job_id, {'status': 'completed', 'result': result})
 
     except Exception as e:
         logger.error(f"[Job {job_id}] Erreur fatale: {type(e).__name__}: {e}", exc_info=True)
-        job['status'] = 'error'
-        job['error'] = str(e) or repr(e)
+        ocr_job_repository.update_job(job_id, {'status': 'error', 'error': str(e) or repr(e)})
 
 
 # ======================================================================
@@ -472,15 +475,8 @@ async def upload_pdf_and_download_csv(file: UploadFile = File(...), v2: bool = F
         raise HTTPException(status_code=400, detail="Invalid or empty PDF")
 
     job_id = str(uuid.uuid4())
-    _jobs[job_id] = {
-        "status": "pending",
-        "progress": 0,
-        "total_pages": 0,
-        "filename": file.filename,
-        "result": None,
-        "error": None,
-        "created_at": datetime.now().isoformat(),
-    }
+    if not ocr_job_repository.create_job(job_id, file.filename):
+        raise HTTPException(status_code=500, detail="Could not create OCR job")
 
     asyncio.create_task(_process_pdf_job(job_id, pdf_content, file.filename, v2))
 
@@ -490,15 +486,10 @@ async def upload_pdf_and_download_csv(file: UploadFile = File(...), v2: bool = F
 
 @router.get("/jobs/{job_id}")
 async def get_job_status(job_id: str):
-    job = _jobs.get(job_id)
+    job = ocr_job_repository.get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
-
-
-@router.get("/jobs")
-async def list_jobs():
-    return [{"job_id": jid, **{k: v for k, v in job.items() if k != "result"}} for jid, job in _jobs.items()]
 
 
 

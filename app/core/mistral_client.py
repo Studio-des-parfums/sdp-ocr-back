@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import requests
 import json
@@ -64,7 +65,8 @@ class MistralOCRClient:
             "Content-Type": "application/json",
         }
 
-        response = requests.post(
+        response = await asyncio.to_thread(
+            requests.post,
             self.endpoint,
             headers=headers,
             json=payload,
@@ -99,7 +101,8 @@ class MistralOCRClient:
             "Content-Type": "application/json",
         }
 
-        response = requests.post(
+        response = await asyncio.to_thread(
+            requests.post,
             self.endpoint,
             headers=headers,
             json=payload,
@@ -185,7 +188,8 @@ class MistralOCRClient:
             "Content-Type": "application/json",
         }
 
-        response = requests.post(
+        response = await asyncio.to_thread(
+            requests.post,
             self.endpoint,
             headers=headers,
             json=payload,
