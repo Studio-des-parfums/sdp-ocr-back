@@ -72,23 +72,17 @@ async def get_formula_pdf(formula_id: int):
 async def generate_and_persist_formula_pdf(formula_id: int):
     """
     Génère la fiche formule en PDF et l'associe définitivement à la formule
-    (comme un document scanné classique), afin de ne plus avoir à la
-    régénérer à chaque fois.
+    (comme un document scanné classique).
 
-    Sert pour les formules qui n'ont aucun document/fiche associé
-    (ex: formules créées digitalement).
+    Si la formule a déjà une fiche associée (ex: après modification des
+    notes), le fichier existant est remplacé par la nouvelle version à jour
+    plutôt que d'en créer un doublon.
     """
     formula = formula_repository.get_formula_by_id(formula_id)
     if not formula:
         raise HTTPException(
             status_code=404,
             detail=f"Formule avec ID {formula_id} non trouvée"
-        )
-
-    if formula.get("file_id"):
-        raise HTTPException(
-            status_code=409,
-            detail="Cette formule a déjà une fiche associée"
         )
 
     customer = {}
@@ -100,33 +94,53 @@ async def generate_and_persist_formula_pdf(formula_id: int):
     reference = formula.get("reference") or f"formule-{formula_id}"
     original_filename = f"fiche-{reference}.pdf"
 
+    existing_file_id = formula.get("file_id")
+    existing_file = (
+        customer_file_repository.get_customer_file_by_id(existing_file_id)
+        if existing_file_id else None
+    )
+
     file_path, _ = file_storage_service.save_file_for_customer(
         pdf_bytes,
         formula.get("customer_id"),
         original_filename,
     )
 
-    file_id = customer_file_repository.create_customer_file({
-        "customer_id": formula.get("customer_id"),
-        "customer_review_id": None,
-        "file_path": file_path,
-        "file_name": original_filename,
-        "file_type": "application/pdf",
-        "file_size": len(pdf_bytes),
-        "uploaded_at": datetime.now(),
-    })
-
-    if not file_id:
-        raise HTTPException(
-            status_code=500,
-            detail="Erreur lors de l'enregistrement du fichier"
-        )
-
-    if not formula_repository.set_file_id(formula_id, file_id):
-        raise HTTPException(
-            status_code=500,
-            detail="Erreur lors de l'association du fichier à la formule"
-        )
+    if existing_file:
+        updated = customer_file_repository.update_customer_file(existing_file_id, {
+            "file_path": file_path,
+            "file_name": original_filename,
+            "file_type": "application/pdf",
+            "file_size": len(pdf_bytes),
+            "uploaded_at": datetime.now(),
+        })
+        if not updated:
+            raise HTTPException(
+                status_code=500,
+                detail="Erreur lors de la mise à jour de la fiche existante"
+            )
+        file_storage_service.delete_file(existing_file["file_path"])
+        file_id = existing_file_id
+    else:
+        file_id = customer_file_repository.create_customer_file({
+            "customer_id": formula.get("customer_id"),
+            "customer_review_id": None,
+            "file_path": file_path,
+            "file_name": original_filename,
+            "file_type": "application/pdf",
+            "file_size": len(pdf_bytes),
+            "uploaded_at": datetime.now(),
+        })
+        if not file_id:
+            raise HTTPException(
+                status_code=500,
+                detail="Erreur lors de l'enregistrement du fichier"
+            )
+        if not formula_repository.set_file_id(formula_id, file_id):
+            raise HTTPException(
+                status_code=500,
+                detail="Erreur lors de l'association du fichier à la formule"
+            )
 
     updated_formula = formula_repository.get_formula_by_id(formula_id)
     return FormulaResponse(**updated_formula)
