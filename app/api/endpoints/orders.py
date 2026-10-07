@@ -115,7 +115,7 @@ async def create_order(order_data: OrderCreate):
                         subject="Nouvelle commande attribuée – Le Studio des Parfums",
                         body=html,
                         is_html=True,
-                        cc=settings.SMTP_CC_EMAIL or None
+                        cc=settings.EMAIL_CC_ADDRESS or None
                     )
             except Exception as e:
                 print(f"Erreur envoi email notification commande: {e}")
@@ -219,7 +219,7 @@ async def update_order(order_id: int, order_data: OrderUpdate):
                         subject="Nouvelle commande attribuée – Le Studio des Parfums",
                         body=html,
                         is_html=True,
-                        cc=settings.SMTP_CC_EMAIL or None
+                        cc=settings.EMAIL_CC_ADDRESS or None
                     )
             except Exception as e:
                 print(f"Erreur envoi email notification commande: {e}")

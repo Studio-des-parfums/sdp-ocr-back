@@ -8,8 +8,9 @@ class EmailTestRequest(BaseModel):
 
 
 class PyramidRequest(BaseModel):
-    """Schema pour la route pyramid"""
-    reference: str
+    """Schema pour la route pyramid. Une des deux clés (reference ou formula_id) doit être fournie."""
+    reference: Optional[str] = None
+    formula_id: Optional[int] = None
 
 
 class EmailResponse(BaseModel):

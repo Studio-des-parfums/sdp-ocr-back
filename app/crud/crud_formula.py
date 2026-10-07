@@ -238,6 +238,67 @@ def get_by_reference(
             cursor.close()
 
 
+def get_pending_review_emails(
+    connection: pymysql.connections.Connection,
+    delay_hours: int = 24,
+) -> list[dict]:
+    """
+    Formules créées depuis au moins `delay_hours`, issues du parcours tablette,
+    dont l'email de demande d'avis Google n'a pas encore été envoyé, pour un
+    client avec une adresse email connue.
+
+    Returns:
+        Liste de dicts {formula_id, perfume_name, customer_id, email, first_name, last_name}
+    """
+    cursor = None
+    try:
+        cursor = connection.cursor()
+
+        query = """
+            SELECT f.id AS formula_id, f.perfume_name, c.id AS customer_id,
+                   c.email, c.first_name, c.last_name
+            FROM formula f
+            JOIN customers c ON c.id = f.customer_id
+            WHERE f.source = 'tablet'
+              AND f.review_email_sent_at IS NULL
+              AND f.created_at <= DATE_SUB(NOW(), INTERVAL %s HOUR)
+              AND c.email IS NOT NULL AND c.email != ''
+        """
+        cursor.execute(query, (delay_hours,))
+        return cursor.fetchall() or []
+
+    except Exception as e:
+        print(f"Erreur récupération formules en attente d'email avis : {e}")
+        return []
+    finally:
+        if cursor is not None:
+            cursor.close()
+
+
+def mark_review_email_sent(
+    connection: pymysql.connections.Connection,
+    formula_id: int,
+) -> bool:
+    """Marque l'email de demande d'avis Google comme envoyé pour cette formule."""
+    cursor = None
+    try:
+        cursor = connection.cursor()
+        cursor.execute(
+            "UPDATE formula SET review_email_sent_at = NOW() WHERE id = %s",
+            (formula_id,),
+        )
+        connection.commit()
+        return True
+
+    except Exception as e:
+        print(f"Erreur marquage email avis envoyé pour formule {formula_id} : {e}")
+        connection.rollback()
+        return False
+    finally:
+        if cursor is not None:
+            cursor.close()
+
+
 def generate_tablet_reference(
     connection: pymysql.connections.Connection,
     year_month: str,

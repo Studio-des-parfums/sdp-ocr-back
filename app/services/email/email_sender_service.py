@@ -1,91 +1,41 @@
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email.mime.image import MIMEImage
-from email import encoders
+import base64
+import requests
 from typing import Optional, List, Dict
 from app.core.config import settings
 
+RESEND_API_URL = "https://api.resend.com/emails"
+
 
 class EmailSenderService:
-    """Service pour l'envoi d'emails via SMTP Gmail"""
+    """Service pour l'envoi d'emails via l'API Resend"""
 
     def __init__(self):
-        self.smtp_host = settings.SMTP_HOST
-        self.smtp_port = settings.SMTP_PORT
-        self.smtp_user = settings.SMTP_USER
-        self.smtp_password = settings.SMTP_PASSWORD
-        self.from_email = settings.SMTP_FROM_EMAIL
-        self.from_name = settings.SMTP_FROM_NAME
+        self.api_key = settings.RESEND_API_KEY
+        self.from_email = settings.RESEND_FROM_EMAIL
+        self.from_name = settings.RESEND_FROM_NAME
 
-    def _create_message(
+    def _build_attachments(
         self,
-        to_email: str,
-        subject: str,
-        body: str,
-        is_html: bool = False,
         attachments: List[Dict] = None,
-        inline_images: List[Dict] = None,
-        cc: Optional[str] = None
-    ) -> MIMEMultipart:
+        inline_images: List[Dict] = None
+    ) -> List[Dict]:
         """
-        Creer un message email avec support des pieces jointes et images inline.
-
-        Args:
-            to_email: Adresse email du destinataire
-            subject: Sujet de l'email
-            body: Corps du message
-            is_html: True si le body est en HTML
-            attachments: Liste de dict avec 'filename', 'content' (bytes), 'mime_type'
-            inline_images: Liste de dict avec 'cid', 'content' (bytes), 'mime_type'
+        Convertit pièces jointes et images inline au format attendu par Resend
+        (content en base64, image inline via content_id référencé par cid: dans le HTML).
         """
-        # Utiliser 'related' pour les images inline, sinon 'mixed' pour les pieces jointes
-        if inline_images:
-            message = MIMEMultipart("related")
-        elif attachments:
-            message = MIMEMultipart("mixed")
-        else:
-            message = MIMEMultipart("alternative")
-
-        message["Subject"] = subject
-        message["From"] = f"{self.from_name} <{self.from_email}>"
-        message["To"] = to_email
-        if cc:
-            message["Cc"] = cc
-
-        # Ajouter le corps du message
-        if inline_images:
-            # Pour les images inline, on doit imbriquer le HTML dans une partie alternative
-            msg_alternative = MIMEMultipart("alternative")
-            content_type = "html" if is_html else "plain"
-            msg_alternative.attach(MIMEText(body, content_type, "utf-8"))
-            message.attach(msg_alternative)
-        else:
-            content_type = "html" if is_html else "plain"
-            message.attach(MIMEText(body, content_type, "utf-8"))
-
-        # Ajouter les images inline avec Content-ID
-        if inline_images:
-            for img in inline_images:
-                mime_image = MIMEImage(img["content"], _subtype=img.get("subtype", "png"))
-                mime_image.add_header("Content-ID", f"<{img['cid']}>")
-                mime_image.add_header("Content-Disposition", "inline", filename=img.get("filename", "image.png"))
-                message.attach(mime_image)
-
-        # Ajouter les pieces jointes
-        if attachments:
-            for attachment in attachments:
-                part = MIMEBase("application", "octet-stream")
-                part.set_payload(attachment["content"])
-                encoders.encode_base64(part)
-                part.add_header(
-                    "Content-Disposition",
-                    f"attachment; filename={attachment['filename']}"
-                )
-                message.attach(part)
-
-        return message
+        result = []
+        for attachment in attachments or []:
+            result.append({
+                "filename": attachment["filename"],
+                "content": base64.b64encode(attachment["content"]).decode("utf-8"),
+            })
+        for img in inline_images or []:
+            result.append({
+                "filename": img.get("filename", "image.png"),
+                "content": base64.b64encode(img["content"]).decode("utf-8"),
+                "content_id": img["cid"],
+            })
+        return result
 
     def send_email(
         self,
@@ -106,48 +56,58 @@ class EmailSenderService:
             body: Corps du message (texte ou HTML)
             is_html: True si le body est en HTML
             attachments: Liste de pieces jointes [{'filename': 'doc.pdf', 'content': bytes}]
-            inline_images: Liste d'images inline [{'cid': 'pyramid', 'content': bytes, 'subtype': 'png'}]
+            inline_images: Liste d'images inline [{'cid': 'pyramid', 'content': bytes, 'filename': '...'}]
+            cc: Adresse en copie
 
         Returns:
             dict avec success (bool) et message (str)
         """
         try:
-            if not self.smtp_user or not self.smtp_password:
+            if not self.api_key or not self.from_email:
                 return {
                     "success": False,
-                    "message": "Configuration SMTP manquante (SMTP_USER ou SMTP_PASSWORD)"
+                    "message": "Configuration Resend manquante (RESEND_API_KEY ou RESEND_FROM_EMAIL)"
                 }
 
-            message = self._create_message(
-                to_email, subject, body, is_html,
-                attachments=attachments,
-                inline_images=inline_images,
-                cc=cc
+            payload = {
+                "from": f"{self.from_name} <{self.from_email}>",
+                "to": [to_email],
+                "subject": subject,
+            }
+            payload["html" if is_html else "text"] = body
+
+            if cc:
+                payload["cc"] = [cc]
+
+            built_attachments = self._build_attachments(attachments, inline_images)
+            if built_attachments:
+                payload["attachments"] = built_attachments
+
+            response = requests.post(
+                RESEND_API_URL,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=30,
             )
 
-            recipients = [to_email]
-            if cc:
-                recipients.append(cc)
-
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.starttls()
-                server.login(self.smtp_user, self.smtp_password)
-                server.sendmail(self.from_email, recipients, message.as_string())
+            if response.status_code >= 400:
+                return {
+                    "success": False,
+                    "message": f"Erreur Resend ({response.status_code}): {response.text}"
+                }
 
             return {
                 "success": True,
                 "message": f"Email envoye avec succes a {to_email}"
             }
 
-        except smtplib.SMTPAuthenticationError:
+        except requests.RequestException as e:
             return {
                 "success": False,
-                "message": "Erreur d'authentification SMTP. Verifiez les identifiants."
-            }
-        except smtplib.SMTPException as e:
-            return {
-                "success": False,
-                "message": f"Erreur SMTP: {str(e)}"
+                "message": f"Erreur reseau lors de l'envoi via Resend: {str(e)}"
             }
         except Exception as e:
             return {
@@ -170,7 +130,7 @@ class EmailSenderService:
         <html>
         <body style="font-family: Arial, sans-serif; padding: 20px;">
             <h2 style="color: #333;">Email de test</h2>
-            <p>Ceci est un email de test envoye depuis <strong>SDP OCR Backend</strong>.</p>
+            <p>Ceci est un email de test envoye depuis <strong>SDP OCR Backend</strong> (via Resend).</p>
             <p>Si vous recevez ce message, la configuration email fonctionne correctement.</p>
             <hr style="border: 1px solid #eee; margin: 20px 0;">
             <p style="color: #888; font-size: 12px;">

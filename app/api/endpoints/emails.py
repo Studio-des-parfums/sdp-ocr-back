@@ -1,25 +1,12 @@
-import os
 import base64
 from fastapi import APIRouter, HTTPException
 from app.schemas.email_schemas import EmailTestRequest, PyramidRequest, EmailResponse, PyramidPreviewResponse
 from app.services.email.email_sender_service import email_sender_service
+from app.services.email.email_assets import get_pyramid_image_bytes, get_logo_image_bytes
 from app.database.connection import get_connection
 from app.crud import crud_formula, crud_customer, crud_notes
 
 router = APIRouter()
-
-STATIC_PATH = os.path.join(os.path.dirname(__file__), "../../static/images")
-PYRAMID_IMAGE_PATH = os.path.join(STATIC_PATH, "pyramide.png")
-
-
-def get_pyramid_image_bytes():
-    try:
-        if os.path.exists(PYRAMID_IMAGE_PATH):
-            with open(PYRAMID_IMAGE_PATH, "rb") as img_file:
-                return img_file.read()
-    except Exception as e:
-        print(f"Erreur lecture image pyramide: {e}")
-    return None
 
 
 def _format_notes_html(notes):
@@ -33,10 +20,11 @@ def _format_notes_html(notes):
 
 def _build_pyramid_html(customer, formula, top_notes, heart_notes, base_notes, percentages, preview=False):
     """Construit le HTML de la pyramide olfactive.
-    Si preview=True, l'image est encodée en base64 data URI pour affichage navigateur.
-    Si preview=False, l'image utilise cid: pour l'envoi email.
+    Si preview=True, les images sont encodées en base64 data URI pour affichage navigateur.
+    Si preview=False, les images utilisent cid: pour l'envoi email.
     """
     pyramid_image_bytes = get_pyramid_image_bytes()
+    logo_image_bytes = get_logo_image_bytes()
 
     if pyramid_image_bytes:
         if preview:
@@ -55,6 +43,15 @@ def _build_pyramid_html(customer, formula, top_notes, heart_notes, base_notes, p
     else:
         pyramid_img_tag = "<div style='width:260px;height:200px;background:#eee'></div>"
 
+    if logo_image_bytes:
+        if preview:
+            logo_b64 = base64.b64encode(logo_image_bytes).decode("utf-8")
+            logo_img_tag = f'<img src="data:image/png;base64,{logo_b64}" alt="Le Studio des Parfums" style="height:60px;display:block;margin:0 auto 10px;">'
+        else:
+            logo_img_tag = '<img src="cid:logo_image" alt="Le Studio des Parfums" style="height:60px;display:block;margin:0 auto 10px;">'
+    else:
+        logo_img_tag = ""
+
     return f"""
 <!DOCTYPE html>
 <html>
@@ -70,6 +67,12 @@ def _build_pyramid_html(customer, formula, top_notes, heart_notes, base_notes, p
 
 <!-- CONTENEUR PRINCIPAL -->
 <table width="700" cellpadding="0" cellspacing="0" style="max-width:700px">
+
+<tr>
+<td align="center" style="padding-bottom:20px">
+{logo_img_tag}
+</td>
+</tr>
 
 <tr>
 <td style="font-size:15px;line-height:1.6">
@@ -174,9 +177,15 @@ def _sum_quantities(notes):
     return sum(_parse_quantity(n) for n in notes)
 
 
-def _get_pyramid_data(connection, reference):
-    """Récupère les données nécessaires pour construire la pyramide."""
-    formula = crud_formula.get_by_reference(connection, reference)
+def _get_pyramid_data(connection, reference=None, formula_id=None):
+    """Récupère les données nécessaires pour construire la pyramide, par reference ou formula_id."""
+    if formula_id is not None:
+        formula = crud_formula.get_by_id(connection, formula_id)
+    elif reference:
+        formula = crud_formula.get_by_reference(connection, reference)
+    else:
+        raise HTTPException(status_code=422, detail="reference ou formula_id requis")
+
     if not formula:
         raise HTTPException(status_code=404, detail="Formule non trouvee")
 
@@ -231,7 +240,9 @@ async def preview_pyramid_email(request: PyramidRequest):
         if not connection:
             raise HTTPException(status_code=500, detail="Erreur de connexion a la base de donnees")
 
-        formula, customer, top_notes, heart_notes, base_notes, percentages = _get_pyramid_data(connection, request.reference)
+        formula, customer, top_notes, heart_notes, base_notes, percentages = _get_pyramid_data(
+            connection, reference=request.reference, formula_id=request.formula_id
+        )
 
         subject = "Votre pyramide olfactive – Le Studio des Parfums"
         html = _build_pyramid_html(customer, formula, top_notes, heart_notes, base_notes, percentages, preview=True)
@@ -260,12 +271,15 @@ async def send_pyramid_email(request: PyramidRequest):
         if not connection:
             raise HTTPException(status_code=500, detail="Erreur de connexion a la base de donnees")
 
-        formula, customer, top_notes, heart_notes, base_notes, percentages = _get_pyramid_data(connection, request.reference)
+        formula, customer, top_notes, heart_notes, base_notes, percentages = _get_pyramid_data(
+            connection, reference=request.reference, formula_id=request.formula_id
+        )
 
         subject = "Votre pyramide olfactive – Le Studio des Parfums"
         body = _build_pyramid_html(customer, formula, top_notes, heart_notes, base_notes, percentages, preview=False)
 
         pyramid_image_bytes = get_pyramid_image_bytes()
+        logo_image_bytes = get_logo_image_bytes()
         inline_images = []
         if pyramid_image_bytes:
             inline_images.append({
@@ -273,6 +287,13 @@ async def send_pyramid_email(request: PyramidRequest):
                 "content": pyramid_image_bytes,
                 "subtype": "png",
                 "filename": "pyramide.png"
+            })
+        if logo_image_bytes:
+            inline_images.append({
+                "cid": "logo_image",
+                "content": logo_image_bytes,
+                "subtype": "png",
+                "filename": "logoSDP.png"
             })
 
         result = email_sender_service.send_email(

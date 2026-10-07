@@ -16,14 +16,11 @@ class Settings:
         "DASHBOARD_API_URL", "https://sdp-dashboard-back-production.up.railway.app"
     )
 
-    # Configuration SMTP Gmail
-    SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
-    SMTP_PORT: int = int(os.getenv("SMTP_PORT", 587))
-    SMTP_USER: str = os.getenv("SMTP_USER")
-    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD")
-    SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL")
-    SMTP_FROM_NAME: str = os.getenv("SMTP_FROM_NAME", "SDP OCR")
-    SMTP_CC_EMAIL: str = os.getenv("SMTP_CC_EMAIL", "")
+    # Configuration Resend (envoi d'emails via API HTTP)
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
+    RESEND_FROM_EMAIL: str = os.getenv("RESEND_FROM_EMAIL", "")
+    RESEND_FROM_NAME: str = os.getenv("RESEND_FROM_NAME", "Le Studio des Parfums")
+    EMAIL_CC_ADDRESS: str = os.getenv("EMAIL_CC_ADDRESS", "")
 
     # URL du serveur pour les fichiers statiques
     SERVER_URL: str = os.getenv("SERVER_URL", "http://localhost:8000")
