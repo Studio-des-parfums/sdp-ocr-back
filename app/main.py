@@ -34,6 +34,7 @@ app.add_middleware(
         "https://sdp-ocr-front.vercel.app",
         "https://master.d2ee6u027rjr9i.amplifyapp.com",
         "https://main.d15r7t7kjwrhgq.amplifyapp.com",
+        "https://main.d1e2pr3r9i0qy0.amplifyapp.com",
         "https://aglae-app.vercel.app",
         "http://localhost:3000",
         "http://localhost:5173",
