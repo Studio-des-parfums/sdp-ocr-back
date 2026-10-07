@@ -144,6 +144,33 @@ def upsert_answer(
             cursor.close()
 
 
+def expire_stale_sessions(
+    connection: pymysql.connections.Connection,
+    inactive_hours: int = 2,
+) -> int:
+    """
+    Annule les sessions 'active' sans activité depuis `inactive_hours` (client parti sans
+    terminer ni annuler explicitement). Retourne le nombre de sessions annulées.
+    """
+    cursor = None
+    try:
+        cursor = connection.cursor()
+        cursor.execute(
+            "UPDATE sessions SET status = 'cancelled', updated_at = NOW() "
+            "WHERE status = 'active' AND updated_at <= DATE_SUB(NOW(), INTERVAL %s HOUR)",
+            (inactive_hours,),
+        )
+        connection.commit()
+        return cursor.rowcount
+    except Exception as e:
+        print(f"Erreur expiration sessions inactives : {e}")
+        connection.rollback()
+        return 0
+    finally:
+        if cursor:
+            cursor.close()
+
+
 def get_answers(
     connection: pymysql.connections.Connection,
     session_id: int,

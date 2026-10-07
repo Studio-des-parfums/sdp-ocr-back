@@ -10,6 +10,7 @@ setup_logging()
 from app.api.endpoints import ocr, customers, users, export, groups, login_history, customer_reviews, files, formulas, emails, roles, orders, tablet, sessions, devices
 from app.database import get_connection
 from app.services.review_scheduler import start_review_scheduler
+from app.services.session_scheduler import start_session_scheduler
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -21,6 +22,7 @@ test = get_connection()
 test
 
 start_review_scheduler()
+start_session_scheduler()
 
 # Monter les fichiers statiques
 static_path = os.path.join(os.path.dirname(__file__), "static")
