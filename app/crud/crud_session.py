@@ -6,15 +6,16 @@ def create(
     connection: pymysql.connections.Connection,
     customer_name: Optional[str] = None,
     customer_email: Optional[str] = None,
+    room: Optional[str] = None,
 ) -> Optional[int]:
     cursor = None
     try:
         cursor = connection.cursor()
         query = """
-            INSERT INTO sessions (customer_name, customer_email, status)
-            VALUES (%s, %s, 'active')
+            INSERT INTO sessions (customer_name, customer_email, room, status)
+            VALUES (%s, %s, %s, 'active')
         """
-        cursor.execute(query, (customer_name, customer_email))
+        cursor.execute(query, (customer_name, customer_email, room))
         connection.commit()
         return cursor.lastrowid
     except Exception as e:
@@ -26,20 +27,27 @@ def create(
             cursor.close()
 
 
-def get_active(connection: pymysql.connections.Connection) -> list[dict]:
+def get_active(
+    connection: pymysql.connections.Connection,
+    room: Optional[str] = None,
+) -> list[dict]:
     cursor = None
     try:
         cursor = connection.cursor()
         query = """
-            SELECT s.id, s.customer_name, s.customer_email, s.status,
+            SELECT s.id, s.customer_name, s.customer_email, s.room, s.status,
                    s.started_at, s.updated_at, s.supervisor_id,
                    CONCAT(u.first_name, ' ', u.last_name) AS supervisor_name
             FROM sessions s
             LEFT JOIN users u ON u.id = s.supervisor_id
             WHERE s.status = 'active'
-            ORDER BY s.updated_at DESC, s.started_at DESC
         """
-        cursor.execute(query)
+        params: list = []
+        if room:
+            query += " AND s.room = %s"
+            params.append(room)
+        query += " ORDER BY s.updated_at DESC, s.started_at DESC"
+        cursor.execute(query, params)
         return cursor.fetchall() or []
     except Exception as e:
         print(f"Erreur recuperation sessions actives : {e}")
@@ -57,7 +65,7 @@ def get_by_id(
     try:
         cursor = connection.cursor()
         query = """
-            SELECT s.id, s.customer_name, s.customer_email, s.status,
+            SELECT s.id, s.customer_name, s.customer_email, s.room, s.status,
                    s.started_at, s.updated_at, s.supervisor_id,
                    CONCAT(u.first_name, ' ', u.last_name) AS supervisor_name
             FROM sessions s

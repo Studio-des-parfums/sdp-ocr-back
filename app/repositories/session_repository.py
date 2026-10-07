@@ -7,22 +7,23 @@ from app.crud import crud_session
 def create_session(
     customer_name: Optional[str] = None,
     customer_email: Optional[str] = None,
+    room: Optional[str] = None,
 ) -> Optional[int]:
     conn = get_connection()
     if not conn:
         return None
     try:
-        return crud_session.create(conn, customer_name, customer_email)
+        return crud_session.create(conn, customer_name, customer_email, room)
     finally:
         conn.close()
 
 
-def get_active_sessions() -> list[dict]:
+def get_active_sessions(room: Optional[str] = None) -> list[dict]:
     conn = get_connection()
     if not conn:
         return []
     try:
-        return crud_session.get_active(conn)
+        return crud_session.get_active(conn, room)
     finally:
         conn.close()
 

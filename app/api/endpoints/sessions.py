@@ -1,4 +1,5 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Query
+from typing import Optional
 import json
 
 from app.repositories import session_repository
@@ -52,6 +53,7 @@ async def create_session(payload: SessionCreate):
     session_id = session_repository.create_session(
         customer_name=payload.customer_name,
         customer_email=payload.customer_email,
+        room=payload.room,
     )
     if not session_id:
         raise HTTPException(status_code=500, detail="Erreur creation session")
@@ -83,8 +85,8 @@ async def assign_supervisor(session_id: int, payload: AssignSupervisorRequest):
 
 
 @router.get("/sessions/active", response_model=list[SessionResponse])
-async def list_active_sessions():
-    sessions = session_repository.get_active_sessions()
+async def list_active_sessions(room: Optional[str] = Query(None)):
+    sessions = session_repository.get_active_sessions(room=room)
     return [SessionResponse(**s) for s in sessions]
 
 

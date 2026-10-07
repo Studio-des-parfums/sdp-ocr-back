@@ -6,12 +6,14 @@ from pydantic import BaseModel
 class SessionCreate(BaseModel):
     customer_name: Optional[str] = None
     customer_email: Optional[str] = None
+    room: Optional[str] = None
 
 
 class SessionResponse(BaseModel):
     id: int
     customer_name: Optional[str] = None
     customer_email: Optional[str] = None
+    room: Optional[str] = None
     status: str
     started_at: datetime
     updated_at: Optional[datetime] = None
