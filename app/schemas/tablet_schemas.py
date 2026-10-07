@@ -27,6 +27,9 @@ class TabletSubmissionCreate(BaseModel):
     supervisor_id: Optional[int] = None
     atelier_id: Optional[int] = None
     atelier_name: Optional[str] = None
+    reused_from_formula_id: Optional[int] = Field(
+        None, description="Si renseigné, la référence est dérivée de celle de cette formule (ex: 20260900001-2)"
+    )
     top_notes: List[TabletNote] = []
     heart_notes: List[TabletNote] = []
     base_notes: List[TabletNote] = []

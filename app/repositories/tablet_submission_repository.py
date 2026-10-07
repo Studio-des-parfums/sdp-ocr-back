@@ -71,9 +71,15 @@ class TabletSubmissionRepository:
 
             # 2) Créer la formule (pas de fiche scannée → file_id None)
             now = datetime.now()
-            reference = crud_formula.generate_tablet_reference(
-                connection, now.strftime("%y%m")
-            )
+            reference = None
+            if submission.reused_from_formula_id is not None:
+                reference = crud_formula.generate_reused_reference(
+                    connection, submission.reused_from_formula_id
+                )
+            if reference is None:
+                reference = crud_formula.generate_tablet_reference(
+                    connection, now.strftime("%y%m")
+                )
             formula_id = crud_formula.create(
                 connection,
                 customer_id=customer_id,

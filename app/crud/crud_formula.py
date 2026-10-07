@@ -343,6 +343,47 @@ def generate_tablet_reference(
             cursor.close()
 
 
+def generate_reused_reference(
+    connection: pymysql.connections.Connection,
+    source_formula_id: int,
+) -> Optional[str]:
+    """
+    Génère la référence d'une formule recréée à partir d'une formule existante
+    (parcours "recommencer à partir d'une formule") : '<référence source>-N', où N
+    est le prochain numéro de réutilisation de CETTE référence source précise
+    (ex: 20260900001 -> 20260900001-2 -> si on repart de -2 : 20260900001-2-2).
+
+    Returns:
+        La nouvelle référence, ou None si la formule source n'a pas de référence.
+    """
+    cursor = None
+    try:
+        cursor = connection.cursor()
+
+        cursor.execute("SELECT reference FROM formula WHERE id = %s", (source_formula_id,))
+        source = cursor.fetchone()
+        source_reference = source.get("reference") if source else None
+        if not source_reference:
+            return None
+
+        prefix = f"{source_reference}-"
+        cursor.execute(
+            "SELECT reference FROM formula WHERE reference LIKE %s",
+            (f"{prefix}%",),
+        )
+        last_sequence = 1
+        for row in cursor.fetchall():
+            suffix = row["reference"][len(prefix):]
+            if suffix.isdigit():
+                last_sequence = max(last_sequence, int(suffix))
+
+        return f"{prefix}{last_sequence + 1}"
+
+    finally:
+        if cursor is not None:
+            cursor.close()
+
+
 def delete(
     connection: pymysql.connections.Connection,
     formula_id: int,
