@@ -219,7 +219,7 @@ def update(connection: pymysql.connections.Connection, review_id: int,
             return True
 
         # Construire la requête UPDATE
-        set_clauses = [f"{col} = %s" for col in clean_data.keys()]
+        set_clauses = [f"`{col}` = %s" for col in clean_data.keys()]
         values = list(clean_data.values())
         values.append(review_id)  # Pour le WHERE
 
