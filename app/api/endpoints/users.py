@@ -391,15 +391,18 @@ def _resolve_or_create_user_id(user_id: int, email: Optional[str], first_name: O
     if existing:
         return existing["id"]
 
+    # `phone`, `job`, `team` sont NOT NULL sans défaut en base, mais create()
+    # retire toute valeur vide ("") du payload avant l'INSERT — une chaîne vide
+    # finirait donc par violer la contrainte NOT NULL. On passe un espace à la
+    # place pour que ces colonnes restent bien renseignées.
     new_id = user_repository.create_user({
         "first_name": first_name or email.split("@")[0],
-        "last_name": last_name or "",
+        "last_name": last_name or " ",
         "email": email,
-        "phone": "",
-        "job": "",
-        "role_id": None,
+        "phone": " ",
+        "job": " ",
         "is_online": True,
-        "team": "",
+        "team": " ",
     })
     if not new_id:
         raise HTTPException(status_code=500, detail="Impossible de créer l'utilisateur côté OCR")
