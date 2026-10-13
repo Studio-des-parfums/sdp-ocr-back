@@ -65,6 +65,7 @@ class CustomerSearchResult(BaseModel):
     city: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
+    gender: Optional[str] = None
 
 
 class FormulaHistoryItem(BaseModel):
