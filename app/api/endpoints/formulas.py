@@ -189,12 +189,18 @@ async def update_formula_notes(formula_id: int, notes_update: FormulaUpdateNotes
     if notes_update.base_notes is not None:
         base_notes_dict = [note.model_dump() for note in notes_update.base_notes]
 
+    booster_notes_dict = None
+    if notes_update.booster_notes is not None:
+        booster_notes_dict = [note.model_dump() for note in notes_update.booster_notes]
+
     # Mettre à jour les notes, le commentaire, la référence, le nom du parfum et/ou la date (skip_correction=True car modification manuelle)
     success = formula_repository.update_formula_notes(
         formula_id,
         top_notes=top_notes_dict,
         heart_notes=heart_notes_dict,
         base_notes=base_notes_dict,
+        booster_notes=booster_notes_dict,
+        options=notes_update.options,
         comment=notes_update.comment,
         reference=notes_update.reference,
         perfume_name=notes_update.perfume_name,

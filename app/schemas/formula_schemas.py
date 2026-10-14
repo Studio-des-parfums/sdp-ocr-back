@@ -78,6 +78,8 @@ class FormulaUpdateNotes(BaseModel):
     top_notes: Optional[List[NoteUpdate]] = None
     heart_notes: Optional[List[NoteUpdate]] = None
     base_notes: Optional[List[NoteUpdate]] = None
+    booster_notes: Optional[List[NoteUpdate]] = None
+    options: Optional[List[str]] = None
     comment: Optional[str] = None
     reference: Optional[str] = None
     perfume_name: Optional[str] = None

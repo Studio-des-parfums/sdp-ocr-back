@@ -207,6 +207,8 @@ class FormulaRepository:
         top_notes: Optional[List[Dict[str, Any]]] = None,
         heart_notes: Optional[List[Dict[str, Any]]] = None,
         base_notes: Optional[List[Dict[str, Any]]] = None,
+        booster_notes: Optional[List[Dict[str, Any]]] = None,
+        options: Optional[List[str]] = None,
         comment: Optional[str] = None,
         reference: Optional[str] = None,
         perfume_name: Optional[str] = None,
@@ -312,6 +314,8 @@ class FormulaRepository:
                             crud_notes.create_heart_note(connection, formula_id, corrected_name, quantity)
                         elif table_name == "base_note":
                             crud_notes.create_base_note(connection, formula_id, corrected_name, quantity)
+                        elif table_name == "booster_note":
+                            crud_notes.create_booster_note(connection, formula_id, corrected_name, quantity)
                         print(f"➕ Nouvelle note créée dans {table_name}: {corrected_name}")
 
                 return True
@@ -325,6 +329,14 @@ class FormulaRepository:
 
             if base_notes is not None:
                 _update_notes_by_type("base_note", base_notes)
+
+            if booster_notes is not None:
+                _update_notes_by_type("booster_note", booster_notes)
+
+            # Options : pas d'id exposé côté API, on remplace toujours la liste entière.
+            if options is not None:
+                crud_formula_options.replace_for_formula(connection, formula_id, options)
+                print(f"🎁 Options de la formule {formula_id} mises à jour")
 
             # Mettre à jour le commentaire, la référence, le nom du parfum et/ou la date si fournis
             update_kwargs = {}
