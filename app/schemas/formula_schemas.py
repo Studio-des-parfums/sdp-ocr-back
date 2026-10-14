@@ -94,6 +94,8 @@ class FormulaResponse(FormulaBase):
     top_notes: List[NoteResponse] = []
     heart_notes: List[NoteResponse] = []
     base_notes: List[NoteResponse] = []
+    booster_notes: List[NoteResponse] = []
+    options: List[str] = []
 
     class Config:
         from_attributes = True
