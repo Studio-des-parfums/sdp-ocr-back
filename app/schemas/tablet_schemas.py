@@ -17,6 +17,7 @@ class TabletSubmissionCreate(BaseModel):
     job: Optional[str] = None
     country: Optional[str] = None
     city: Optional[str] = None
+    booking_source: Optional[str] = None
     phone: str
     email: str
     has_allergy: Optional[bool] = None

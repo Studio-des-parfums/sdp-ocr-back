@@ -148,6 +148,7 @@ class TabletSubmissionRepository:
             "country": clean(submission.country),
             "gender": clean(submission.gender),
             "birth_date": clean(submission.birth_date),
+            "booking_source": clean(submission.booking_source),
             "has_allergy": submission.has_allergy,
             "liability_accepted": submission.liability_accepted,
             "rgpd_consent": submission.rgpd_consent,
