@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Dict, Optional, Tuple
 
 from app.database import get_connection
-from app.crud import crud_customer, crud_formula, crud_notes
+from app.crud import crud_customer, crud_formula, crud_notes, crud_formula_options
 from app.services.customer import customer_business_service
 from app.services.phone import phone_validator
 from app.schemas.tablet_schemas import TabletSubmissionCreate
@@ -105,6 +105,8 @@ class TabletSubmissionRepository:
                 crud_notes.create_base_note(connection, formula_id, note.name, note.quantity)
             for note in submission.booster_notes:
                 crud_notes.create_booster_note(connection, formula_id, note.name, note.quantity)
+            for option_name in submission.options:
+                crud_formula_options.create(connection, formula_id, option_name)
 
             return {
                 "customer_id": customer_id,

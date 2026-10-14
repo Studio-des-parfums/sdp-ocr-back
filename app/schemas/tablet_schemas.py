@@ -35,6 +35,7 @@ class TabletSubmissionCreate(BaseModel):
     heart_notes: List[TabletNote] = []
     base_notes: List[TabletNote] = []
     booster_notes: List[TabletNote] = []
+    options: List[str] = []
 
 
 class TabletSubmissionResponse(BaseModel):
@@ -84,6 +85,7 @@ class FormulaDetail(FormulaHistoryItem):
     heart_notes: List[TabletNote] = []
     base_notes: List[TabletNote] = []
     booster_notes: List[TabletNote] = []
+    options: List[str] = []
     atelier_id: Optional[int] = None
     atelier_name: Optional[str] = None
 

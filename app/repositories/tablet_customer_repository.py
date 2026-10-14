@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional
 
 from app.database import get_connection
-from app.crud import crud_customer, crud_formula, crud_notes
+from app.crud import crud_customer, crud_formula, crud_notes, crud_formula_options
 
 
 class TabletCustomerRepository:
@@ -61,6 +61,7 @@ class TabletCustomerRepository:
             formula["heart_notes"] = crud_notes.get_notes_by_type(connection, "heart_note", formula_id)
             formula["base_notes"] = crud_notes.get_notes_by_type(connection, "base_note", formula_id)
             formula["booster_notes"] = crud_notes.get_notes_by_type(connection, "booster_note", formula_id)
+            formula["options"] = crud_formula_options.get_by_formula(connection, formula_id)
             return formula
         finally:
             connection.close()
