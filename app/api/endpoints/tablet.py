@@ -19,6 +19,8 @@ from app.repositories.tablet_submission_repository import tablet_submission_repo
 from app.repositories.tablet_customer_repository import tablet_customer_repository
 from app.services.dashboard_rules import dashboard_rules_service
 from app.services.perfumer import perfumer_service
+from app.services.email.pyramid_email_service import send_pyramid_email_for_formula
+from app.database.connection import get_connection
 from app.utils.note_corrector import NoteCorrector
 
 router = APIRouter()
@@ -101,7 +103,29 @@ async def create_tablet_submission(submission: TabletSubmissionCreate):
     if error:
         raise HTTPException(status_code=500, detail=error)
 
+    _send_pyramid_email_best_effort(result["formula_id"])
+
     return TabletSubmissionResponse(**result)
+
+
+def _send_pyramid_email_best_effort(formula_id: int) -> None:
+    """Envoie l'email de pyramide olfactive au client après validation de sa formule.
+    Best-effort : un échec d'envoi (mail manquant, Resend indisponible, etc.)
+    ne doit jamais faire échouer la soumission tablette."""
+    connection = None
+    try:
+        connection = get_connection()
+        if not connection:
+            print(f"Email pyramide non envoyé (formule {formula_id}) : connexion base de données impossible")
+            return
+        result = send_pyramid_email_for_formula(connection, formula_id)
+        if not result["success"]:
+            print(f"Email pyramide non envoyé (formule {formula_id}) : {result['message']}")
+    except Exception as e:
+        print(f"Email pyramide non envoyé (formule {formula_id}) : erreur inattendue : {e}")
+    finally:
+        if connection:
+            connection.close()
 
 
 @router.get("/customers/search", response_model=CustomerSearchResult)
