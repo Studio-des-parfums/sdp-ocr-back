@@ -7,7 +7,7 @@ from app.core.config import settings
 from app.core.logger import setup_logging
 
 setup_logging()
-from app.api.endpoints import ocr, customers, users, export, groups, login_history, customer_reviews, files, formulas, emails, roles, orders, tablet, sessions, devices
+from app.api.endpoints import ocr, customers, users, export, groups, login_history, customer_reviews, files, formulas, emails, roles, orders, tablet, sessions, devices, analytics
 from app.database import get_connection
 from app.services.review_scheduler import start_review_scheduler
 from app.services.session_scheduler import start_session_scheduler
@@ -68,6 +68,7 @@ app.include_router(orders.router, prefix="/api/v1/orders", tags=["Orders"])
 app.include_router(tablet.router, prefix="/api/v1/tablet", tags=["Tablet"])
 app.include_router(sessions.router, prefix="/api/v1/tablet", tags=["Sessions"])
 app.include_router(devices.router, prefix="/api/v1", tags=["Devices"])
+app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
 
 @app.get("/")
 async def root():
