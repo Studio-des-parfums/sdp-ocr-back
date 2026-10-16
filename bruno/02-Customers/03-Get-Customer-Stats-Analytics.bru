@@ -1,0 +1,15 @@
+meta {
+  name: Customer Stats Analytics
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/customers/stats/analytics
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}

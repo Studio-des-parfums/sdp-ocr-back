@@ -1,0 +1,23 @@
+meta {
+  name: Update Customer
+  type: http
+  seq: 7
+}
+
+put {
+  url: {{baseUrl}}/api/v1/customers/{{createdCustomerId}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "first_name": "TestBrunoUpdated",
+    "city": "Lyon"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.first_name: eq TestBrunoUpdated
+}

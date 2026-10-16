@@ -1,0 +1,16 @@
+meta {
+  name: List Roles
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/roles/?page=1&size=10
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.roles: isDefined
+}

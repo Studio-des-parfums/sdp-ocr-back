@@ -1,0 +1,15 @@
+meta {
+  name: Top Ateliers
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/v1/analytics/ateliers/top?limit=10
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}

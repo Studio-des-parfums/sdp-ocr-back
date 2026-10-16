@@ -1,0 +1,16 @@
+meta {
+  name: Top Notes (By Note Type)
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/v1/analytics/notes/top?note_type=top_note&limit=5
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.top_note: isDefined
+}

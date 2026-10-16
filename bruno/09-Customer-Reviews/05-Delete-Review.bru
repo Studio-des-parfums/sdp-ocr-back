@@ -1,0 +1,15 @@
+meta {
+  name: Delete Review
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/customer-reviews/{{createdReviewId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}

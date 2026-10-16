@@ -1,0 +1,15 @@
+meta {
+  name: List Online Users
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/users/online
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
