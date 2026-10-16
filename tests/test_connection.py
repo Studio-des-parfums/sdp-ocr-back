@@ -31,12 +31,14 @@ def test_database_connection():
             cursor = connection.cursor()
             cursor.execute("SELECT DATABASE()")
             db_name = cursor.fetchone()
-            print(f"   Nom de la base : {db_name[0]}")
+            db_val = list(db_name.values())[0] if isinstance(db_name, dict) else db_name[0]
+            print(f"   Nom de la base : {db_val}")
 
             cursor.execute("SHOW TABLES")
             tables = cursor.fetchall()
             print(f"   Nombre de tables : {len(tables)}")
-            print(f"   Tables : {[table[0] for table in tables]}")
+            table_names = [list(t.values())[0] if isinstance(t, dict) else t[0] for t in tables]
+            print(f"   Tables : {table_names}")
 
             cursor.close()
             connection.close()
