@@ -1,0 +1,15 @@
+meta {
+  name: Get Tablet Notes Catalog
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tablet/notes
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}

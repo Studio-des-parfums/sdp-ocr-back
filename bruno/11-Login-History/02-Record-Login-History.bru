@@ -1,0 +1,22 @@
+meta {
+  name: Record Login Event
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/login-history/record
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "user_id": 2,
+    "type": "connexion"
+  }
+}
+
+assert {
+  res.status: eq 200
+}

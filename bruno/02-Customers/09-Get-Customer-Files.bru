@@ -1,0 +1,15 @@
+meta {
+  name: Get Customer Files
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/v1/customers/{{sampleCustomerId}}/files
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: in [200, 404]
+}

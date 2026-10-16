@@ -1,0 +1,15 @@
+meta {
+  name: Delete Order Item
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/orders/{{createdOrderId}}/items/{{createdOrderItemId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
