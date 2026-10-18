@@ -1,0 +1,33 @@
+meta {
+  name: Create Tablet Session
+  type: http
+  seq: 5
+  tags: [
+    mutation
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tablet/sessions
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "customer_name": "Client Bruno",
+    "customer_email": "bruno.session@example.com",
+    "room": "Atelier 1"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.session_id: isNumber
+}
+
+script:post-response {
+  if (res.body.session_id) {
+    bru.setVar("createdSessionId", res.body.session_id);
+  }
+}

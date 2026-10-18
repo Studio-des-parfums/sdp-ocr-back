@@ -176,14 +176,57 @@ test de connexion MySQL
 validation de domaines email
 correction automatique d’emails
 logique fuzzy sur les notes
-Exécution :
 
+Exécution des tests unitaires :
 pytest
-Selon la configuration locale, certains tests peuvent dépendre :
 
-d’un accès réseau
-d’une base MySQL disponible
-de clés API actives
+---
+
+Tests Automatisés d’API avec Bruno (`/bruno`)
+
+Une suite complète de 74 requêtes et 145 assertions automatisées couvre l'intégralité des routes de l'API.
+
+Organisation des dossiers :
+- `01-Consultation/` (39 requêtes) : **Lecture seule** (GET, Analytics, Stats, Health, métadonnées). Garanti 0 écriture en base, 100 % sécurisé pour tester la **Production** ou le Local.
+- `02-Creations-Modifications/` (35 requêtes) : **Cycles CRUD et mutations** (POST, PUT, DELETE pour clients, commandes, rôles, sessions, tablettes, groupes, avis).
+- `03-Tous-Les-Tests/` (74 requêtes) : **Suite complète** regroupant l'ensemble des modules (Consultation + CRUD).
+
+> ⚠️ **IMPORTANT — Nettoyage de la base de données :**
+> Lorsque vous exécutez le dossier **`02-Creations-Modifications`** ou **`03-Tous-Les-Tests`**, des enregistrements de test temporaires sont créés en base (groupes soft-deleted, devices, sessions annulées, logs d'audit).
+> **Il faut impérativement exécuter le script de nettoyage après chaque exécution du dossier 02 ou 03 :**
+> ```bash
+> python scripts/cleanup_test_data.py
+> ```
+
+Commandes d'exécution rapide (CLI) :
+
+1. Tester la Production en toute sécurité (0 écriture) :
+```bash
+cd bruno
+bru run 01-Consultation -r --env prod
+```
+
+2. Tester le Local en consultation seule :
+```bash
+cd bruno
+bru run 01-Consultation -r --env local
+```
+
+3. Exécuter la suite complète en Local :
+```bash
+cd bruno
+bru run 03-Tous-Les-Tests -r --env local
+# Toujours nettoyer la base après :
+python ../scripts/cleanup_test_data.py
+```
+
+4. Exécuter uniquement les mutations CRUD en Local :
+```bash
+cd bruno
+bru run 02-Creations-Modifications -r --env local
+# Toujours nettoyer la base après :
+python ../scripts/cleanup_test_data.py
+```
 
 Licence
 Projet privé / usage interne, à préciser selon votre contexte.

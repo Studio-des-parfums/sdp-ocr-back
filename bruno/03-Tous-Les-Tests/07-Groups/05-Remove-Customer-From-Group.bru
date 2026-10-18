@@ -1,0 +1,24 @@
+meta {
+  name: Remove Customer From Group
+  type: http
+  seq: 5
+  tags: [
+    mutation
+  ]
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/groups/{{createdGroupId}}/customers
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "customer_ids": [69]
+  }
+}
+
+assert {
+  res.status: eq 200
+}

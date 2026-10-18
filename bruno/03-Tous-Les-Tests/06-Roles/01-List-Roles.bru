@@ -1,0 +1,19 @@
+meta {
+  name: List Roles
+  type: http
+  seq: 1
+  tags: [
+    readonly
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/roles/?page=1&size=10
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.roles.length: gte 1
+}

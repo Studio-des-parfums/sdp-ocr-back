@@ -1,0 +1,19 @@
+meta {
+  name: Get Review By ID
+  type: http
+  seq: 3
+  tags: [
+    mutation
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/customer-reviews/{{createdReviewId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: eq {{createdReviewId}}
+}

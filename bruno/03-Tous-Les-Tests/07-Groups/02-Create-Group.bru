@@ -1,0 +1,33 @@
+meta {
+  name: Create Group
+  type: http
+  seq: 2
+  tags: [
+    mutation
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/groups/
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "GroupeBruno_{{$timestamp}}",
+    "description": "Groupe créé par test Bruno",
+    "created_by": 2
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: isNumber
+}
+
+script:post-response {
+  if (res.body.id) {
+    bru.setVar("createdGroupId", res.body.id);
+  }
+}

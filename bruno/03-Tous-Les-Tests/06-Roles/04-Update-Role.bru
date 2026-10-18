@@ -1,0 +1,26 @@
+meta {
+  name: Update Role
+  type: http
+  seq: 4
+  tags: [
+    mutation
+  ]
+}
+
+put {
+  url: {{baseUrl}}/api/v1/roles/{{createdRoleId}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email_sending": true,
+    "devices_access": true
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.email_sending: eq true
+}
