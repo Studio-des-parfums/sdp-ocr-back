@@ -1,0 +1,18 @@
+meta {
+  name: Search Tablet Customers
+  type: http
+  seq: 2
+  tags: [
+    readonly
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tablet/customers/search?email=wilfredeperez13@gmail.com
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}

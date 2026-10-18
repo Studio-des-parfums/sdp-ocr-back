@@ -1,0 +1,35 @@
+meta {
+  name: Create Customer Review
+  type: http
+  seq: 2
+  tags: [
+    mutation
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/customer-reviews/
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "first_name": "ReviewBruno",
+    "last_name": "Test",
+    "email": "review.bruno.{{$timestamp}}@example.com",
+    "phone": "0600000001",
+    "type": "Modifié"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: isNumber
+}
+
+script:post-response {
+  if (res.body.id) {
+    bru.setVar("createdReviewId", res.body.id);
+  }
+}

@@ -1,0 +1,32 @@
+meta {
+  name: Add Item To Order
+  type: http
+  seq: 5
+  tags: [
+    mutation
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/orders/{{createdOrderId}}/items
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Flacon vaporisateur 100ml",
+    "quantity": 2
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: isNumber
+}
+
+script:post-response {
+  if (res.body.id) {
+    bru.setVar("createdOrderItemId", res.body.id);
+  }
+}

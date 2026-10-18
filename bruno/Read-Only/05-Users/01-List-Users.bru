@@ -1,0 +1,25 @@
+meta {
+  name: List Users
+  type: http
+  seq: 1
+  tags: [
+    readonly
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/users?page=1&size=10
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.users.length: gte 1
+}
+
+script:post-response {
+  if (res.body.users && res.body.users.length > 0) {
+    bru.setVar("sampleUserId", res.body.users[0].id);
+  }
+}

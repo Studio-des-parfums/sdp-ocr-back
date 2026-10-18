@@ -1,0 +1,18 @@
+meta {
+  name: Get User By Identifier
+  type: http
+  seq: 4
+  tags: [
+    readonly
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/users/by-identifier?identifier=ABR166
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: in [200, 404]
+}
