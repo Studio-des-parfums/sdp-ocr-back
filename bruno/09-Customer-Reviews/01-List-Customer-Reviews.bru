@@ -12,5 +12,5 @@ get {
 
 assert {
   res.status: eq 200
-  res.body.customers: isDefined
+  res.body.customers.length: gte 1
 }

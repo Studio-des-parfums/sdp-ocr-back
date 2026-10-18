@@ -12,8 +12,9 @@ get {
 
 assert {
   res.status: eq 200
-  res.body.customers: isDefined
+  res.body.customers.length: gte 1
   res.body.total: isNumber
+  res.body.total: gt 0
 }
 
 script:post-response {

@@ -12,6 +12,6 @@ get {
 
 assert {
   res.status: eq 200
-  res.body.top_countries: isDefined
-  res.body.top_cities: isDefined
+  res.body.top_countries.length: gte 1
+  res.body.top_cities.length: gte 1
 }

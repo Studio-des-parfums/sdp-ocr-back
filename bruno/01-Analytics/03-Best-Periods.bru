@@ -12,7 +12,7 @@ get {
 
 assert {
   res.status: eq 200
-  res.body.top_months: isDefined
-  res.body.top_days_of_week: isDefined
-  res.body.top_years: isDefined
+  res.body.top_months.length: gte 1
+  res.body.top_days_of_week.length: gte 1
+  res.body.top_years.length: gte 1
 }

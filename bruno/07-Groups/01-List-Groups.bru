@@ -12,5 +12,6 @@ get {
 
 assert {
   res.status: eq 200
-  res.body.groups: isDefined
+  res.body.groups.length: gte 1
+  res.body.total: gt 0
 }

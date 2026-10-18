@@ -12,5 +12,5 @@ get {
 
 assert {
   res.status: eq 200
-  res.body.top_note: isDefined
+  res.body.top_note.length: gte 1
 }

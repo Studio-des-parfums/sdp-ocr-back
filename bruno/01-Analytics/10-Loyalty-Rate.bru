@@ -13,6 +13,9 @@ get {
 assert {
   res.status: eq 200
   res.body.total_customers_with_formula: isNumber
+  res.body.total_customers_with_formula: gt 0
   res.body.loyal_customers: isNumber
+  res.body.loyal_customers: gt 0
   res.body.loyalty_rate: isNumber
+  res.body.loyalty_rate: gt 0
 }

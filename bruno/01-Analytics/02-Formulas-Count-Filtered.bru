@@ -13,5 +13,6 @@ get {
 assert {
   res.status: eq 200
   res.body.total: isNumber
-  res.body.data: isDefined
+  res.body.total: gt 0
+  res.body.data.length: gte 1
 }

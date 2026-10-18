@@ -12,4 +12,5 @@ get {
 
 assert {
   res.status: eq 200
+  res.body.top_notes.length: gte 1
 }
