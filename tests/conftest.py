@@ -1,19 +1,18 @@
 """
-Fixtures pytest partagées pour tous les tests.
+Fixtures pytest partagées — bootstrappe l'app FastAPI avec tous les
+services externes mockés (DB, schedulers, APIs tierces).
 
-Les tests unitaires ne doivent pas nécessiter une vraie DB ou des APIs externes.
-Ce fichier met en place les mocks nécessaires pour que l'app FastAPI puisse être
-importée et testée en CI sans aucun service externe.
+Stratégie : on mock get_connection() avant que les modules qui l'importent
+soient chargés, puis on crée un TestClient sur l'app déjà instanciée.
 """
 
 import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi.testclient import TestClient
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Assure que les variables d'env minimales sont définies avant tout import
-# ──────────────────────────────────────────────────────────────────────────────
+# ── Variables d'env minimales avant tout import de l'app ──────────────────
 os.environ.setdefault("MISTRAL_API_KEY", "ci-dummy")
 os.environ.setdefault("OPENAI_API_KEY", "ci-dummy")
 os.environ.setdefault("RESEND_API_KEY", "ci-dummy")
@@ -25,22 +24,35 @@ os.environ.setdefault("DB_NAME", "ci_db")
 os.environ.setdefault("STORAGE_BACKEND", "local")
 
 
-@pytest.fixture(autouse=True, scope="session")
-def mock_db_connection():
-    """Mock la connexion DB pour tous les tests : évite toute tentative de
-    connexion réelle à MySQL."""
-    mock_conn = MagicMock()
-    mock_conn.__enter__ = lambda s: s
-    mock_conn.__exit__ = MagicMock(return_value=False)
-    with patch("app.database.get_connection", return_value=mock_conn):
-        yield mock_conn
+def _make_mock_connection():
+    """Retourne un mock de connexion MySQL qui ne fait rien."""
+    conn = MagicMock()
+    conn.open = True
+    conn.__enter__ = lambda s: s
+    conn.__exit__ = MagicMock(return_value=False)
+    return conn
 
 
-@pytest.fixture(autouse=True, scope="session")
-def mock_schedulers():
-    """Mock les schedulers APScheduler pour ne pas démarrer de threads en CI."""
+@pytest.fixture(scope="session")
+def app():
+    """
+    Instancie l'app FastAPI une seule fois pour toute la session de tests,
+    avec DB et schedulers mockés.
+    """
+    mock_conn = _make_mock_connection()
+
     with (
+        patch("app.database.get_connection", return_value=mock_conn),
         patch("app.services.review_scheduler.start_review_scheduler"),
         patch("app.services.session_scheduler.start_session_scheduler"),
     ):
-        yield
+        from app.main import app as fastapi_app
+
+        yield fastapi_app
+
+
+@pytest.fixture(scope="session")
+def client(app):
+    """TestClient réutilisé pour toute la session."""
+    with TestClient(app, raise_server_exceptions=False) as c:
+        yield c
