@@ -1,0 +1,21 @@
+meta {
+  name: Formulas Count (All Periods)
+  type: http
+  seq: 1
+  tags: [
+    readonly
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/analytics/formulas/count?group_by=month
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.total: isNumber
+  res.body.total: gt 0
+  res.body.data.length: gte 1
+}

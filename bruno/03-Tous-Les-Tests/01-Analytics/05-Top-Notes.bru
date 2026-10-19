@@ -1,0 +1,19 @@
+meta {
+  name: Top Notes (All Types)
+  type: http
+  seq: 5
+  tags: [
+    readonly
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/analytics/notes/top?limit=10
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.all.length: gte 1
+}

@@ -1,0 +1,20 @@
+meta {
+  name: Top Locations (Cities & Countries)
+  type: http
+  seq: 9
+  tags: [
+    readonly
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/analytics/customers/locations?limit=10
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.top_countries.length: gte 1
+  res.body.top_cities.length: gte 1
+}

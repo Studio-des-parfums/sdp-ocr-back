@@ -1,0 +1,18 @@
+meta {
+  name: Get Customer Formulas (Tablet Flow)
+  type: http
+  seq: 3
+  tags: [
+    readonly
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tablet/customers/69/formulas
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}

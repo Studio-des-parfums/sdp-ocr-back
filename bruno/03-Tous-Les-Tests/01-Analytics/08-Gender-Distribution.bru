@@ -1,0 +1,22 @@
+meta {
+  name: Gender Distribution
+  type: http
+  seq: 8
+  tags: [
+    readonly
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/analytics/customers/gender
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.male: isNumber
+  res.body.female: isNumber
+  res.body.total: isNumber
+  res.body.total: gt 0
+}

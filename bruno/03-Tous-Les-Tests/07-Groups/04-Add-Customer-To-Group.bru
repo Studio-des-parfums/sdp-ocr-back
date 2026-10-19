@@ -1,0 +1,25 @@
+meta {
+  name: Add Customer To Group
+  type: http
+  seq: 4
+  tags: [
+    mutation
+  ]
+}
+
+post {
+  url: {{baseUrl}}/api/v1/groups/{{createdGroupId}}/customers
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "customer_ids": [69],
+    "added_by": 2
+  }
+}
+
+assert {
+  res.status: in [200, 201]
+}

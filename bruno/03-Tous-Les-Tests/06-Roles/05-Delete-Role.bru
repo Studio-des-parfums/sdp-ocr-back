@@ -1,0 +1,18 @@
+meta {
+  name: Delete Role
+  type: http
+  seq: 5
+  tags: [
+    mutation
+  ]
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/roles/{{createdRoleId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}

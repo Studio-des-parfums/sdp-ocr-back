@@ -1,0 +1,19 @@
+meta {
+  name: Top Options
+  type: http
+  seq: 7
+  tags: [
+    readonly
+  ]
+}
+
+get {
+  url: {{baseUrl}}/api/v1/analytics/options/top?limit=10
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.length: gte 1
+}
