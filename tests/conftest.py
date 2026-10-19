@@ -43,6 +43,7 @@ def app():
 
     with (
         patch("app.database.get_connection", return_value=mock_conn),
+        patch("app.database.connection.get_connection", return_value=mock_conn),
         patch("app.services.review_scheduler.start_review_scheduler"),
         patch("app.services.session_scheduler.start_session_scheduler"),
     ):
