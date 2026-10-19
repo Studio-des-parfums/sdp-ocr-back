@@ -1,13 +1,31 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-import os
 
 from app.core.config import settings
 from app.core.logger import setup_logging
 
 setup_logging()
-from app.api.endpoints import ocr, customers, users, export, groups, login_history, customer_reviews, files, formulas, emails, roles, orders, tablet, sessions, devices, analytics
+from app.api.endpoints import (
+    analytics,
+    customer_reviews,
+    customers,
+    devices,
+    emails,
+    export,
+    files,
+    formulas,
+    groups,
+    login_history,
+    ocr,
+    orders,
+    roles,
+    sessions,
+    tablet,
+    users,
+)
 from app.database import get_connection
 from app.services.review_scheduler import start_review_scheduler
 from app.services.session_scheduler import start_session_scheduler
@@ -15,7 +33,7 @@ from app.services.session_scheduler import start_session_scheduler
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="Backend API for PDF OCR processing with Mistral",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 test = get_connection()
@@ -45,7 +63,7 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
         "http://127.0.0.1:5174",
-        "http://127.0.0.1:8081"
+        "http://127.0.0.1:8081",
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -59,7 +77,9 @@ app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(export.router, prefix="/api/v1/export", tags=["Export"])
 app.include_router(groups.router, prefix="/api/v1/groups", tags=["Groups"])
 app.include_router(login_history.router, prefix="/api/v1/login-history", tags=["Login History"])
-app.include_router(customer_reviews.router, prefix="/api/v1/customer-reviews", tags=["Customer Reviews"])
+app.include_router(
+    customer_reviews.router, prefix="/api/v1/customer-reviews", tags=["Customer Reviews"]
+)
 app.include_router(files.router, prefix="/api/v1", tags=["Files"])
 app.include_router(formulas.router, prefix="/api/v1/formulas", tags=["Formulas"])
 app.include_router(emails.router, prefix="/api/v1/emails", tags=["Emails"])
@@ -69,6 +89,7 @@ app.include_router(tablet.router, prefix="/api/v1/tablet", tags=["Tablet"])
 app.include_router(sessions.router, prefix="/api/v1/tablet", tags=["Sessions"])
 app.include_router(devices.router, prefix="/api/v1", tags=["Devices"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
+
 
 @app.get("/")
 async def root():
@@ -89,23 +110,21 @@ async def root():
             "emails": "/api/v1/emails",
             "roles": "/api/v1/roles",
             "orders": "/api/v1/orders",
-            "docs": "/docs"
-        }
+            "docs": "/docs",
+        },
     }
+
 
 @app.get("/health")
 async def health():
     return {"status": "healthy", "service": "SDP OCR Backend"}
 
+
 # For Render deployment
 if __name__ == "__main__":
     import os
+
     import uvicorn
 
     port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=port,
-        reload=False
-    )
+    uvicorn.run(app, host="0.0.0.0", port=port, reload=False)

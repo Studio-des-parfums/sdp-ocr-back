@@ -1,6 +1,7 @@
-from typing import Dict, Any, Optional
-from app.database import get_connection
+from typing import Any
+
 from app.crud import crud_ocr_job
+from app.database import get_connection
 
 
 class OcrJobRepository:
@@ -22,7 +23,7 @@ class OcrJobRepository:
         finally:
             connection.close()
 
-    def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
+    def get_job(self, job_id: str) -> dict[str, Any] | None:
         connection = get_connection()
         if not connection:
             return None
@@ -32,7 +33,7 @@ class OcrJobRepository:
         finally:
             connection.close()
 
-    def update_job(self, job_id: str, job_data: Dict[str, Any]) -> bool:
+    def update_job(self, job_id: str, job_data: dict[str, Any]) -> bool:
         connection = get_connection()
         if not connection:
             return False

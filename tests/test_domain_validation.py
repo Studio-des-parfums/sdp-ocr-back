@@ -1,6 +1,7 @@
 """
 Script de test pour vérifier la validation de domaines email via MX DNS
 """
+
 import sys
 from pathlib import Path
 
@@ -28,7 +29,7 @@ def test_email_domains():
         is_valid, details = email_domain_validator.verify_email_domain(email)
 
         status = "✅ VALIDE" if is_valid else "❌ INVALIDE"
-        domain = email.split('@')[1] if '@' in email else 'N/A'
+        domain = email.split("@")[1] if "@" in email else "N/A"
 
         print(f"Email: {email}")
         print(f"Domaine: {domain}")

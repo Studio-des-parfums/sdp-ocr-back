@@ -49,7 +49,9 @@ def delete_by_formula(connection: pymysql.connections.Connection, formula_id: in
         cursor.close()
 
 
-def replace_for_formula(connection: pymysql.connections.Connection, formula_id: int, names: list) -> None:
+def replace_for_formula(
+    connection: pymysql.connections.Connection, formula_id: int, names: list
+) -> None:
     """Remplace toutes les options d'une formule par la liste donnée."""
     delete_by_formula(connection, formula_id)
     for name in names:

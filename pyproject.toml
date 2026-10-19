@@ -1,0 +1,49 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "alembic/versions",
+    "transfer_db.py",   # script ponctuel de migration
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",   # line too long (géré par ruff format)
+    "B008",   # do not perform function calls in default arguments (FastAPI Depends)
+    # ── À corriger progressivement (PR dédiées) ──
+    "B904",   # raise without `from err` dans les except – 76 occurrences
+    "B007",   # loop variable non utilisée
+    "B018",   # expression inutile
+    "UP042",  # StrEnum – correction à faire après test de non-régression
+    "E402",   # module level import not at top of file (scripts utilitaires)
+    "E722",   # bare except
+    "F841",   # variable locale assignée mais jamais utilisée
+    "W291",   # trailing whitespace
+    "W293",   # blank line contains whitespace
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "tests_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+pythonpath = ["."]

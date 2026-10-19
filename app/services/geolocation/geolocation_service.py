@@ -1,6 +1,7 @@
-import requests
-from typing import Dict, Optional
 import ipaddress
+
+import requests
+
 
 class GeolocationService:
     """
@@ -21,30 +22,22 @@ class GeolocationService:
         except ValueError:
             return False
 
-    def get_location_by_ip(self, ip_address: str) -> Dict[str, str]:
+    def get_location_by_ip(self, ip_address: str) -> dict[str, str]:
         """
         Récupère la géolocalisation d'une IP
         Retourne un dictionnaire avec city et country
         """
         # Valeurs par défaut
-        default_location = {
-            "city": "Unknown",
-            "country": "Unknown"
-        }
+        default_location = {"city": "Unknown", "country": "Unknown"}
 
         # Si IP privée/locale, retourner valeurs par défaut
         if self._is_private_ip(ip_address) or ip_address in ["127.0.0.1", "localhost", "::1"]:
-            return {
-                "city": "Local",
-                "country": "Local"
-            }
+            return {"city": "Local", "country": "Local"}
 
         try:
             # Faire l'appel API
             response = requests.get(
-                f"{self.api_url}/{ip_address}",
-                timeout=5,
-                params={"fields": "status,city,country"}
+                f"{self.api_url}/{ip_address}", timeout=5, params={"fields": "status,city,country"}
             )
 
             if response.status_code == 200:
@@ -53,7 +46,7 @@ class GeolocationService:
                 if data.get("status") == "success":
                     return {
                         "city": data.get("city", "Unknown"),
-                        "country": data.get("country", "Unknown")
+                        "country": data.get("country", "Unknown"),
                     }
                 else:
                     print(f"Erreur API géolocalisation : {data}")
@@ -68,5 +61,6 @@ class GeolocationService:
         except Exception as e:
             print(f"Erreur générale géolocalisation : {e}")
             return default_location
+
 
 geolocation_service = GeolocationService()

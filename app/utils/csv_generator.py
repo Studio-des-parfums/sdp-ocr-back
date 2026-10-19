@@ -1,8 +1,9 @@
 import csv
 import io
-import re
 import json
-from typing import List, Dict, Any, Optional
+import re
+from typing import Any
+
 from app.schemas.ocr_schemas import DocumentType
 
 
@@ -30,7 +31,7 @@ class CSVGenerator:
         "notes_de_fond",
     ]
 
-    def generate_studio_parfums_csv(self, processed_pages: List[Dict[str, Any]]) -> str:
+    def generate_studio_parfums_csv(self, processed_pages: list[dict[str, Any]]) -> str:
         output = io.StringIO()
         writer = csv.DictWriter(
             output,
@@ -44,7 +45,8 @@ class CSVGenerator:
 
         # Filtrer les pages Studio des Parfums
         studio_pages = [
-            page for page in processed_pages
+            page
+            for page in processed_pages
             if page.get("document_type") == DocumentType.STUDIO_PARFUMS.value
         ]
 
@@ -87,7 +89,7 @@ class CSVGenerator:
     # NETTOYAGE DES CHAMPS
     # ------------------------------------------------------------------
 
-    def _clean_simple(self, value: Optional[str]) -> str:
+    def _clean_simple(self, value: str | None) -> str:
         if not value:
             return ""
         v = str(value).strip()
@@ -96,9 +98,17 @@ class CSVGenerator:
 
     def _cut_on_labels(self, v: str) -> str:
         labels = [
-            "Pays:", "Ville:", "Tel:", "Email:", "Profession:",
-            "Date:", "Nom:", "Prénom:", "Date de naissance:",
-            "Groupe:", "Group:"
+            "Pays:",
+            "Ville:",
+            "Tel:",
+            "Email:",
+            "Profession:",
+            "Date:",
+            "Nom:",
+            "Prénom:",
+            "Date de naissance:",
+            "Groupe:",
+            "Group:",
         ]
         for label in labels:
             if label.lower() in v.lower():
@@ -106,18 +116,14 @@ class CSVGenerator:
                 return v[:idx].strip()
         return v.strip()
 
-    def _clean_email(self, value: Optional[str]) -> str:
+    def _clean_email(self, value: str | None) -> str:
         if not value:
             return ""
 
         text = str(value).strip()
 
         # D'abord essayer le pattern standard
-        match = re.search(
-            r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}",
-            text,
-            re.IGNORECASE
-        )
+        match = re.search(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", text, re.IGNORECASE)
         if match:
             return match.group(0)
 
@@ -126,31 +132,31 @@ class CSVGenerator:
         ocr_match = re.search(
             r"([A-Z0-9._%-]+(?:\s+[A-Z0-9._%-]+)*)\s*@\s*([A-Z0-9.-]+\.[A-Z]{2,})",
             text,
-            re.IGNORECASE
+            re.IGNORECASE,
         )
         if ocr_match:
-            local_part = re.sub(r'\s+', '', ocr_match.group(1))  # enlever espaces
-            domain_part = re.sub(r'\s+', '', ocr_match.group(2))  # enlever espaces
+            local_part = re.sub(r"\s+", "", ocr_match.group(1))  # enlever espaces
+            domain_part = re.sub(r"\s+", "", ocr_match.group(2))  # enlever espaces
             return f"{local_part}@{domain_part}"
 
         return ""
 
-    def _clean_phone(self, value: Optional[str]) -> str:
+    def _clean_phone(self, value: str | None) -> str:
         if not value:
             return ""
 
         digits = re.sub(r"[^\d]", "", value)
 
         if len(digits) == 10 and digits.startswith("0"):
-            return " ".join(digits[i:i+2] for i in range(0, 10, 2))
+            return " ".join(digits[i : i + 2] for i in range(0, 10, 2))
 
         if digits.startswith("33") and len(digits) == 11:
             digits = digits[2:]
-            return "+33 " + " ".join(digits[i:i+2] for i in range(0, 10, 2))
+            return "+33 " + " ".join(digits[i : i + 2] for i in range(0, 10, 2))
 
         return value.strip()
 
-    def _clean_date(self, value: Optional[str]) -> str:
+    def _clean_date(self, value: str | None) -> str:
         if not value:
             return ""
 
@@ -189,7 +195,7 @@ class CSVGenerator:
 
         return f"{day:02d}/{month:02d}/{year}"
 
-    def _clean_city(self, value: Optional[str]) -> str:
+    def _clean_city(self, value: str | None) -> str:
         if not value:
             return ""
         v = str(value)
@@ -197,7 +203,7 @@ class CSVGenerator:
         v = re.split(r"(?i)pays\s*:", v)[0]
         return v.strip()
 
-    def _clean_country(self, value: Optional[str]) -> str:
+    def _clean_country(self, value: str | None) -> str:
         if not value:
             return ""
         v = str(value)
@@ -205,7 +211,7 @@ class CSVGenerator:
         v = re.split(r"(?i)ville\s*:", v)[0]
         return v.strip()
 
-    def _clean_identifiant(self, value: Optional[str]) -> str:
+    def _clean_identifiant(self, value: str | None) -> str:
         if not value:
             return ""
 
@@ -219,16 +225,16 @@ class CSVGenerator:
 
         return digits
 
-    def _clean_perfume_notes(self, value: Optional[List[Dict[str, Any]]]) -> str:
+    def _clean_perfume_notes(self, value: list[dict[str, Any]] | None) -> str:
         """
         Nettoie et formate les notes de parfum (liste de dicts) en JSON string pour le CSV.
         Accepte notes_de_tete, notes_de_coeur, notes_de_fond.
-        
+
         Format attendu: [{"essence": str, "quantite_ml": float}, ...]
         """
         if not value:
             return ""
-        
+
         try:
             # Si c'est déjà une liste, la convertir en JSON
             if isinstance(value, list):
@@ -243,7 +249,7 @@ class CSVGenerator:
         except (json.JSONDecodeError, TypeError):
             return ""
 
-    def _detect_identifiant_prefix(self, studio_pages: List[Dict[str, Any]]) -> str:
+    def _detect_identifiant_prefix(self, studio_pages: list[dict[str, Any]]) -> str:
         """
         Détecte le préfixe commun des identifiants existants.
         Ex: ["202201001", "202201005"] → "202201"

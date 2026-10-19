@@ -1,7 +1,7 @@
-import httpx
-import asyncio
 import os
-from typing import Optional, Dict, Any
+
+import httpx
+
 
 class EmailValidatorService:
     """Service pour valider les emails avec Abstract API"""
@@ -25,10 +25,7 @@ class EmailValidatorService:
 
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                params = {
-                    "api_key": self.api_key,
-                    "email": email
-                }
+                params = {"api_key": self.api_key, "email": email}
 
                 response = await client.get(self.base_url, params=params)
                 response.raise_for_status()
@@ -63,19 +60,16 @@ class EmailValidatorService:
         try:
             import requests
 
-            params = {
-                "api_key": self.api_key,
-                "email": email
-            }
+            params = {"api_key": self.api_key, "email": email}
 
             response = requests.get(self.base_url, params=params, timeout=10)
 
             # Gérer les différents codes d'erreur
             if response.status_code == 401:
-                print(f"Erreur API: Clé API invalide ou non autorisée")
+                print("Erreur API: Clé API invalide ou non autorisée")
                 return False
             elif response.status_code == 429:
-                print(f"Erreur API: Limite de requêtes atteinte")
+                print("Erreur API: Limite de requêtes atteinte")
                 return False
             elif response.status_code != 200:
                 print(f"Erreur API: Code {response.status_code}")
@@ -95,6 +89,7 @@ class EmailValidatorService:
             print(f"Erreur validation email {email}: {e}")
             # En cas d'erreur API, on considère l'email comme non validé
             return False
+
 
 # Instance globale du service
 email_validator = EmailValidatorService()

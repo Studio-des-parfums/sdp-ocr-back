@@ -1,10 +1,9 @@
 import os
 
 import pymysql
-from pymysql import MySQLError
 from dbutils.pooled_db import PooledDB
 from dotenv import load_dotenv
-
+from pymysql import MySQLError
 
 # Charge les variables d'environnement depuis le fichier .env (si présent)
 load_dotenv()
@@ -25,9 +24,9 @@ def _get_pool():
             _connection_pool = PooledDB(
                 creator=pymysql,
                 maxconnections=10,  # Max connexions dans le pool
-                mincached=2,        # Connexions min gardées en cache
-                maxcached=5,        # Connexions max gardées en cache
-                blocking=True,      # Attendre si le pool est plein
+                mincached=2,  # Connexions min gardées en cache
+                maxcached=5,  # Connexions max gardées en cache
+                blocking=True,  # Attendre si le pool est plein
                 host=os.getenv("DB_HOST", "localhost"),
                 port=int(os.getenv("DB_PORT", 3306)),
                 user=os.getenv("DB_USER"),

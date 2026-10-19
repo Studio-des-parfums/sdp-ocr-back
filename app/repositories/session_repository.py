@@ -1,14 +1,12 @@
-from typing import Optional
-
-from app.database import get_connection
 from app.crud import crud_session
+from app.database import get_connection
 
 
 def create_session(
-    customer_name: Optional[str] = None,
-    customer_email: Optional[str] = None,
-    room: Optional[str] = None,
-) -> Optional[int]:
+    customer_name: str | None = None,
+    customer_email: str | None = None,
+    room: str | None = None,
+) -> int | None:
     conn = get_connection()
     if not conn:
         return None
@@ -18,7 +16,7 @@ def create_session(
         conn.close()
 
 
-def get_active_sessions(room: Optional[str] = None) -> list[dict]:
+def get_active_sessions(room: str | None = None) -> list[dict]:
     conn = get_connection()
     if not conn:
         return []
@@ -28,7 +26,7 @@ def get_active_sessions(room: Optional[str] = None) -> list[dict]:
         conn.close()
 
 
-def get_session_by_id(session_id: int) -> Optional[dict]:
+def get_session_by_id(session_id: int) -> dict | None:
     conn = get_connection()
     if not conn:
         return None

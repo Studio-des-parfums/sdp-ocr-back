@@ -1,8 +1,10 @@
 """
 Test simple de connexion à la base de données
 """
+
 import pymysql
 from pymysql import MySQLError
+
 
 def test_connection():
     print("=" * 80)
@@ -12,13 +14,13 @@ def test_connection():
 
     # Paramètres de connexion
     config = {
-        'host': '127.0.0.1',
-        'port': 3306,
-        'user': 'u440859155_dwain_sdp',
-        'password': 'Daventys93110@',
-        'database': 'u440859155_sdp_test',
-        'cursorclass': pymysql.cursors.DictCursor,
-        'connect_timeout': 5
+        "host": "127.0.0.1",
+        "port": 3306,
+        "user": "u440859155_dwain_sdp",
+        "password": "Daventys93110@",
+        "database": "u440859155_sdp_test",
+        "cursorclass": pymysql.cursors.DictCursor,
+        "connect_timeout": 5,
     }
 
     print(f"Host: {config['host']}:{config['port']}")
@@ -59,7 +61,7 @@ def test_connection():
 
     except MySQLError as e:
         print(f"❌ Erreur de connexion MySQL : {e}")
-        if hasattr(e, 'args') and len(e.args) >= 2:
+        if hasattr(e, "args") and len(e.args) >= 2:
             print(f"   Code erreur : {e.args[0]}")
             print(f"   Message : {e.args[1]}")
 
@@ -67,6 +69,7 @@ def test_connection():
         print(f"❌ Erreur inattendue : {e}")
 
     print("=" * 80)
+
 
 if __name__ == "__main__":
     test_connection()

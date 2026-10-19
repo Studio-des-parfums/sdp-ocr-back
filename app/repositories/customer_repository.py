@@ -1,7 +1,8 @@
 import re
-from typing import Dict, Any, Optional, List, Tuple
-from app.database import get_connection
+from typing import Any
+
 from app.crud import crud_customer
+from app.database import get_connection
 from app.services.customer import customer_business_service
 
 
@@ -10,7 +11,9 @@ class CustomerRepository:
     Repository pour gérer l'accès aux données customers (Data Access Layer)
     """
 
-    def insert_customer_if_not_exists(self, extracted_data: Dict[str, Any], v2: bool = False) -> Tuple[Optional[int], str]:
+    def insert_customer_if_not_exists(
+        self, extracted_data: dict[str, Any], v2: bool = False
+    ) -> tuple[int | None, str]:
         """
         Insère un customer dans la base pour chaque PDF traité (peu importe les données)
         Délègue à customer_business_service
@@ -24,7 +27,7 @@ class CustomerRepository:
         """
         return customer_business_service.insert_customer_if_not_exists(extracted_data, v2=v2)
 
-    def create_customer(self, customer_data: Dict[str, Any]) -> Optional[int]:
+    def create_customer(self, customer_data: dict[str, Any]) -> int | None:
         """
         Crée un nouveau customer avec validation d'email
         Délègue à customer_business_service
@@ -37,7 +40,7 @@ class CustomerRepository:
         """
         return customer_business_service.create_customer_with_validation(customer_data)
 
-    def get_customer_by_id(self, customer_id: int) -> Optional[Dict[str, Any]]:
+    def get_customer_by_id(self, customer_id: int) -> dict[str, Any] | None:
         """
         Récupère un customer par son ID avec ses formules et notes
 
@@ -58,7 +61,7 @@ class CustomerRepository:
                 return None
 
             # 2) Enrichir avec les formules et notes
-            def _get_notes(table_name: str, formula_id: int) -> List[Dict[str, Any]]:
+            def _get_notes(table_name: str, formula_id: int) -> list[dict[str, Any]]:
                 cursor = connection.cursor()
                 try:
                     query = f"""
@@ -70,12 +73,14 @@ class CustomerRepository:
                     cursor.execute(query, (formula_id,))
                     return cursor.fetchall()
                 except Exception as e:
-                    print(f"Erreur récupération notes depuis {table_name} pour formula_id={formula_id} : {e}")
+                    print(
+                        f"Erreur récupération notes depuis {table_name} pour formula_id={formula_id} : {e}"
+                    )
                     return []
                 finally:
                     cursor.close()
 
-            def _get_formulas_for_customer(customer_id: int) -> List[Dict[str, Any]]:
+            def _get_formulas_for_customer(customer_id: int) -> list[dict[str, Any]]:
                 cursor = connection.cursor()
                 try:
                     # Récupérer directement les formules via formula.customer_id
@@ -111,13 +116,18 @@ class CustomerRepository:
         finally:
             connection.close()
 
-    def get_all_customers(self, page: int = 1, size: int = 10,
-                         search: Optional[str] = None, v2: bool = False,
-                         country: Optional[str] = None,
-                         year: Optional[str] = None,
-                         month: Optional[str] = None,
-                         verified: Optional[str] = None,
-                         empty_fields: Optional[List[str]] = None) -> Tuple[List[Dict[str, Any]], int]:
+    def get_all_customers(
+        self,
+        page: int = 1,
+        size: int = 10,
+        search: str | None = None,
+        v2: bool = False,
+        country: str | None = None,
+        year: str | None = None,
+        month: str | None = None,
+        verified: str | None = None,
+        empty_fields: list[str] | None = None,
+    ) -> tuple[list[dict[str, Any]], int]:
         """
         Récupère les customers avec pagination et recherche (sans formules/notes,
         non utilisées par la liste, pour éviter le N+1 sur chaque page)
@@ -140,13 +150,14 @@ class CustomerRepository:
             return [], 0
 
         try:
-            customers, total = crud_customer.get_all(connection, page, size, search, v2,
-                                                     country, year, month, verified, empty_fields)
+            customers, total = crud_customer.get_all(
+                connection, page, size, search, v2, country, year, month, verified, empty_fields
+            )
             return customers, total
         finally:
             connection.close()
 
-    def update_customer(self, customer_id: int, customer_data: Dict[str, Any]) -> bool:
+    def update_customer(self, customer_id: int, customer_data: dict[str, Any]) -> bool:
         """
         Met à jour un customer avec validation d'email et de téléphone si modifiés
         Délègue à customer_business_service
@@ -186,8 +197,7 @@ class CustomerRepository:
         finally:
             connection.close()
 
-
-    def get_analytics(self) -> Dict[str, Any]:
+    def get_analytics(self) -> dict[str, Any]:
         """
         Récupère les statistiques d'analyse des clients (évolution mensuelle,
         répartition par mois/année, taux de rétention, top pays)
@@ -204,7 +214,7 @@ class CustomerRepository:
         finally:
             connection.close()
 
-    def get_countries(self) -> List[str]:
+    def get_countries(self) -> list[str]:
         """
         Récupère la liste des pays distincts, nettoyée :
         - Supprime les entrées contenant un chiffre
@@ -225,10 +235,10 @@ class CustomerRepository:
             for c in raw:
                 if not c:
                     continue
-                cleaned = re.sub(r"[^a-zA-ZÀ-ÿ\s\-']", '', c).strip()
+                cleaned = re.sub(r"[^a-zA-ZÀ-ÿ\s\-']", "", c).strip()
                 if not cleaned:
                     continue
-                if re.search(r'\d', cleaned):
+                if re.search(r"\d", cleaned):
                     continue
                 key = cleaned.lower()
                 if key not in seen:
@@ -238,7 +248,7 @@ class CustomerRepository:
         finally:
             connection.close()
 
-    def bulk_update_customers(self, updates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def bulk_update_customers(self, updates: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """
         Met à jour plusieurs customers en masse
 
@@ -255,25 +265,25 @@ class CustomerRepository:
             try:
                 existing = self.get_customer_by_id(customer_id)
                 if not existing:
-                    results.append({
-                        "id": customer_id,
-                        "success": False,
-                        "error": f"Customer avec ID {customer_id} non trouvé"
-                    })
+                    results.append(
+                        {
+                            "id": customer_id,
+                            "success": False,
+                            "error": f"Customer avec ID {customer_id} non trouvé",
+                        }
+                    )
                     continue
 
                 success = self.update_customer(customer_id, item)
-                results.append({
-                    "id": customer_id,
-                    "success": success,
-                    "error": None if success else "Erreur lors de la mise à jour"
-                })
+                results.append(
+                    {
+                        "id": customer_id,
+                        "success": success,
+                        "error": None if success else "Erreur lors de la mise à jour",
+                    }
+                )
             except Exception as e:
-                results.append({
-                    "id": customer_id,
-                    "success": False,
-                    "error": str(e)
-                })
+                results.append({"id": customer_id, "success": False, "error": str(e)})
 
         return results
 

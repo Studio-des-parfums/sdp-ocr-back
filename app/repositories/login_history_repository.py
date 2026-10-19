@@ -1,6 +1,7 @@
-from typing import Dict, Any, Optional, List, Tuple
-from app.database import get_connection
+from typing import Any
+
 from app.crud import crud_login_history
+from app.database import get_connection
 
 
 class LoginHistoryRepository:
@@ -8,8 +9,9 @@ class LoginHistoryRepository:
     Repository pour gérer l'accès aux données login_history (Data Access Layer)
     """
 
-    def create_login_record(self, user_id: int, ip_address: str, city: str,
-                           country: str, log_type: str) -> Optional[int]:
+    def create_login_record(
+        self, user_id: int, ip_address: str, city: str, country: str, log_type: str
+    ) -> int | None:
         """
         Enregistre une nouvelle connexion ou déconnexion
 
@@ -29,12 +31,7 @@ class LoginHistoryRepository:
 
         try:
             record_id = crud_login_history.create(
-                connection,
-                user_id,
-                ip_address,
-                city,
-                country,
-                log_type
+                connection, user_id, ip_address, city, country, log_type
             )
 
             if record_id:
@@ -44,8 +41,9 @@ class LoginHistoryRepository:
         finally:
             connection.close()
 
-    def get_login_history_by_user(self, user_id: int, page: int = 1,
-                                  size: int = 10) -> Tuple[List[Dict[str, Any]], int]:
+    def get_login_history_by_user(
+        self, user_id: int, page: int = 1, size: int = 10
+    ) -> tuple[list[dict[str, Any]], int]:
         """
         Récupère l'historique des connexions d'un utilisateur avec pagination
 
@@ -66,8 +64,9 @@ class LoginHistoryRepository:
         finally:
             connection.close()
 
-    def get_all_login_history(self, page: int = 1,
-                             size: int = 10) -> Tuple[List[Dict[str, Any]], int]:
+    def get_all_login_history(
+        self, page: int = 1, size: int = 10
+    ) -> tuple[list[dict[str, Any]], int]:
         """
         Récupère tout l'historique des connexions avec pagination
 

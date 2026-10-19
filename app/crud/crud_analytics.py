@@ -1,6 +1,7 @@
 from collections import defaultdict
-from datetime import datetime, date
-from typing import Any, Dict, List, Optional
+from datetime import date, datetime
+from typing import Any
+
 import pymysql
 
 from app.core.logger import get_logger
@@ -9,7 +10,7 @@ from app.utils.date_parser import parse_and_resolve_formula_date
 logger = get_logger(__name__)
 
 
-def _parse_filter_date(d_str: Optional[str]) -> Optional[date]:
+def _parse_filter_date(d_str: str | None) -> date | None:
     """Parse une date de filtre au format YYYY-MM-DD."""
     if not d_str:
         return None
@@ -19,7 +20,7 @@ def _parse_filter_date(d_str: Optional[str]) -> Optional[date]:
         return None
 
 
-def _is_in_range(dt: Optional[date], d_from: Optional[date], d_to: Optional[date]) -> bool:
+def _is_in_range(dt: date | None, d_from: date | None, d_to: date | None) -> bool:
     """Vérifie si la date dt est dans la plage [d_from, d_to]."""
     if not dt:
         return False
@@ -34,12 +35,13 @@ def _is_in_range(dt: Optional[date], d_from: Optional[date], d_to: Optional[date
 # 1. Nb de formules total en fonction d'une date
 # ---------------------------------------------------------------------------
 
+
 def get_formula_count_by_date(
     connection: pymysql.connections.Connection,
-    date_from: Optional[str] = None,
-    date_to: Optional[str] = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
     group_by: str = "month",  # "day" | "month" | "year"
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Retourne le nombre total de formules créées, avec une décomposition
     temporelle (par jour, mois ou année) calculée à partir de la date réelle de la formule
@@ -59,7 +61,7 @@ def get_formula_count_by_date(
         """)
         rows = cursor.fetchall() or []
 
-        counts_by_period: Dict[str, int] = defaultdict(int)
+        counts_by_period: dict[str, int] = defaultdict(int)
         total = 0
 
         for r in rows:
@@ -80,8 +82,7 @@ def get_formula_count_by_date(
             counts_by_period[key] += count
 
         sorted_data = [
-            {"period": k, "count": counts_by_period[k]}
-            for k in sorted(counts_by_period.keys())
+            {"period": k, "count": counts_by_period[k]} for k in sorted(counts_by_period.keys())
         ]
 
         period_label = "date" if group_by == "day" else group_by
@@ -105,10 +106,11 @@ def get_formula_count_by_date(
 # 2. Classement des meilleurs mois / jours de l'année
 # ---------------------------------------------------------------------------
 
+
 def get_best_periods(
     connection: pymysql.connections.Connection,
     limit: int = 10,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Retourne les mois (1=Janvier…12=Décembre), jours de la semaine (1=Lundi…7=Dimanche)
     et années qui concentrent le plus de formules créées, selon la colonne formula.date.
@@ -125,9 +127,9 @@ def get_best_periods(
         """)
         rows = cursor.fetchall() or []
 
-        month_counts: Dict[int, int] = defaultdict(int)
-        dow_counts: Dict[int, int] = defaultdict(int)  # 1=Lundi, 7=Dimanche
-        year_counts: Dict[int, int] = defaultdict(int)
+        month_counts: dict[int, int] = defaultdict(int)
+        dow_counts: dict[int, int] = defaultdict(int)  # 1=Lundi, 7=Dimanche
+        year_counts: dict[int, int] = defaultdict(int)
 
         for r in rows:
             dt = parse_and_resolve_formula_date(r["date"], r["reference"], r["created_at"])
@@ -141,13 +143,27 @@ def get_best_periods(
             year_counts[dt.year] += c
 
         month_names = {
-            1: "Janvier", 2: "Février", 3: "Mars", 4: "Avril",
-            5: "Mai", 6: "Juin", 7: "Juillet", 8: "Août",
-            9: "Septembre", 10: "Octobre", 11: "Novembre", 12: "Décembre"
+            1: "Janvier",
+            2: "Février",
+            3: "Mars",
+            4: "Avril",
+            5: "Mai",
+            6: "Juin",
+            7: "Juillet",
+            8: "Août",
+            9: "Septembre",
+            10: "Octobre",
+            11: "Novembre",
+            12: "Décembre",
         }
         day_names = {
-            1: "Lundi", 2: "Mardi", 3: "Mercredi", 4: "Jeudi",
-            5: "Vendredi", 6: "Samedi", 7: "Dimanche"
+            1: "Lundi",
+            2: "Mardi",
+            3: "Mercredi",
+            4: "Jeudi",
+            5: "Vendredi",
+            6: "Samedi",
+            7: "Dimanche",
         }
 
         top_months = sorted(month_counts.items(), key=lambda x: x[1], reverse=True)[:limit]
@@ -160,13 +176,9 @@ def get_best_periods(
                 for m, cnt in top_months
             ],
             "top_days_of_week": [
-                {"day": d, "label": day_names.get(d, str(d)), "count": cnt}
-                for d, cnt in top_days
+                {"day": d, "label": day_names.get(d, str(d)), "count": cnt} for d, cnt in top_days
             ],
-            "top_years": [
-                {"year": y, "count": cnt}
-                for y, cnt in top_years
-            ],
+            "top_years": [{"year": y, "count": cnt} for y, cnt in top_years],
         }
 
     except Exception as e:
@@ -181,12 +193,13 @@ def get_best_periods(
 # 3. Classement des ateliers les plus fréquentés
 # ---------------------------------------------------------------------------
 
+
 def get_top_ateliers(
     connection: pymysql.connections.Connection,
     limit: int = 10,
-    date_from: Optional[str] = None,
-    date_to: Optional[str] = None,
-) -> List[Dict[str, Any]]:
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> list[dict[str, Any]]:
     """
     Retourne le classement des ateliers (atelier_name / atelier_id) par
     nombre de formules associées, filtré selon la date de la formule.
@@ -205,7 +218,7 @@ def get_top_ateliers(
         """)
         rows = cursor.fetchall() or []
 
-        atelier_counts: Dict[tuple, int] = defaultdict(int)
+        atelier_counts: dict[tuple, int] = defaultdict(int)
 
         for r in rows:
             dt = parse_and_resolve_formula_date(r["date"], r["reference"], r["created_at"])
@@ -233,13 +246,14 @@ def get_top_ateliers(
 # 4. Classement des notes les plus utilisées
 # ---------------------------------------------------------------------------
 
+
 def get_top_notes(
     connection: pymysql.connections.Connection,
     limit: int = 20,
-    note_type: Optional[str] = None,  # "top_note"|"heart_note"|"base_note"|"booster_note"|None=all
-    date_from: Optional[str] = None,
-    date_to: Optional[str] = None,
-) -> Dict[str, Any]:
+    note_type: str | None = None,  # "top_note"|"heart_note"|"base_note"|"booster_note"|None=all
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> dict[str, Any]:
     """
     Retourne le classement des notes (essences) les plus utilisées, en filtrant
     selon la date réelle des formules (formula.date) si des filtres temporels sont fournis.
@@ -256,7 +270,7 @@ def get_top_notes(
         has_date_filter = bool(d_from or d_to)
 
         note_filter = "n.name IS NOT NULL AND TRIM(n.name) != '' AND LOWER(TRIM(n.name)) NOT IN ('a définir', 'a definir')"
-        result: Dict[str, Any] = {}
+        result: dict[str, Any] = {}
 
         if not has_date_filter:
             # Sans filtre de dates : requête SQL directe hautement optimisée
@@ -290,7 +304,7 @@ def get_top_notes(
 
         else:
             # Avec filtre de dates : résolution des dates de formules
-            all_counts: Dict[str, int] = defaultdict(int)
+            all_counts: dict[str, int] = defaultdict(int)
 
             for table in note_tables:
                 query = f"""
@@ -301,7 +315,7 @@ def get_top_notes(
                     GROUP BY f.date, f.reference, f.created_at, TRIM(n.name)
                 """
                 cursor.execute(query)
-                table_counts: Dict[str, int] = defaultdict(int)
+                table_counts: dict[str, int] = defaultdict(int)
 
                 for r in cursor.fetchall() or []:
                     dt = parse_and_resolve_formula_date(r["date"], r["reference"], r["created_at"])
@@ -312,7 +326,9 @@ def get_top_notes(
                     table_counts[n_name] += c
                     all_counts[n_name] += c
 
-                sorted_table = sorted(table_counts.items(), key=lambda x: x[1], reverse=True)[:limit]
+                sorted_table = sorted(table_counts.items(), key=lambda x: x[1], reverse=True)[
+                    :limit
+                ]
                 result[table] = [{"name": k, "count": v} for k, v in sorted_table]
 
             if len(note_tables) > 1 or note_type is None:
@@ -333,12 +349,13 @@ def get_top_notes(
 # 5. Classement des options les plus choisies
 # ---------------------------------------------------------------------------
 
+
 def get_top_options(
     connection: pymysql.connections.Connection,
     limit: int = 20,
-    date_from: Optional[str] = None,
-    date_to: Optional[str] = None,
-) -> List[Dict[str, Any]]:
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> list[dict[str, Any]]:
     """
     Retourne le classement des options (formula_option.name) les plus choisies,
     filtrées selon la date résolue de la formule.
@@ -358,7 +375,7 @@ def get_top_options(
         """)
         rows = cursor.fetchall() or []
 
-        option_counts: Dict[str, int] = defaultdict(int)
+        option_counts: dict[str, int] = defaultdict(int)
         for r in rows:
             dt = parse_and_resolve_formula_date(r["date"], r["reference"], r["created_at"])
             if not _is_in_range(dt, d_from, d_to):
@@ -381,11 +398,12 @@ def get_top_options(
 # 6. Pourcentage client Homme / Femme
 # ---------------------------------------------------------------------------
 
+
 def get_gender_distribution(
     connection: pymysql.connections.Connection,
-    date_from: Optional[str] = None,
-    date_to: Optional[str] = None,
-) -> Dict[str, Any]:
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> dict[str, Any]:
     """
     Retourne la répartition Homme / Femme / Non renseigné des clients.
     Si date_from ou date_to est spécifié, filtre sur les clients ayant une formule
@@ -415,7 +433,7 @@ def get_gender_distribution(
                 FROM customers c
                 JOIN formula f ON f.customer_id = c.id
             """)
-            cust_genders: Dict[int, str] = {}
+            cust_genders: dict[int, str] = {}
             for r in cursor.fetchall() or []:
                 dt = parse_and_resolve_formula_date(r["date"], r["reference"], r["created_at"])
                 if _is_in_range(dt, d_from, d_to):
@@ -443,7 +461,15 @@ def get_gender_distribution(
 
     except Exception as e:
         logger.error(f"Erreur get_gender_distribution : {e}", exc_info=True)
-        return {"male": 0, "female": 0, "unknown": 0, "total": 0, "male_pct": 0.0, "female_pct": 0.0, "unknown_pct": 0.0}
+        return {
+            "male": 0,
+            "female": 0,
+            "unknown": 0,
+            "total": 0,
+            "male_pct": 0.0,
+            "female_pct": 0.0,
+            "unknown_pct": 0.0,
+        }
     finally:
         if cursor:
             cursor.close()
@@ -453,12 +479,13 @@ def get_gender_distribution(
 # 7. Classement clients par ville / pays
 # ---------------------------------------------------------------------------
 
+
 def get_top_locations(
     connection: pymysql.connections.Connection,
     limit: int = 20,
-    date_from: Optional[str] = None,
-    date_to: Optional[str] = None,
-) -> Dict[str, Any]:
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> dict[str, Any]:
     """
     Retourne les classements des villes et pays avec le plus de clients,
     filtrés sur la plage de date de formule si spécifiée.
@@ -470,24 +497,30 @@ def get_top_locations(
         d_to = _parse_filter_date(date_to)
 
         if not d_from and not d_to:
-            cursor.execute(f"""
+            cursor.execute(
+                """
                 SELECT TRIM(country) AS country, COUNT(*) AS count
                 FROM customers
                 WHERE country IS NOT NULL AND TRIM(country) != ''
                 GROUP BY TRIM(country)
                 ORDER BY count DESC
                 LIMIT %s
-            """, (limit,))
+            """,
+                (limit,),
+            )
             top_countries = [dict(r) for r in cursor.fetchall()]
 
-            cursor.execute(f"""
+            cursor.execute(
+                """
                 SELECT TRIM(city) AS city, COUNT(*) AS count
                 FROM customers
                 WHERE city IS NOT NULL AND TRIM(city) != ''
                 GROUP BY TRIM(city)
                 ORDER BY count DESC
                 LIMIT %s
-            """, (limit,))
+            """,
+                (limit,),
+            )
             top_cities = [dict(r) for r in cursor.fetchall()]
         else:
             cursor.execute("""
@@ -495,14 +528,14 @@ def get_top_locations(
                 FROM customers c
                 JOIN formula f ON f.customer_id = c.id
             """)
-            matched_customers: Dict[int, tuple] = {}
+            matched_customers: dict[int, tuple] = {}
             for r in cursor.fetchall() or []:
                 dt = parse_and_resolve_formula_date(r["date"], r["reference"], r["created_at"])
                 if _is_in_range(dt, d_from, d_to):
                     matched_customers[r["id"]] = (r["country"] or "", r["city"] or "")
 
-            country_counts: Dict[str, int] = defaultdict(int)
-            city_counts: Dict[str, int] = defaultdict(int)
+            country_counts: dict[str, int] = defaultdict(int)
+            city_counts: dict[str, int] = defaultdict(int)
 
             for ctry, cty in matched_customers.values():
                 if ctry:
@@ -536,12 +569,13 @@ def get_top_locations(
 # 8. Taux de fidélité
 # ---------------------------------------------------------------------------
 
+
 def get_loyalty_rate(
     connection: pymysql.connections.Connection,
     min_formulas: int = 2,
-    date_from: Optional[str] = None,
-    date_to: Optional[str] = None,
-) -> Dict[str, Any]:
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> dict[str, Any]:
     """
     Calcule le taux de fidélité des clients basé sur la date réelle de création de formule :
     - Clients fidèles = ceux ayant >= min_formulas formules
@@ -562,7 +596,7 @@ def get_loyalty_rate(
         rows = cursor.fetchall() or []
 
         # Grouper les formules par client avec leur date résolue
-        by_customer: Dict[int, List[Dict[str, Any]]] = defaultdict(list)
+        by_customer: dict[int, list[dict[str, Any]]] = defaultdict(list)
         for r in rows:
             dt = parse_and_resolve_formula_date(r["date"], r["reference"], r["created_at"])
             # Si filtre de date actif, on ne conserve que les formules dans la plage
@@ -574,7 +608,7 @@ def get_loyalty_rate(
         loyalty_rate_val = round(loyal / total * 100, 2) if total > 0 else 0.0
 
         # Distribution par bucket
-        bucket_counts: Dict[str, int] = defaultdict(int)
+        bucket_counts: dict[str, int] = defaultdict(int)
         for flist in by_customer.values():
             cnt = len(flist)
             b = "5+" if cnt >= 5 else str(cnt)
@@ -587,7 +621,7 @@ def get_loyalty_rate(
         ]
 
         # Évolution mensuelle de l'atteinte du statut fidèle (date de la Nième formule)
-        by_month_counts: Dict[str, int] = defaultdict(int)
+        by_month_counts: dict[str, int] = defaultdict(int)
         for flist in by_customer.values():
             if len(flist) >= min_formulas:
                 sorted_f = sorted(flist, key=lambda x: (x["date"] or datetime.max.date(), x["id"]))
@@ -597,8 +631,7 @@ def get_loyalty_rate(
                     by_month_counts[m] += 1
 
         new_loyal_by_month = [
-            {"month": m, "new_loyal": by_month_counts[m]}
-            for m in sorted(by_month_counts.keys())
+            {"month": m, "new_loyal": by_month_counts[m]} for m in sorted(by_month_counts.keys())
         ]
 
         return {

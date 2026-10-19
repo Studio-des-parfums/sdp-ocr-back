@@ -2,6 +2,7 @@
 """
 Simple startup script for Render deployment
 """
+
 import os
 import sys
 
@@ -11,6 +12,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 # Load .env file for local development
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
     print("Loaded .env file")
 except ImportError:
@@ -30,10 +32,4 @@ if __name__ == "__main__":
     if not os.environ.get("MISTRAL_API_KEY"):
         print("WARNING: MISTRAL_API_KEY environment variable not set!")
 
-    uvicorn.run(
-        "app.main:app",
-        host="0.0.0.0",
-        port=port,
-        reload=False,
-        access_log=True
-    )
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=False, access_log=True)

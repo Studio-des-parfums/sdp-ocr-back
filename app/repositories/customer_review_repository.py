@@ -1,7 +1,8 @@
-from typing import Dict, Any, Optional, List, Tuple
-from app.database import get_connection
+from typing import Any
+
 from app.crud import crud_customer_review
-from app.services.email import email_validator, email_domain_corrector, email_domain_validator
+from app.database import get_connection
+from app.services.email import email_domain_corrector, email_domain_validator, email_validator
 from app.services.phone import phone_intelligence_validator
 
 
@@ -10,8 +11,7 @@ class CustomerReviewRepository:
     Repository pour gérer l'accès aux données customers_review (Data Access Layer)
     """
 
-    def insert_customer_review(self, customer_data: Dict[str, Any],
-                               review_type: str) -> Optional[int]:
+    def insert_customer_review(self, customer_data: dict[str, Any], review_type: str) -> int | None:
         """
         Insère un customer dans la table customers_review avec un type spécifique
 
@@ -27,11 +27,7 @@ class CustomerReviewRepository:
             return None
 
         try:
-            customer_review_id = crud_customer_review.create(
-                connection,
-                customer_data,
-                review_type
-            )
+            customer_review_id = crud_customer_review.create(connection, customer_data, review_type)
 
             if customer_review_id:
                 print(f"Customer review créé avec ID: {customer_review_id}, type: {review_type}")
@@ -40,7 +36,7 @@ class CustomerReviewRepository:
         finally:
             connection.close()
 
-    def get_customer_review_by_id(self, review_id: int) -> Optional[Dict[str, Any]]:
+    def get_customer_review_by_id(self, review_id: int) -> dict[str, Any] | None:
         """
         Récupère un customer_review par son ID avec ses formules et notes
 
@@ -61,7 +57,7 @@ class CustomerReviewRepository:
                 return None
 
             # 2) Enrichir avec les formules et notes
-            def _get_notes(table_name: str, formula_id: int) -> List[Dict[str, Any]]:
+            def _get_notes(table_name: str, formula_id: int) -> list[dict[str, Any]]:
                 cursor = connection.cursor()
                 try:
                     query = f"""
@@ -73,12 +69,14 @@ class CustomerReviewRepository:
                     cursor.execute(query, (formula_id,))
                     return cursor.fetchall()
                 except Exception as e:
-                    print(f"Erreur récupération notes depuis {table_name} pour formula_id={formula_id} : {e}")
+                    print(
+                        f"Erreur récupération notes depuis {table_name} pour formula_id={formula_id} : {e}"
+                    )
                     return []
                 finally:
                     cursor.close()
 
-            def _get_formulas_for_review(review_id: int) -> List[Dict[str, Any]]:
+            def _get_formulas_for_review(review_id: int) -> list[dict[str, Any]]:
                 cursor = connection.cursor()
                 try:
                     # On passe par customer_files pour lier customers_review → files → formula
@@ -116,11 +114,15 @@ class CustomerReviewRepository:
         finally:
             connection.close()
 
-    def get_all_customer_reviews(self, page: int = 1, size: int = 10,
-                                 review_type: Optional[str] = None,
-                                 search: Optional[str] = None,
-                                 v2: bool = False,
-                                 has_reference: Optional[bool] = None) -> Tuple[List[Dict[str, Any]], int]:
+    def get_all_customer_reviews(
+        self,
+        page: int = 1,
+        size: int = 10,
+        review_type: str | None = None,
+        search: str | None = None,
+        v2: bool = False,
+        has_reference: bool | None = None,
+    ) -> tuple[list[dict[str, Any]], int]:
         """
         Récupère tous les customer_reviews avec pagination et filtres optionnels
 
@@ -147,7 +149,7 @@ class CustomerReviewRepository:
 
             # 2) Récupérer les formules de toutes les reviews de la page en UNE seule requête (évite le N+1)
             review_ids = [r.get("id") for r in reviews if r.get("id")]
-            formulas_by_review: Dict[int, List[Dict[str, Any]]] = {}
+            formulas_by_review: dict[int, list[dict[str, Any]]] = {}
 
             if review_ids:
                 cursor = connection.cursor()
@@ -177,8 +179,7 @@ class CustomerReviewRepository:
         finally:
             connection.close()
 
-    def update_customer_review(self, review_id: int,
-                               customer_data: Dict[str, Any]) -> bool:
+    def update_customer_review(self, review_id: int, customer_data: dict[str, Any]) -> bool:
         """
         Met à jour un customer_review
 
@@ -205,8 +206,9 @@ class CustomerReviewRepository:
         finally:
             connection.close()
 
-    def update_customer_review_with_validation(self, review_id: int,
-                                               customer_data: Dict[str, Any]) -> bool:
+    def update_customer_review_with_validation(
+        self, review_id: int, customer_data: dict[str, Any]
+    ) -> bool:
         """
         Met à jour un customer_review avec validation d'email et de téléphone si modifiés
 
@@ -231,40 +233,46 @@ class CustomerReviewRepository:
             update_data = customer_data.copy()
 
             # Si l'email est modifié, valider et corriger
-            if 'email' in customer_data and customer_data['email'] != existing_review.get('email'):
-                email = customer_data['email']
+            if "email" in customer_data and customer_data["email"] != existing_review.get("email"):
+                email = customer_data["email"]
                 if email:
                     # Corriger le domaine email s'il contient une faute
-                    corrected_email, was_corrected, original_domain = email_domain_corrector.correct_email(email)
+                    corrected_email, was_corrected, original_domain = (
+                        email_domain_corrector.correct_email(email)
+                    )
 
                     if was_corrected:
-                        update_data['email'] = corrected_email
+                        update_data["email"] = corrected_email
                         print(f"📧 Domaine corrigé : {email} → {corrected_email}")
 
                     # Vérifier le domaine via MX DNS
-                    email = update_data['email']
+                    email = update_data["email"]
                     is_valid_domain, details = email_domain_validator.verify_email_domain(email)
-                    update_data['verified_domain'] = is_valid_domain
+                    update_data["verified_domain"] = is_valid_domain
                     print(f"🔍 Vérification domaine : {email} → {is_valid_domain} ({details})")
 
                     # Valider l'email
                     print(f"Validation de l'email : {email}")
-                    update_data['verified_email'] = email_validator.validate_email_sync(email)
+                    update_data["verified_email"] = email_validator.validate_email_sync(email)
                     print(f"Résultat validation : {update_data['verified_email']}")
 
             # Si le téléphone est modifié, valider
-            if 'phone' in customer_data and customer_data['phone'] != existing_review.get('phone'):
-                phone = customer_data['phone']
+            if "phone" in customer_data and customer_data["phone"] != existing_review.get("phone"):
+                phone = customer_data["phone"]
                 if phone:
                     print(f"Validation du téléphone : {phone}")
-                    phone_validation_result = phone_intelligence_validator.verify_phone_number(phone)
+                    phone_validation_result = phone_intelligence_validator.verify_phone_number(
+                        phone
+                    )
                     # Ne mettre à jour verified_phone que si l'API a retourné un résultat (True ou False)
                     # Si None (erreur API, rate limit), on garde l'ancienne valeur
                     if phone_validation_result is not None:
-                        update_data['verified_phone'] = phone_validation_result
+                        update_data["verified_phone"] = phone_validation_result
                         print(f"Résultat validation téléphone : {phone_validation_result}")
                     else:
-                        print(f"⚠️ Validation téléphone impossible (API error/rate limit) - verified_phone non modifié")
+                        print(
+                            "⚠️ Validation téléphone impossible (API error/rate limit) - verified_phone non modifié"
+                        )
 
             # Mettre à jour le customer_review
             success = crud_customer_review.update(connection, review_id, update_data)
@@ -304,7 +312,7 @@ class CustomerReviewRepository:
         finally:
             connection.close()
 
-    def transfer_to_customers(self, review_id: int) -> Optional[int]:
+    def transfer_to_customers(self, review_id: int) -> int | None:
         """
         Transfère un customer_review vers la table customers puis le supprime de customers_review
 
@@ -322,7 +330,9 @@ class CustomerReviewRepository:
             customer_id = crud_customer_review.transfer_to_customers(connection, review_id)
 
             if customer_id:
-                print(f"Customer review {review_id} transféré vers customers avec ID: {customer_id}")
+                print(
+                    f"Customer review {review_id} transféré vers customers avec ID: {customer_id}"
+                )
 
             return customer_id
         finally:

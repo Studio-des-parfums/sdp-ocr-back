@@ -1,7 +1,7 @@
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any
 
+from app.crud import crud_formula, crud_formula_options, crud_notes
 from app.database import get_connection
-from app.crud import crud_formula, crud_notes, crud_formula_options
 from app.utils.note_corrector import note_corrector
 
 
@@ -12,14 +12,14 @@ class FormulaRepository:
 
     def create_formula_with_notes(
         self,
-        customer_id: Optional[int],
+        customer_id: int | None,
         file_id: int,
-        extracted_data: Dict[str, Any],
-        customer_review_id: Optional[int] = None,
-        reference: Optional[str] = None,
-        perfume_name: Optional[str] = None,
-        box_type: Optional[str] = None,
-    ) -> Tuple[Optional[int], bool]:
+        extracted_data: dict[str, Any],
+        customer_review_id: int | None = None,
+        reference: str | None = None,
+        perfume_name: str | None = None,
+        box_type: str | None = None,
+    ) -> tuple[int | None, bool]:
         """
         Crée une formule liée à un customer (optionnel) et à un fichier,
         puis insère les notes de tête / cœur / fond associées.
@@ -46,32 +46,39 @@ class FormulaRepository:
 
         try:
             # Extraire la date des données OCR
-            date = (extracted_data.get('date') or '').strip() or None
+            date = (extracted_data.get("date") or "").strip() or None
 
             formula_id = crud_formula.create(
-                connection, customer_id, file_id, customer_review_id=customer_review_id, reference=reference, perfume_name=perfume_name, date=date, box_type=box_type
+                connection,
+                customer_id,
+                file_id,
+                customer_review_id=customer_review_id,
+                reference=reference,
+                perfume_name=perfume_name,
+                date=date,
+                box_type=box_type,
             )
             if not formula_id:
                 return None, False
 
             notes_were_corrected = False
 
-            def _normalize_notes(key: str) -> List[Dict[str, Any]]:
+            def _normalize_notes(key: str) -> list[dict[str, Any]]:
                 nonlocal notes_were_corrected
                 raw_notes = extracted_data.get(key) or []
                 if not isinstance(raw_notes, list):
                     return []
-                normalized: List[Dict[str, Any]] = []
+                normalized: list[dict[str, Any]] = []
                 for note in raw_notes:
                     if not isinstance(note, dict):
                         continue
                     name = (note.get("essence") or "").strip()
                     if not name or name == "---":
                         continue
-                    
+
                     # Correction du nom via Fuzzy Matching
                     corrected_name = note_corrector.correct_note_name(name)
-                    
+
                     # Vérifier si le nom a été modifié ou est inconnu
                     if corrected_name == "A définir":
                         notes_were_corrected = True
@@ -79,7 +86,7 @@ class FormulaRepository:
                     elif corrected_name != name:
                         notes_were_corrected = True
                         print(f"🔧 Note corrigée : '{name}' → '{corrected_name}'")
-                    
+
                     quantity_raw = note.get("quantite_ml")
                     quantity = None
                     if quantity_raw is not None:
@@ -120,7 +127,7 @@ class FormulaRepository:
         finally:
             connection.close()
 
-    def get_formula_by_id(self, formula_id: int) -> Optional[Dict[str, Any]]:
+    def get_formula_by_id(self, formula_id: int) -> dict[str, Any] | None:
         """
         Récupère une formule par son ID avec toutes ses notes.
 
@@ -142,9 +149,15 @@ class FormulaRepository:
 
             # Récupérer les notes
             formula["top_notes"] = crud_notes.get_notes_by_type(connection, "top_note", formula_id)
-            formula["heart_notes"] = crud_notes.get_notes_by_type(connection, "heart_note", formula_id)
-            formula["base_notes"] = crud_notes.get_notes_by_type(connection, "base_note", formula_id)
-            formula["booster_notes"] = crud_notes.get_notes_by_type(connection, "booster_note", formula_id)
+            formula["heart_notes"] = crud_notes.get_notes_by_type(
+                connection, "heart_note", formula_id
+            )
+            formula["base_notes"] = crud_notes.get_notes_by_type(
+                connection, "base_note", formula_id
+            )
+            formula["booster_notes"] = crud_notes.get_notes_by_type(
+                connection, "booster_note", formula_id
+            )
             formula["options"] = crud_formula_options.get_by_formula(connection, formula_id)
 
             return formula
@@ -204,16 +217,16 @@ class FormulaRepository:
     def update_formula_notes(
         self,
         formula_id: int,
-        top_notes: Optional[List[Dict[str, Any]]] = None,
-        heart_notes: Optional[List[Dict[str, Any]]] = None,
-        base_notes: Optional[List[Dict[str, Any]]] = None,
-        booster_notes: Optional[List[Dict[str, Any]]] = None,
-        options: Optional[List[str]] = None,
-        comment: Optional[str] = None,
-        reference: Optional[str] = None,
-        perfume_name: Optional[str] = None,
-        date: Optional[str] = None,
-        box_type: Optional[str] = None,
+        top_notes: list[dict[str, Any]] | None = None,
+        heart_notes: list[dict[str, Any]] | None = None,
+        base_notes: list[dict[str, Any]] | None = None,
+        booster_notes: list[dict[str, Any]] | None = None,
+        options: list[str] | None = None,
+        comment: str | None = None,
+        reference: str | None = None,
+        perfume_name: str | None = None,
+        date: str | None = None,
+        box_type: str | None = None,
         skip_correction: bool = True,
     ) -> bool:
         """
@@ -259,7 +272,7 @@ class FormulaRepository:
 
             def _update_notes_by_type(
                 table_name: str,
-                new_notes: Optional[List[Dict[str, Any]]],
+                new_notes: list[dict[str, Any]] | None,
             ) -> bool:
                 """
                 Met à jour les notes d'un type donné.
@@ -309,13 +322,21 @@ class FormulaRepository:
                     else:
                         # INSERT
                         if table_name == "top_note":
-                            crud_notes.create_top_note(connection, formula_id, corrected_name, quantity)
+                            crud_notes.create_top_note(
+                                connection, formula_id, corrected_name, quantity
+                            )
                         elif table_name == "heart_note":
-                            crud_notes.create_heart_note(connection, formula_id, corrected_name, quantity)
+                            crud_notes.create_heart_note(
+                                connection, formula_id, corrected_name, quantity
+                            )
                         elif table_name == "base_note":
-                            crud_notes.create_base_note(connection, formula_id, corrected_name, quantity)
+                            crud_notes.create_base_note(
+                                connection, formula_id, corrected_name, quantity
+                            )
                         elif table_name == "booster_note":
-                            crud_notes.create_booster_note(connection, formula_id, corrected_name, quantity)
+                            crud_notes.create_booster_note(
+                                connection, formula_id, corrected_name, quantity
+                            )
                         print(f"➕ Nouvelle note créée dans {table_name}: {corrected_name}")
 
                 return True
@@ -341,15 +362,15 @@ class FormulaRepository:
             # Mettre à jour le commentaire, la référence, le nom du parfum et/ou la date si fournis
             update_kwargs = {}
             if comment is not None:
-                update_kwargs['comment'] = comment
+                update_kwargs["comment"] = comment
             if reference is not None:
-                update_kwargs['reference'] = reference
+                update_kwargs["reference"] = reference
             if perfume_name is not None:
-                update_kwargs['perfume_name'] = perfume_name
+                update_kwargs["perfume_name"] = perfume_name
             if date is not None:
-                update_kwargs['date'] = date
+                update_kwargs["date"] = date
             if box_type is not None:
-                update_kwargs['box_type'] = box_type
+                update_kwargs["box_type"] = box_type
 
             if update_kwargs:
                 crud_formula.update(connection, formula_id, **update_kwargs)
@@ -376,4 +397,3 @@ class FormulaRepository:
 
 
 formula_repository = FormulaRepository()
-

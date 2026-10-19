@@ -4,18 +4,18 @@ Module CRUD contenant toutes les opérations de base de données pures
 
 from app.crud import (
     crud_customer,
-    crud_user,
+    crud_customer_review,
     crud_group,
     crud_login_history,
-    crud_customer_review,
-    crud_ocr_job
+    crud_ocr_job,
+    crud_user,
 )
 
 __all__ = [
-    'crud_customer',
-    'crud_user',
-    'crud_group',
-    'crud_login_history',
-    'crud_customer_review',
-    'crud_ocr_job'
+    "crud_customer",
+    "crud_user",
+    "crud_group",
+    "crud_login_history",
+    "crud_customer_review",
+    "crud_ocr_job",
 ]

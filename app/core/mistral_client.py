@@ -1,17 +1,21 @@
 import asyncio
 import base64
-import requests
 import json
+
+import requests
+
 from app.core.config import settings
 
 try:
     from mistralai import Mistral
+
     print("✅ Mistral SDK imported successfully")
 except Exception as e:
     print(f"❌ Mistral SDK import failed: {type(e).__name__}: {e}")
     Mistral = None
 
 from app.schemas.ocr_schemas import MistralDocumentAnnotation
+
 
 class MistralOCRClient:
     def __init__(self):
@@ -55,9 +59,9 @@ class MistralOCRClient:
             "model": "mistral-ocr-latest",
             "document": {
                 "type": "document_url",
-                "document_url": f"data:image/png;base64,{image_base64}"
+                "document_url": f"data:image/png;base64,{image_base64}",
             },
-            "include_image_base64": False
+            "include_image_base64": False,
         }
 
         headers = {
@@ -66,11 +70,7 @@ class MistralOCRClient:
         }
 
         response = await asyncio.to_thread(
-            requests.post,
-            self.endpoint,
-            headers=headers,
-            json=payload,
-            timeout=120
+            requests.post, self.endpoint, headers=headers, json=payload, timeout=120
         )
 
         if response.status_code != 200:
@@ -90,10 +90,10 @@ class MistralOCRClient:
             "model": "mistral-ocr-latest",
             "document": {
                 "type": "document_url",
-                "document_url": f"data:application/pdf;base64,{pdf_base64}"
+                "document_url": f"data:application/pdf;base64,{pdf_base64}",
             },
             "include_image_base64": False,
-            "table_format": "markdown"
+            "table_format": "markdown",
         }
 
         headers = {
@@ -102,11 +102,7 @@ class MistralOCRClient:
         }
 
         response = await asyncio.to_thread(
-            requests.post,
-            self.endpoint,
-            headers=headers,
-            json=payload,
-            timeout=120
+            requests.post, self.endpoint, headers=headers, json=payload, timeout=120
         )
 
         print(f"Mistral OCR response status: {response.status_code}")
@@ -116,46 +112,46 @@ class MistralOCRClient:
             raise Exception(f"OCR API error {response.status_code}: {response.text}")
 
         data = response.json()
-        
+
         # ⚠️ LOGS DE DIAGNOSTIC DÉTAILLÉS ⚠️
-        print(f"\n{'='*80}")
-        print(f"📋 RÉPONSE MISTRAL OCR COMPLÈTE:")
+        print(f"\n{'=' * 80}")
+        print("📋 RÉPONSE MISTRAL OCR COMPLÈTE:")
         print(json.dumps(data, indent=2, ensure_ascii=False)[:5000])
-        print(f"{'='*80}\n")
-        
+        print(f"{'=' * 80}\n")
+
         if "pages" in data and len(data["pages"]) > 0:
             page_data = data["pages"][0]
-            
+
             # Log du markdown
             markdown = page_data.get("markdown", "")
             print(f"📝 MARKDOWN EXTRAIT ({len(markdown)} caractères):")
             print(markdown[:2000])
-            print(f"\n{'='*80}\n")
-            
+            print(f"\n{'=' * 80}\n")
+
             # Vérifier si les tableaux sont dans un autre champ
             if "tables" in page_data:
-                print(f"📊 TABLES TROUVÉES DANS page_data:")
+                print("📊 TABLES TROUVÉES DANS page_data:")
                 print(json.dumps(page_data["tables"], indent=2, ensure_ascii=False))
-                print(f"{'='*80}\n")
-            
+                print(f"{'=' * 80}\n")
+
             if "html" in page_data:
-                print(f"📊 HTML TROUVÉ DANS page_data:")
+                print("📊 HTML TROUVÉ DANS page_data:")
                 print(page_data["html"][:2000])
-                print(f"{'='*80}\n")
-            
+                print(f"{'=' * 80}\n")
+
             # Afficher toutes les clés disponibles dans page_data
             print(f"🔑 CLÉS DISPONIBLES DANS page_data: {list(page_data.keys())}")
-            print(f"{'='*80}\n")
-        
+            print(f"{'=' * 80}\n")
+
         # Vérifier au niveau racine aussi
         if "tables" in data:
-            print(f"📊 TABLES TROUVÉES AU NIVEAU RACINE:")
+            print("📊 TABLES TROUVÉES AU NIVEAU RACINE:")
             print(json.dumps(data["tables"], indent=2, ensure_ascii=False))
-            print(f"{'='*80}\n")
-        
+            print(f"{'=' * 80}\n")
+
         # Afficher toutes les clés au niveau racine
         print(f"🔑 CLÉS DISPONIBLES AU NIVEAU RACINE: {list(data.keys())}")
-        print(f"{'='*80}\n")
+        print(f"{'=' * 80}\n")
 
         return data
 
@@ -204,17 +200,21 @@ class MistralOCRClient:
         data = response.json()
 
         # ⚠️ LOGS DE DIAGNOSTIC DÉTAILLÉS ⚠️
-        print(f"\n{'='*80}")
-        print(f"📋 RÉPONSE MISTRAL ANNOTATIONS COMPLÈTE:")
+        print(f"\n{'=' * 80}")
+        print("📋 RÉPONSE MISTRAL ANNOTATIONS COMPLÈTE:")
         print(json.dumps(data, indent=2, ensure_ascii=False)[:5000])
-        print(f"{'='*80}\n")
+        print(f"{'=' * 80}\n")
 
         # Logs "safe": ne pas afficher de base64 ni de payload énorme
         try:
             if isinstance(data, dict):
                 keys = list(data.keys())
                 print(f"[MISTRAL][ANNOTATIONS] response keys: {keys}")
-                ann = data.get("document_annotation") or data.get("document_annotations") or data.get("annotation")
+                ann = (
+                    data.get("document_annotation")
+                    or data.get("document_annotations")
+                    or data.get("annotation")
+                )
                 # Parfois l'API renvoie une chaîne JSON: on tente de la décoder.
                 if isinstance(ann, str):
                     try:
@@ -235,34 +235,35 @@ class MistralOCRClient:
         # Vérifier les pages et le markdown pour les annotations aussi
         if "pages" in data and len(data["pages"]) > 0:
             page_data = data["pages"][0]
-            
+
             # Log du markdown
             markdown = page_data.get("markdown", "")
             print(f"📝 MARKDOWN EXTRAIT (ANNOTATIONS) ({len(markdown)} caractères):")
             print(markdown[:2000])
-            print(f"\n{'='*80}\n")
-            
+            print(f"\n{'=' * 80}\n")
+
             # Vérifier si les tableaux sont dans un autre champ
             if "tables" in page_data:
-                print(f"📊 TABLES TROUVÉES DANS page_data (ANNOTATIONS):")
+                print("📊 TABLES TROUVÉES DANS page_data (ANNOTATIONS):")
                 print(json.dumps(page_data["tables"], indent=2, ensure_ascii=False))
-                print(f"{'='*80}\n")
-            
+                print(f"{'=' * 80}\n")
+
             if "html" in page_data:
-                print(f"📊 HTML TROUVÉ DANS page_data (ANNOTATIONS):")
+                print("📊 HTML TROUVÉ DANS page_data (ANNOTATIONS):")
                 print(page_data["html"][:2000])
-                print(f"{'='*80}\n")
-            
+                print(f"{'=' * 80}\n")
+
             # Afficher toutes les clés disponibles dans page_data
             print(f"🔑 CLÉS DISPONIBLES DANS page_data (ANNOTATIONS): {list(page_data.keys())}")
-            print(f"{'='*80}\n")
-        
+            print(f"{'=' * 80}\n")
+
         # Vérifier au niveau racine aussi
         if "tables" in data:
-            print(f"📊 TABLES TROUVÉES AU NIVEAU RACINE (ANNOTATIONS):")
+            print("📊 TABLES TROUVÉES AU NIVEAU RACINE (ANNOTATIONS):")
             print(json.dumps(data["tables"], indent=2, ensure_ascii=False))
-            print(f"{'='*80}\n")
+            print(f"{'=' * 80}\n")
 
         return data
+
 
 mistral_ocr_client = MistralOCRClient()

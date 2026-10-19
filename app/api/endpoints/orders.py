@@ -1,18 +1,29 @@
 from fastapi import APIRouter, HTTPException, Query
-from typing import Optional
-from app.schemas.order_schemas import (
-    OrderCreate, OrderUpdate, OrderResponse,
-    OrderItemCreate, OrderItemUpdate, OrderItemResponse
-)
+
+from app.core.config import settings
 from app.repositories.order_repository import order_repository
 from app.repositories.user_repository import user_repository
+from app.schemas.order_schemas import (
+    OrderCreate,
+    OrderItemCreate,
+    OrderItemResponse,
+    OrderItemUpdate,
+    OrderResponse,
+    OrderUpdate,
+)
 from app.services.email.email_sender_service import email_sender_service
-from app.core.config import settings
 
 router = APIRouter()
 
 
-def _build_order_notification_html(user_first_name, customer_first_name, customer_last_name, order_type, order_date, order_reference=None):
+def _build_order_notification_html(
+    user_first_name,
+    customer_first_name,
+    customer_last_name,
+    order_type,
+    order_date,
+    order_reference=None,
+):
     """Construit le HTML de notification d'attribution de commande."""
     return f"""
 <!DOCTYPE html>
@@ -76,46 +87,49 @@ www.studiodesparfums-paris.fr
 
 # ==================== ORDERS ====================
 
+
 @router.post("/", response_model=OrderResponse)
 async def create_order(order_data: OrderCreate):
     """Créer une nouvelle commande"""
     try:
         order_dict = order_data.model_dump()
         # Convertir les items en liste de dicts
-        if order_dict.get('items'):
-            order_dict['items'] = [item for item in order_dict['items']]
+        if order_dict.get("items"):
+            order_dict["items"] = [item for item in order_dict["items"]]
 
         order_id = order_repository.create_order(order_dict)
 
         if order_id is None:
-            raise HTTPException(status_code=500,
-                                detail="Erreur lors de la création de la commande")
+            raise HTTPException(status_code=500, detail="Erreur lors de la création de la commande")
 
         created_order = order_repository.get_order_by_id(order_id)
         if created_order is None:
-            raise HTTPException(status_code=500,
-                                detail="Commande créée mais impossible de la récupérer")
+            raise HTTPException(
+                status_code=500, detail="Commande créée mais impossible de la récupérer"
+            )
 
         # Envoi de l'email de notification au responsable
-        if created_order.get('responsible'):
+        if created_order.get("responsible"):
             try:
-                responsible_user = user_repository.get_user_by_id(created_order['responsible'])
-                if responsible_user and responsible_user.get('email'):
-                    customer = created_order.get('customer') or {}
+                responsible_user = user_repository.get_user_by_id(created_order["responsible"])
+                if responsible_user and responsible_user.get("email"):
+                    customer = created_order.get("customer") or {}
                     html = _build_order_notification_html(
-                        user_first_name=responsible_user.get('first_name'),
-                        customer_first_name=customer.get('first_name'),
-                        customer_last_name=customer.get('last_name'),
-                        order_type=created_order.get('type'),
-                        order_date=str(created_order.get('date', '')) if created_order.get('date') else None,
-                        order_reference=created_order.get('reference')
+                        user_first_name=responsible_user.get("first_name"),
+                        customer_first_name=customer.get("first_name"),
+                        customer_last_name=customer.get("last_name"),
+                        order_type=created_order.get("type"),
+                        order_date=str(created_order.get("date", ""))
+                        if created_order.get("date")
+                        else None,
+                        order_reference=created_order.get("reference"),
                     )
                     email_sender_service.send_email(
-                        to_email=responsible_user['email'],
+                        to_email=responsible_user["email"],
                         subject="Nouvelle commande attribuée – Le Studio des Parfums",
                         body=html,
                         is_html=True,
-                        cc=settings.EMAIL_CC_ADDRESS or None
+                        cc=settings.EMAIL_CC_ADDRESS or None,
                     )
             except Exception as e:
                 print(f"Erreur envoi email notification commande: {e}")
@@ -124,32 +138,41 @@ async def create_order(order_data: OrderCreate):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500,
-                            detail=f"Erreur lors de la création de la commande: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Erreur lors de la création de la commande: {str(e)}"
+        )
 
 
 @router.get("/", response_model=dict)
 async def get_orders(
     page: int = Query(1, ge=1, description="Numéro de page"),
     size: int = Query(10, ge=1, le=100, description="Taille de la page"),
-    search: Optional[str] = Query(None, description="Recherche dans les commentaires"),
-    customer_id: Optional[int] = Query(None, description="Filtrer par client"),
-    status: Optional[str] = Query(None, description="Filtrer par statut"),
-    formula_id: Optional[int] = Query(None, description="Filtrer par formule"),
-    date_from: Optional[str] = Query(None, description="Date de début (YYYY-MM-DD)"),
-    date_to: Optional[str] = Query(None, description="Date de fin (YYYY-MM-DD)"),
-    customer_name: Optional[str] = Query(None, description="Filtrer par nom du client"),
-    order_type: Optional[str] = Query(None, description="Filtrer par type de commande"),
-    responsible: Optional[int] = Query(None, description="Filtrer par responsable"),
-    reference: Optional[str] = Query(None, description="Filtrer par référence de commande")
+    search: str | None = Query(None, description="Recherche dans les commentaires"),
+    customer_id: int | None = Query(None, description="Filtrer par client"),
+    status: str | None = Query(None, description="Filtrer par statut"),
+    formula_id: int | None = Query(None, description="Filtrer par formule"),
+    date_from: str | None = Query(None, description="Date de début (YYYY-MM-DD)"),
+    date_to: str | None = Query(None, description="Date de fin (YYYY-MM-DD)"),
+    customer_name: str | None = Query(None, description="Filtrer par nom du client"),
+    order_type: str | None = Query(None, description="Filtrer par type de commande"),
+    responsible: int | None = Query(None, description="Filtrer par responsable"),
+    reference: str | None = Query(None, description="Filtrer par référence de commande"),
 ):
     """Récupérer toutes les commandes avec pagination et filtres"""
     try:
         orders, total = order_repository.get_all_orders(
-            page=page, size=size, search=search,
-            customer_id=customer_id, status=status, formula_id=formula_id,
-            date_from=date_from, date_to=date_to, customer_name=customer_name,
-            order_type=order_type, responsible=responsible, reference=reference
+            page=page,
+            size=size,
+            search=search,
+            customer_id=customer_id,
+            status=status,
+            formula_id=formula_id,
+            date_from=date_from,
+            date_to=date_to,
+            customer_name=customer_name,
+            order_type=order_type,
+            responsible=responsible,
+            reference=reference,
         )
 
         return {
@@ -157,11 +180,12 @@ async def get_orders(
             "total": total,
             "page": page,
             "size": size,
-            "pages": (total + size - 1) // size if total > 0 else 0
+            "pages": (total + size - 1) // size if total > 0 else 0,
         }
     except Exception as e:
-        raise HTTPException(status_code=500,
-                            detail=f"Erreur lors de la récupération des commandes: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Erreur lors de la récupération des commandes: {str(e)}"
+        )
 
 
 @router.get("/{order_id}", response_model=OrderResponse)
@@ -175,8 +199,9 @@ async def get_order(order_id: int):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500,
-                            detail=f"Erreur lors de la récupération de la commande: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Erreur lors de la récupération de la commande: {str(e)}"
+        )
 
 
 @router.put("/{order_id}", response_model=OrderResponse)
@@ -189,37 +214,39 @@ async def update_order(order_id: int, order_data: OrderUpdate):
 
         update_dict = order_data.model_dump(exclude_unset=True)
         if not update_dict:
-            raise HTTPException(status_code=400,
-                                detail="Aucune donnée à mettre à jour")
+            raise HTTPException(status_code=400, detail="Aucune donnée à mettre à jour")
 
         success = order_repository.update_order(order_id, update_dict)
         if not success:
-            raise HTTPException(status_code=500,
-                                detail="Erreur lors de la mise à jour de la commande")
+            raise HTTPException(
+                status_code=500, detail="Erreur lors de la mise à jour de la commande"
+            )
 
         updated_order = order_repository.get_order_by_id(order_id)
 
         # Envoi de l'email si le responsable a changé
-        new_responsible = update_dict.get('responsible')
-        if new_responsible and new_responsible != existing_order.get('responsible'):
+        new_responsible = update_dict.get("responsible")
+        if new_responsible and new_responsible != existing_order.get("responsible"):
             try:
                 responsible_user = user_repository.get_user_by_id(new_responsible)
-                if responsible_user and responsible_user.get('email'):
-                    customer = updated_order.get('customer') or {}
+                if responsible_user and responsible_user.get("email"):
+                    customer = updated_order.get("customer") or {}
                     html = _build_order_notification_html(
-                        user_first_name=responsible_user.get('first_name'),
-                        customer_first_name=customer.get('first_name'),
-                        customer_last_name=customer.get('last_name'),
-                        order_type=updated_order.get('type'),
-                        order_date=str(updated_order.get('date', '')) if updated_order.get('date') else None,
-                        order_reference=updated_order.get('reference')
+                        user_first_name=responsible_user.get("first_name"),
+                        customer_first_name=customer.get("first_name"),
+                        customer_last_name=customer.get("last_name"),
+                        order_type=updated_order.get("type"),
+                        order_date=str(updated_order.get("date", ""))
+                        if updated_order.get("date")
+                        else None,
+                        order_reference=updated_order.get("reference"),
                     )
                     email_sender_service.send_email(
-                        to_email=responsible_user['email'],
+                        to_email=responsible_user["email"],
                         subject="Nouvelle commande attribuée – Le Studio des Parfums",
                         body=html,
                         is_html=True,
-                        cc=settings.EMAIL_CC_ADDRESS or None
+                        cc=settings.EMAIL_CC_ADDRESS or None,
                     )
             except Exception as e:
                 print(f"Erreur envoi email notification commande: {e}")
@@ -228,8 +255,9 @@ async def update_order(order_id: int, order_data: OrderUpdate):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500,
-                            detail=f"Erreur lors de la mise à jour de la commande: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Erreur lors de la mise à jour de la commande: {str(e)}"
+        )
 
 
 @router.delete("/{order_id}")
@@ -242,17 +270,20 @@ async def delete_order(order_id: int):
 
         success = order_repository.delete_order(order_id)
         if not success:
-            raise HTTPException(status_code=500,
-                                detail="Erreur lors de la suppression de la commande")
+            raise HTTPException(
+                status_code=500, detail="Erreur lors de la suppression de la commande"
+            )
         return {"message": f"Commande {order_id} supprimée avec succès"}
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500,
-                            detail=f"Erreur lors de la suppression de la commande: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Erreur lors de la suppression de la commande: {str(e)}"
+        )
 
 
 # ==================== ORDER ITEMS ====================
+
 
 @router.post("/{order_id}/items", response_model=OrderItemResponse)
 async def add_item_to_order(order_id: int, item_data: OrderItemCreate):
@@ -267,20 +298,17 @@ async def add_item_to_order(order_id: int, item_data: OrderItemCreate):
         item_id = order_repository.add_item_to_order(order_id, item_dict)
 
         if item_id is None:
-            raise HTTPException(status_code=500,
-                                detail="Erreur lors de l'ajout de l'item")
+            raise HTTPException(status_code=500, detail="Erreur lors de l'ajout de l'item")
 
         created_item = order_repository.get_order_item_by_id(item_id)
         if created_item is None:
-            raise HTTPException(status_code=500,
-                                detail="Item créé mais impossible de le récupérer")
+            raise HTTPException(status_code=500, detail="Item créé mais impossible de le récupérer")
 
         return created_item
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500,
-                            detail=f"Erreur lors de l'ajout de l'item: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de l'ajout de l'item: {str(e)}")
 
 
 @router.put("/{order_id}/items/{item_id}", response_model=OrderItemResponse)
@@ -291,27 +319,25 @@ async def update_order_item(order_id: int, item_id: int, item_data: OrderItemUpd
         existing_item = order_repository.get_order_item_by_id(item_id)
         if existing_item is None:
             raise HTTPException(status_code=404, detail="Item non trouvé")
-        if existing_item['order_id'] != order_id:
-            raise HTTPException(status_code=400,
-                                detail="L'item n'appartient pas à cette commande")
+        if existing_item["order_id"] != order_id:
+            raise HTTPException(status_code=400, detail="L'item n'appartient pas à cette commande")
 
         update_dict = item_data.model_dump(exclude_unset=True)
         if not update_dict:
-            raise HTTPException(status_code=400,
-                                detail="Aucune donnée à mettre à jour")
+            raise HTTPException(status_code=400, detail="Aucune donnée à mettre à jour")
 
         success = order_repository.update_order_item(item_id, update_dict)
         if not success:
-            raise HTTPException(status_code=500,
-                                detail="Erreur lors de la mise à jour de l'item")
+            raise HTTPException(status_code=500, detail="Erreur lors de la mise à jour de l'item")
 
         updated_item = order_repository.get_order_item_by_id(item_id)
         return updated_item
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500,
-                            detail=f"Erreur lors de la mise à jour de l'item: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Erreur lors de la mise à jour de l'item: {str(e)}"
+        )
 
 
 @router.delete("/{order_id}/items/{item_id}")
@@ -322,17 +348,16 @@ async def delete_order_item(order_id: int, item_id: int):
         existing_item = order_repository.get_order_item_by_id(item_id)
         if existing_item is None:
             raise HTTPException(status_code=404, detail="Item non trouvé")
-        if existing_item['order_id'] != order_id:
-            raise HTTPException(status_code=400,
-                                detail="L'item n'appartient pas à cette commande")
+        if existing_item["order_id"] != order_id:
+            raise HTTPException(status_code=400, detail="L'item n'appartient pas à cette commande")
 
         success = order_repository.delete_order_item(item_id)
         if not success:
-            raise HTTPException(status_code=500,
-                                detail="Erreur lors de la suppression de l'item")
+            raise HTTPException(status_code=500, detail="Erreur lors de la suppression de l'item")
         return {"message": f"Item {item_id} supprimé avec succès"}
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500,
-                            detail=f"Erreur lors de la suppression de l'item: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Erreur lors de la suppression de l'item: {str(e)}"
+        )

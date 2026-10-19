@@ -1,12 +1,9 @@
-from typing import Dict, Any, Optional, List
+from typing import Any
+
 import pymysql
-from datetime import datetime
 
 
-def create(
-    connection: pymysql.connections.Connection,
-    file_data: Dict[str, Any]
-) -> Optional[int]:
+def create(connection: pymysql.connections.Connection, file_data: dict[str, Any]) -> int | None:
     """
     Crée un nouveau customer_file dans la base de données
 
@@ -23,7 +20,7 @@ def create(
         # Filtrer les valeurs None/vides (sauf customer_id et customer_review_id qui peuvent être None)
         clean_data = {}
         for k, v in file_data.items():
-            if k in ['customer_id', 'customer_review_id']:
+            if k in ["customer_id", "customer_review_id"]:
                 clean_data[k] = v  # Garder même si None
             elif v is not None and v != "":
                 clean_data[k] = v
@@ -36,8 +33,8 @@ def create(
         values = list(clean_data.values())
 
         query = f"""
-            INSERT INTO customer_files ({', '.join(columns)})
-            VALUES ({', '.join(placeholders)})
+            INSERT INTO customer_files ({", ".join(columns)})
+            VALUES ({", ".join(placeholders)})
         """
         cursor.execute(query, values)
         connection.commit()
@@ -53,10 +50,7 @@ def create(
         cursor.close()
 
 
-def get_by_id(
-    connection: pymysql.connections.Connection,
-    file_id: int
-) -> Optional[Dict[str, Any]]:
+def get_by_id(connection: pymysql.connections.Connection, file_id: int) -> dict[str, Any] | None:
     """
     Récupère un customer_file par son ID
 
@@ -89,9 +83,8 @@ def get_by_id(
 
 
 def get_by_customer_id(
-    connection: pymysql.connections.Connection,
-    customer_id: int
-) -> List[Dict[str, Any]]:
+    connection: pymysql.connections.Connection, customer_id: int
+) -> list[dict[str, Any]]:
     """
     Récupère tous les fichiers d'un customer
 
@@ -125,9 +118,8 @@ def get_by_customer_id(
 
 
 def get_by_customer_review_id(
-    connection: pymysql.connections.Connection,
-    customer_review_id: int
-) -> List[Dict[str, Any]]:
+    connection: pymysql.connections.Connection, customer_review_id: int
+) -> list[dict[str, Any]]:
     """
     Récupère tous les fichiers d'un customer_review
 
@@ -161,9 +153,8 @@ def get_by_customer_review_id(
 
 
 def get_by_formula_id(
-    connection: pymysql.connections.Connection,
-    formula_id: int
-) -> Optional[Dict[str, Any]]:
+    connection: pymysql.connections.Connection, formula_id: int
+) -> dict[str, Any] | None:
     """
     Récupère le fichier associé à une formule via formula.file_id
 
@@ -198,9 +189,7 @@ def get_by_formula_id(
 
 
 def update(
-    connection: pymysql.connections.Connection,
-    file_id: int,
-    file_data: Dict[str, Any]
+    connection: pymysql.connections.Connection, file_id: int, file_data: dict[str, Any]
 ) -> bool:
     """
     Met à jour un customer_file
@@ -219,7 +208,7 @@ def update(
         # Filtrer les valeurs None/vides (sauf customer_id et customer_review_id)
         clean_data = {}
         for k, v in file_data.items():
-            if k in ['customer_id', 'customer_review_id']:
+            if k in ["customer_id", "customer_review_id"]:
                 clean_data[k] = v
             elif v is not None and v != "":
                 clean_data[k] = v
@@ -234,7 +223,7 @@ def update(
 
         query = f"""
             UPDATE customer_files
-            SET {', '.join(set_clauses)}
+            SET {", ".join(set_clauses)}
             WHERE id = %s
         """
 
@@ -252,10 +241,7 @@ def update(
         cursor.close()
 
 
-def delete(
-    connection: pymysql.connections.Connection,
-    file_id: int
-) -> bool:
+def delete(connection: pymysql.connections.Connection, file_id: int) -> bool:
     """
     Supprime un customer_file
 
@@ -285,9 +271,7 @@ def delete(
 
 
 def transfer_files_to_customer(
-    connection: pymysql.connections.Connection,
-    customer_review_id: int,
-    customer_id: int
+    connection: pymysql.connections.Connection, customer_review_id: int, customer_id: int
 ) -> bool:
     """
     Transfère tous les fichiers d'un customer_review vers un customer
@@ -313,7 +297,9 @@ def transfer_files_to_customer(
         connection.commit()
 
         rows_affected = cursor.rowcount
-        print(f"✅ {rows_affected} fichier(s) transféré(s) de customer_review {customer_review_id} vers customer {customer_id}")
+        print(
+            f"✅ {rows_affected} fichier(s) transféré(s) de customer_review {customer_review_id} vers customer {customer_id}"
+        )
         return True
 
     except Exception as e:

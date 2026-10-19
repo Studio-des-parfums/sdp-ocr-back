@@ -1,6 +1,7 @@
 import re
-from typing import Tuple
+
 from app.schemas.ocr_schemas import DocumentType
+
 
 class DocumentClassifier:
     def __init__(self):
@@ -8,7 +9,7 @@ class DocumentClassifier:
         self.studio_parfums_keywords = [
             "LE STUDIO DES PARFUMS",
             "STUDIO DES PARFUMS",
-            "STUDIO PARFUMS"
+            "STUDIO PARFUMS",
         ]
 
         # Indicateurs spécifiques au formulaire parfumeur (résistants aux fautes OCR)
@@ -30,7 +31,7 @@ class DocumentClassifier:
             "doublons",
         ]
 
-    def classify_document(self, text: str) -> Tuple[DocumentType, float]:
+    def classify_document(self, text: str) -> tuple[DocumentType, float]:
         """
         Classify document based on extracted text
         Returns: (DocumentType, confidence_score)
@@ -81,7 +82,7 @@ class DocumentClassifier:
                 score += 0.4
 
         # Mois en toutes lettres + année (ex: "janvier 2024") — spécifique aux feuilles de stats
-        month_pattern = r'\b(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\s+\d{4}\b'
+        month_pattern = r"\b(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\s+\d{4}\b"
         if re.search(month_pattern, text, re.IGNORECASE):
             score += 0.3
 
@@ -90,5 +91,6 @@ class DocumentClassifier:
             score += 0.2
 
         return min(score, 1.0)
+
 
 document_classifier = DocumentClassifier()

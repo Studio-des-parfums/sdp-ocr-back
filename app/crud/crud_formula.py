@@ -1,22 +1,21 @@
-from typing import Optional
 import pymysql
 
 
 def create(
     connection: pymysql.connections.Connection,
-    customer_id: Optional[int],
-    file_id: Optional[int],
-    customer_review_id: Optional[int] = None,
-    reference: Optional[str] = None,
-    perfume_name: Optional[str] = None,
-    date: Optional[str] = None,
-    quantity: Optional[str] = None,
-    source: Optional[str] = None,
-    supervisor_id: Optional[int] = None,
-    box_type: Optional[str] = None,
-    atelier_id: Optional[int] = None,
-    atelier_name: Optional[str] = None,
-) -> Optional[int]:
+    customer_id: int | None,
+    file_id: int | None,
+    customer_review_id: int | None = None,
+    reference: str | None = None,
+    perfume_name: str | None = None,
+    date: str | None = None,
+    quantity: str | None = None,
+    source: str | None = None,
+    supervisor_id: int | None = None,
+    box_type: str | None = None,
+    atelier_id: int | None = None,
+    atelier_name: str | None = None,
+) -> int | None:
     """
     Crée une nouvelle formule liée à un customer (ou customer_review) et à un fichier.
 
@@ -68,8 +67,8 @@ def create(
         placeholders = ["%s"] * len(columns)
 
         query = f"""
-            INSERT INTO formula ({', '.join(columns)})
-            VALUES ({', '.join(placeholders)})
+            INSERT INTO formula ({", ".join(columns)})
+            VALUES ({", ".join(placeholders)})
         """
         cursor.execute(query, list(data.values()))
 
@@ -90,7 +89,7 @@ def create(
 def get_by_id(
     connection: pymysql.connections.Connection,
     formula_id: int,
-) -> Optional[dict]:
+) -> dict | None:
     """
     Récupère une formule par son ID.
 
@@ -165,7 +164,7 @@ def get_by_customer_id(
 def increment_reuse_count(
     connection: pymysql.connections.Connection,
     formula_id: int,
-) -> Optional[int]:
+) -> int | None:
     """
     Incrémente le compteur de réutilisation d'une formule.
 
@@ -205,7 +204,7 @@ def increment_reuse_count(
 def get_by_reference(
     connection: pymysql.connections.Connection,
     reference: str,
-) -> Optional[dict]:
+) -> dict | None:
     """
     Récupère une formule par sa référence.
 
@@ -331,7 +330,7 @@ def generate_tablet_reference(
 
         last_sequence = 0
         if result and result.get("reference"):
-            suffix = result["reference"][len(prefix):]
+            suffix = result["reference"][len(prefix) :]
             if suffix.isdigit():
                 last_sequence = int(suffix)
 
@@ -346,7 +345,7 @@ def generate_tablet_reference(
 def generate_reused_reference(
     connection: pymysql.connections.Connection,
     source_formula_id: int,
-) -> Optional[str]:
+) -> str | None:
     """
     Génère la référence d'une formule recréée à partir d'une formule existante
     (parcours "recommencer à partir d'une formule") : '<référence source>-N', où N
@@ -373,7 +372,7 @@ def generate_reused_reference(
         )
         last_sequence = 1
         for row in cursor.fetchall():
-            suffix = row["reference"][len(prefix):]
+            suffix = row["reference"][len(prefix) :]
             if suffix.isdigit():
                 last_sequence = max(last_sequence, int(suffix))
 
@@ -446,7 +445,16 @@ def update(
         cursor = connection.cursor()
 
         # Construire la requête dynamiquement
-        allowed_fields = {"customer_id", "file_id", "customer_review_id", "comment", "reference", "perfume_name", "date", "box_type"}
+        allowed_fields = {
+            "customer_id",
+            "file_id",
+            "customer_review_id",
+            "comment",
+            "reference",
+            "perfume_name",
+            "date",
+            "box_type",
+        }
         fields_to_update = {k: v for k, v in kwargs.items() if k in allowed_fields}
 
         if not fields_to_update:
@@ -475,9 +483,7 @@ def update(
 
 
 def transfer_formulas_to_customer(
-    connection: pymysql.connections.Connection,
-    customer_review_id: int,
-    customer_id: int
+    connection: pymysql.connections.Connection, customer_review_id: int, customer_id: int
 ) -> bool:
     """
     Transfère toutes les formules d'un customer_review vers un customer.
@@ -504,7 +510,9 @@ def transfer_formulas_to_customer(
         connection.commit()
 
         rows_affected = cursor.rowcount
-        print(f"✅ {rows_affected} formule(s) transférée(s) de customer_review {customer_review_id} vers customer {customer_id}")
+        print(
+            f"✅ {rows_affected} formule(s) transférée(s) de customer_review {customer_review_id} vers customer {customer_id}"
+        )
         return True
 
     except Exception as e:
@@ -514,4 +522,3 @@ def transfer_formulas_to_customer(
     finally:
         if cursor is not None:
             cursor.close()
-

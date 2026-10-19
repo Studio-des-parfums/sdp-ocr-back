@@ -3,8 +3,9 @@ Email de demande d'avis Google, envoyé 24h après la création d'une formule
 (parcours tablette). Voir app/services/review_scheduler.py pour le job qui
 déclenche cet envoi périodiquement.
 """
-from app.services.email.email_sender_service import email_sender_service
+
 from app.services.email.email_assets import get_logo_image_bytes
+from app.services.email.email_sender_service import email_sender_service
 
 # Lien Maps direct vers la fiche "Le Studio des Parfums" (panneau avis déjà ouvert) :
 # le client clique sur "Rédiger un avis" depuis cette fiche. Un lien court dédié
@@ -19,12 +20,14 @@ GOOGLE_REVIEW_URL = (
 def _build_review_request_html(first_name: str, perfume_name: str, logo_cid: str | None) -> str:
     logo_img_tag = (
         f'<img src="cid:{logo_cid}" alt="Le Studio des Parfums" style="height:60px;display:block;margin:0 auto 20px;">'
-        if logo_cid else ""
+        if logo_cid
+        else ""
     )
     greeting = f"Bonjour {first_name}," if first_name else "Bonjour,"
     perfume_line = (
         f"<p>Nous espérons que votre parfum <strong>{perfume_name}</strong> vous plaît !</p>"
-        if perfume_name else "<p>Nous espérons que votre création vous plaît !</p>"
+        if perfume_name
+        else "<p>Nous espérons que votre création vous plaît !</p>"
     )
 
     return f"""
@@ -87,11 +90,13 @@ def send_review_request_email(to_email: str, first_name: str, perfume_name: str 
     logo_cid = None
     if logo_bytes:
         logo_cid = "review_logo_image"
-        inline_images.append({
-            "cid": logo_cid,
-            "content": logo_bytes,
-            "filename": "logoSDP.png",
-        })
+        inline_images.append(
+            {
+                "cid": logo_cid,
+                "content": logo_bytes,
+                "filename": "logoSDP.png",
+            }
+        )
 
     html = _build_review_request_html(first_name, perfume_name, logo_cid)
 

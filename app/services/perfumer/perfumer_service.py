@@ -1,9 +1,8 @@
 import json
 import unicodedata
-from typing import Dict, List, Optional
 
 from openai import OpenAI
-from rapidfuzz import process, fuzz
+from rapidfuzz import fuzz, process
 
 from app.core.config import settings
 from app.core.logger import get_logger
@@ -25,11 +24,19 @@ _CONCENTRATION_BY_INTENSITY = {
 
 _INTENSITY_ALIASES = {
     # léger
-    "leger": "light", "light": "light", "ligero": "light", "leve": "light",
+    "leger": "light",
+    "light": "light",
+    "ligero": "light",
+    "leve": "light",
     # modéré
-    "modere": "moderate", "moderate": "moderate", "moderado": "moderate",
+    "modere": "moderate",
+    "moderate": "moderate",
+    "moderado": "moderate",
     # fort
-    "fort": "strong", "strong": "strong", "fuerte": "strong", "forte": "strong",
+    "fort": "strong",
+    "strong": "strong",
+    "fuerte": "strong",
+    "forte": "strong",
 }
 
 
@@ -38,7 +45,7 @@ def _strip_accents(value: str) -> str:
     return "".join(c for c in normalized if not unicodedata.combining(c))
 
 
-def normalize_intensity(raw: Optional[str]) -> str:
+def normalize_intensity(raw: str | None) -> str:
     """Normalise un libellé d'intensité (FR/EN/ES/PT, libellé ou code) vers light/moderate/strong."""
     if not raw:
         return "moderate"
@@ -59,7 +66,9 @@ def _normalize_note_name(value: str) -> str:
 _FUZZY_MATCH_THRESHOLD = 80
 
 
-def _distribute_integer_ml(raw_values: Dict[str, float], total_cap: Optional[float] = None) -> Dict[str, int]:
+def _distribute_integer_ml(
+    raw_values: dict[str, float], total_cap: float | None = None
+) -> dict[str, int]:
     """
     Convertit des quantités (ml) potentiellement à virgule en quantités entières,
     avec 1 ml comme minimum par note. Chaque valeur est d'abord arrondie à l'entier
@@ -89,7 +98,7 @@ def _distribute_integer_ml(raw_values: Dict[str, float], total_cap: Optional[flo
     return floored
 
 
-def _resolve_note_value(note: str, family_values: Dict[str, float]) -> Optional[float]:
+def _resolve_note_value(note: str, family_values: dict[str, float]) -> float | None:
     """
     Retrouve la quantité renvoyée par le LLM pour `note`, en tolérant les écarts
     mineurs de formulation (accents, casse, espaces, parenthèses) entre le nom
@@ -128,7 +137,7 @@ class PerfumerService:
     """
 
     def __init__(self):
-        self._client: Optional[OpenAI] = None
+        self._client: OpenAI | None = None
 
     @property
     def client(self) -> OpenAI:
@@ -140,13 +149,13 @@ class PerfumerService:
 
     def suggest_quantities(
         self,
-        top_notes: List[str],
-        heart_notes: List[str],
-        base_notes: List[str],
+        top_notes: list[str],
+        heart_notes: list[str],
+        base_notes: list[str],
         intensity: str,
         total_volume_ml: float,
-        max_dosage_by_note: Optional[Dict[str, float]] = None,
-    ) -> Dict[str, Dict[str, int]]:
+        max_dosage_by_note: dict[str, float] | None = None,
+    ) -> dict[str, dict[str, int]]:
         """
         Retourne {"top": {note: ml, ...}, "heart": {...}, "base": {...}}
         avec des quantités en ml toujours entières (jamais de virgule) et un
@@ -160,16 +169,29 @@ class PerfumerService:
 
         try:
             result = self._ask_llm(
-                top_notes, heart_notes, base_notes, normalized_intensity, total_volume_ml,
+                top_notes,
+                heart_notes,
+                base_notes,
+                normalized_intensity,
+                total_volume_ml,
                 max_dosage_by_note,
             )
             return self._validate_and_fix(
-                result, top_notes, heart_notes, base_notes, total_volume_ml, max_dosage_by_note,
+                result,
+                top_notes,
+                heart_notes,
+                base_notes,
+                total_volume_ml,
+                max_dosage_by_note,
             )
         except Exception as e:
             logger.warning(f"[PerfumerService] Échec de l'appel IA, fallback déterministe : {e}")
             return self._fallback_split(
-                top_notes, heart_notes, base_notes, normalized_intensity, total_volume_ml,
+                top_notes,
+                heart_notes,
+                base_notes,
+                normalized_intensity,
+                total_volume_ml,
                 max_dosage_by_note,
             )
 
@@ -177,12 +199,12 @@ class PerfumerService:
 
     def _ask_llm(
         self,
-        top_notes: List[str],
-        heart_notes: List[str],
-        base_notes: List[str],
+        top_notes: list[str],
+        heart_notes: list[str],
+        base_notes: list[str],
         intensity: str,
         total_volume_ml: float,
-        max_dosage_by_note: Dict[str, float],
+        max_dosage_by_note: dict[str, float],
     ) -> dict:
         # Le mode "strict" d'OpenAI n'autorise pas les objets à clés dynamiques
         # (additionalProperties) : chaque "properties" doit lister exhaustivement
@@ -210,7 +232,12 @@ class PerfumerService:
         }
 
         prompt = self._build_prompt(
-            top_notes, heart_notes, base_notes, intensity, total_volume_ml, max_dosage_by_note,
+            top_notes,
+            heart_notes,
+            base_notes,
+            intensity,
+            total_volume_ml,
+            max_dosage_by_note,
         )
 
         response = self.client.chat.completions.create(
@@ -238,12 +265,12 @@ class PerfumerService:
 
     def _build_prompt(
         self,
-        top_notes: List[str],
-        heart_notes: List[str],
-        base_notes: List[str],
+        top_notes: list[str],
+        heart_notes: list[str],
+        base_notes: list[str],
         intensity: str,
         total_volume_ml: float,
-        max_dosage_by_note: Dict[str, float],
+        max_dosage_by_note: dict[str, float],
     ) -> str:
         concentration = _CONCENTRATION_BY_INTENSITY[intensity]
 
@@ -297,17 +324,17 @@ Réponds uniquement avec le JSON du schéma demandé.
     def _validate_and_fix(
         self,
         result: dict,
-        top_notes: List[str],
-        heart_notes: List[str],
-        base_notes: List[str],
+        top_notes: list[str],
+        heart_notes: list[str],
+        base_notes: list[str],
         total_volume_ml: float,
-        max_dosage_by_note: Dict[str, float],
-    ) -> Dict[str, Dict[str, int]]:
+        max_dosage_by_note: dict[str, float],
+    ) -> dict[str, dict[str, int]]:
         expected = {"top": top_notes, "heart": heart_notes, "base": base_notes}
-        raw: Dict[str, Dict[str, float]] = {"top": {}, "heart": {}, "base": {}}
+        raw: dict[str, dict[str, float]] = {"top": {}, "heart": {}, "base": {}}
 
         # La réponse LLM est une liste plate [{family, name, quantity_ml}, ...]
-        by_family: Dict[str, Dict[str, float]] = {"top": {}, "heart": {}, "base": {}}
+        by_family: dict[str, dict[str, float]] = {"top": {}, "heart": {}, "base": {}}
         for entry in result.get("notes") or []:
             family = entry.get("family")
             name = entry.get("name")
@@ -337,10 +364,12 @@ Réponds uniquement avec le JSON du schéma demandé.
 
         # Chaque note reçoit un nombre entier de ml (minimum 1) ; la somme est
         # ramenée sous total_volume_ml si l'arrondi/le plancher la fait dépasser.
-        all_raw = {f"{family}::{note}": v for family, notes in raw.items() for note, v in notes.items()}
+        all_raw = {
+            f"{family}::{note}": v for family, notes in raw.items() for note, v in notes.items()
+        }
         distributed = _distribute_integer_ml(all_raw, total_cap=total_volume_ml)
 
-        fixed: Dict[str, Dict[str, int]] = {"top": {}, "heart": {}, "base": {}}
+        fixed: dict[str, dict[str, int]] = {"top": {}, "heart": {}, "base": {}}
         for family, notes in raw.items():
             for note in notes:
                 fixed[family][note] = distributed[f"{family}::{note}"]
@@ -351,13 +380,13 @@ Réponds uniquement avec le JSON du schéma demandé.
 
     def _fallback_split(
         self,
-        top_notes: List[str],
-        heart_notes: List[str],
-        base_notes: List[str],
+        top_notes: list[str],
+        heart_notes: list[str],
+        base_notes: list[str],
         intensity: str,
         total_volume_ml: float,
-        max_dosage_by_note: Dict[str, float],
-    ) -> Dict[str, Dict[str, int]]:
+        max_dosage_by_note: dict[str, float],
+    ) -> dict[str, dict[str, int]]:
         concentration = _CONCENTRATION_BY_INTENSITY[intensity]
         notes_volume = total_volume_ml * concentration
 
@@ -365,7 +394,7 @@ Réponds uniquement avec le JSON du schéma demandé.
         active_weights = {k: w for k, w in _BASE_SPLIT.items() if families[k]}
         weight_sum = sum(active_weights.values()) or 1.0
 
-        raw: Dict[str, float] = {}
+        raw: dict[str, float] = {}
         for family, notes in families.items():
             if not notes:
                 continue
@@ -377,7 +406,7 @@ Réponds uniquement avec le JSON du schéma demandé.
 
         distributed = _distribute_integer_ml(raw, total_cap=total_volume_ml)
 
-        result: Dict[str, Dict[str, int]] = {"top": {}, "heart": {}, "base": {}}
+        result: dict[str, dict[str, int]] = {"top": {}, "heart": {}, "base": {}}
         for family, notes in families.items():
             for note in notes:
                 result[family][note] = distributed[f"{family}::{note}"]
@@ -386,22 +415,26 @@ Réponds uniquement avec le JSON du schéma demandé.
 
     @staticmethod
     def _split_with_caps(
-        notes: List[str], even_share: float, max_dosage_by_note: Dict[str, float]
-    ) -> Dict[str, float]:
+        notes: list[str], even_share: float, max_dosage_by_note: dict[str, float]
+    ) -> dict[str, float]:
         """
         Répartit équitablement even_share ml entre `notes`, plafonne celles ayant
         une règle de dosage max, et redistribue le surplus ainsi libéré entre les
         notes restantes (sans jamais dépasser leur propre plafond).
         """
         remaining_notes = list(notes)
-        allocated: Dict[str, float] = {}
+        allocated: dict[str, float] = {}
         pending_volume = even_share * len(notes)
 
         # Boucle car plafonner une note peut faire baisser le partage équitable
         # des autres en-dessous de leur propre plafond, ou l'inverse.
         while remaining_notes:
             share = pending_volume / len(remaining_notes)
-            capped = [n for n in remaining_notes if n in max_dosage_by_note and max_dosage_by_note[n] < share]
+            capped = [
+                n
+                for n in remaining_notes
+                if n in max_dosage_by_note and max_dosage_by_note[n] < share
+            ]
             if not capped:
                 for note in remaining_notes:
                     allocated[note] = share

@@ -1,6 +1,7 @@
-from typing import Dict, Any, List
-from app.database import get_connection
+from typing import Any
+
 from app.crud import crud_group
+from app.database import get_connection
 
 
 class GroupBusinessService:
@@ -8,8 +9,9 @@ class GroupBusinessService:
     Service pour la logique métier des groupes
     """
 
-    def add_customers_to_group(self, group_id: int, customer_ids: List[int],
-                              added_by: int) -> Dict[str, Any]:
+    def add_customers_to_group(
+        self, group_id: int, customer_ids: list[int], added_by: int
+    ) -> dict[str, Any]:
         """
         Ajoute plusieurs customers à un groupe avec gestion des erreurs détaillée
 
@@ -44,10 +46,7 @@ class GroupBusinessService:
 
                 # Ajouter le customer au groupe
                 result = crud_group.add_customer_to_group(
-                    connection,
-                    customer_id,
-                    group_id,
-                    added_by
+                    connection, customer_id, group_id, added_by
                 )
 
                 if result:
@@ -62,8 +61,8 @@ class GroupBusinessService:
                     "success_count": success_count,
                     "already_exists": already_exists,
                     "failed_count": failed_count,
-                    "errors": errors
-                }
+                    "errors": errors,
+                },
             }
 
         except Exception as e:
@@ -71,8 +70,7 @@ class GroupBusinessService:
         finally:
             connection.close()
 
-    def remove_customers_from_group(self, group_id: int,
-                                   customer_ids: List[int]) -> Dict[str, Any]:
+    def remove_customers_from_group(self, group_id: int, customer_ids: list[int]) -> dict[str, Any]:
         """
         Retire plusieurs customers d'un groupe
 
@@ -97,11 +95,7 @@ class GroupBusinessService:
 
             for customer_id in customer_ids:
                 # Supprimer la relation
-                result = crud_group.remove_customer_from_group(
-                    connection,
-                    customer_id,
-                    group_id
-                )
+                result = crud_group.remove_customer_from_group(connection, customer_id, group_id)
 
                 if result:
                     success_count += 1
@@ -111,10 +105,7 @@ class GroupBusinessService:
             return {
                 "success": True,
                 "message": f"{success_count} clients retirés, {not_found_count} n'étaient pas dans le groupe",
-                "details": {
-                    "success_count": success_count,
-                    "not_found_count": not_found_count
-                }
+                "details": {"success_count": success_count, "not_found_count": not_found_count},
             }
 
         except Exception as e:

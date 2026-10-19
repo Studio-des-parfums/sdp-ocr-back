@@ -12,8 +12,8 @@ Utilisé notamment pour les formules qui n'ont aucune fiche/document
 associé (ex: formules créées digitalement) afin de fournir un
 téléchargement de remplacement reprenant la même charte graphique.
 """
+
 from io import BytesIO
-from typing import Optional
 
 from weasyprint import HTML
 from weasyprint.text.fonts import FontConfiguration
@@ -40,7 +40,7 @@ def _format_notes_rows(notes: list, min_rows: int = 7) -> str:
     return rows
 
 
-def _size_rows(selected_size: Optional[str]) -> str:
+def _size_rows(selected_size: str | None) -> str:
     sizes = [("30", "6 - 8"), ("50", "12 - 16"), ("100", "20 - 30")]
     rows = ""
     for ml, usage in sizes:

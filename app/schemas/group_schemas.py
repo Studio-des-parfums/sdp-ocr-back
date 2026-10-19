@@ -1,11 +1,11 @@
-from pydantic import BaseModel
-from typing import Optional, List
 from datetime import datetime
+
+from pydantic import BaseModel
 
 
 class GroupBase(BaseModel):
     name: str
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class GroupCreate(GroupBase):
@@ -13,8 +13,8 @@ class GroupCreate(GroupBase):
 
 
 class GroupUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
+    name: str | None = None
+    description: str | None = None
 
 
 class GroupResponse(GroupBase):
@@ -30,19 +30,20 @@ class GroupResponse(GroupBase):
 
 # Schémas pour gérer les relations clients-groupes
 class AddCustomersToGroup(BaseModel):
-    customer_ids: List[int]
+    customer_ids: list[int]
     added_by: int
 
 
 class RemoveCustomersFromGroup(BaseModel):
-    customer_ids: List[int]
+    customer_ids: list[int]
 
 
 class MergeGroupsRequest(BaseModel):
     """Schéma pour fusionner plusieurs groupes"""
-    source_group_ids: List[int]
+
+    source_group_ids: list[int]
     new_group_name: str
-    description: Optional[str] = None
+    description: str | None = None
     created_by: int
 
 

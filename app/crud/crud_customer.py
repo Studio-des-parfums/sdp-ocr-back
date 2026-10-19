@@ -1,8 +1,9 @@
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Any
+
 import pymysql
 
 
-def create(connection: pymysql.connections.Connection, customer_data: Dict[str, Any]) -> Optional[int]:
+def create(connection: pymysql.connections.Connection, customer_data: dict[str, Any]) -> int | None:
     """
     Crée un nouveau customer dans la base de données
 
@@ -25,8 +26,8 @@ def create(connection: pymysql.connections.Connection, customer_data: Dict[str, 
             values = list(clean_data.values())
 
             query = f"""
-                INSERT INTO customers ({', '.join(columns)})
-                VALUES ({', '.join(placeholders)})
+                INSERT INTO customers ({", ".join(columns)})
+                VALUES ({", ".join(placeholders)})
             """
             cursor.execute(query, values)
         else:
@@ -47,7 +48,9 @@ def create(connection: pymysql.connections.Connection, customer_data: Dict[str, 
         cursor.close()
 
 
-def get_by_id(connection: pymysql.connections.Connection, customer_id: int) -> Optional[Dict[str, Any]]:
+def get_by_id(
+    connection: pymysql.connections.Connection, customer_id: int
+) -> dict[str, Any] | None:
     """
     Récupère un customer par son ID
 
@@ -74,7 +77,7 @@ def get_by_id(connection: pymysql.connections.Connection, customer_id: int) -> O
         cursor.close()
 
 
-def get_by_email(connection: pymysql.connections.Connection, email: str) -> Optional[Dict[str, Any]]:
+def get_by_email(connection: pymysql.connections.Connection, email: str) -> dict[str, Any] | None:
     """
     Récupère un customer par son email
 
@@ -101,7 +104,7 @@ def get_by_email(connection: pymysql.connections.Connection, email: str) -> Opti
         cursor.close()
 
 
-def get_by_phone(connection: pymysql.connections.Connection, phone: str) -> Optional[Dict[str, Any]]:
+def get_by_phone(connection: pymysql.connections.Connection, phone: str) -> dict[str, Any] | None:
     """
     Récupère un customer par son téléphone
 
@@ -128,7 +131,9 @@ def get_by_phone(connection: pymysql.connections.Connection, phone: str) -> Opti
         cursor.close()
 
 
-def get_by_phone_normalized(connection: pymysql.connections.Connection, phone: str) -> Optional[Dict[str, Any]]:
+def get_by_phone_normalized(
+    connection: pymysql.connections.Connection, phone: str
+) -> dict[str, Any] | None:
     """
     Récupère un customer par téléphone en ignorant tout caractère non numérique
     (espaces, tirets, points) des deux côtés de la comparaison.
@@ -144,6 +149,7 @@ def get_by_phone_normalized(connection: pymysql.connections.Connection, phone: s
         Dictionnaire avec les données du customer ou None
     """
     import re
+
     digits_only = re.sub(r"\D", "", phone or "")
     if not digits_only:
         return None
@@ -180,13 +186,18 @@ EMPTY_FIELDS_COLUMNS = {
 }
 
 
-def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int = 10,
-            search: Optional[str] = None, v2: bool = False,
-            country: Optional[str] = None,
-            year: Optional[str] = None,
-            month: Optional[str] = None,
-            verified: Optional[str] = None,
-            empty_fields: Optional[List[str]] = None) -> Tuple[List[Dict[str, Any]], int]:
+def get_all(
+    connection: pymysql.connections.Connection,
+    page: int = 1,
+    size: int = 10,
+    search: str | None = None,
+    v2: bool = False,
+    country: str | None = None,
+    year: str | None = None,
+    month: str | None = None,
+    verified: str | None = None,
+    empty_fields: list[str] | None = None,
+) -> tuple[list[dict[str, Any]], int]:
     """
     Récupère tous les customers avec pagination et recherche
 
@@ -239,7 +250,7 @@ def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int
 
         if verified is not None:
             conditions.append("customers.verified_email = %s")
-            params.append(1 if verified == 'true' else 0)
+            params.append(1 if verified == "true" else 0)
 
         if empty_fields:
             columns = [EMPTY_FIELDS_COLUMNS[f] for f in empty_fields if f in EMPTY_FIELDS_COLUMNS]
@@ -264,7 +275,7 @@ def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int
         # Compter le total
         count_query = f"SELECT COUNT(*) as total FROM customers {where_clause}"
         cursor.execute(count_query, params)
-        total = cursor.fetchone()['total']
+        total = cursor.fetchone()["total"]
 
         # Récupérer les résultats paginés
         offset = (page - 1) * size
@@ -287,8 +298,9 @@ def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int
         cursor.close()
 
 
-def update(connection: pymysql.connections.Connection, customer_id: int,
-           customer_data: Dict[str, Any]) -> bool:
+def update(
+    connection: pymysql.connections.Connection, customer_id: int, customer_data: dict[str, Any]
+) -> bool:
     """
     Met à jour un customer
 
@@ -327,7 +339,7 @@ def update(connection: pymysql.connections.Connection, customer_id: int,
 
         query = f"""
             UPDATE customers
-            SET {', '.join(set_clauses)}
+            SET {", ".join(set_clauses)}
             WHERE id = %s
         """
 
@@ -402,7 +414,7 @@ def check_duplicate_email(connection: pymysql.connections.Connection, email: str
         cursor.close()
 
 
-def get_analytics(connection: pymysql.connections.Connection) -> Dict[str, Any]:
+def get_analytics(connection: pymysql.connections.Connection) -> dict[str, Any]:
     """
     Calcule les statistiques d'analyse des clients :
     - Total clients ce mois-ci vs mois dernier
@@ -428,8 +440,8 @@ def get_analytics(connection: pymysql.connections.Connection) -> Dict[str, Any]:
             FROM customers
         """)
         month_row = cursor.fetchone() or {}
-        current_month = month_row.get('current_month') or 0
-        last_month = month_row.get('last_month') or 0
+        current_month = month_row.get("current_month") or 0
+        last_month = month_row.get("last_month") or 0
 
         # Année effective d'un customer : created_at si présent, sinon l'année
         # de référence de sa première formule (les customers plus anciens
@@ -470,7 +482,7 @@ def get_analytics(connection: pymysql.connections.Connection) -> Dict[str, Any]:
 
         # Taux de rétention : clients avec au moins 2 formules
         cursor.execute("SELECT COUNT(*) AS total FROM customers")
-        total_customers = (cursor.fetchone() or {}).get('total') or 0
+        total_customers = (cursor.fetchone() or {}).get("total") or 0
 
         cursor.execute("""
             SELECT COUNT(*) AS total FROM (
@@ -481,9 +493,11 @@ def get_analytics(connection: pymysql.connections.Connection) -> Dict[str, Any]:
                 HAVING COUNT(*) >= 2
             ) AS retained
         """)
-        retained_customers = (cursor.fetchone() or {}).get('total') or 0
+        retained_customers = (cursor.fetchone() or {}).get("total") or 0
 
-        retention_rate = round((retained_customers / total_customers) * 100, 2) if total_customers > 0 else 0
+        retention_rate = (
+            round((retained_customers / total_customers) * 100, 2) if total_customers > 0 else 0
+        )
 
         # Top 5 pays par nombre de clients
         cursor.execute("""
@@ -523,7 +537,7 @@ def get_analytics(connection: pymysql.connections.Connection) -> Dict[str, Any]:
         cursor.close()
 
 
-def get_countries(connection: pymysql.connections.Connection) -> List[str]:
+def get_countries(connection: pymysql.connections.Connection) -> list[str]:
     """
     Récupère la liste des pays distincts dans la table customers
 
@@ -545,7 +559,7 @@ def get_countries(connection: pymysql.connections.Connection) -> List[str]:
         cursor.execute(query)
         rows = cursor.fetchall()
 
-        return [row['country'] for row in rows]
+        return [row["country"] for row in rows]
 
     except Exception as e:
         print(f"Erreur récupération pays : {e}")

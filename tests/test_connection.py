@@ -1,6 +1,7 @@
 """
 Script de test pour vérifier la connexion à la base de données
 """
+
 import sys
 from pathlib import Path
 
@@ -24,7 +25,7 @@ def test_database_connection():
 
     if connection:
         print("✅ Connexion réussie !")
-        print(f"   Base de données connectée")
+        print("   Base de données connectée")
 
         # Tester une requête simple
         try:

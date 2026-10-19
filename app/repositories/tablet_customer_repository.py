@@ -1,7 +1,7 @@
-from typing import Any, Dict, List, Optional
+from typing import Any
 
+from app.crud import crud_customer, crud_formula, crud_formula_options, crud_notes
 from app.database import get_connection
-from app.crud import crud_customer, crud_formula, crud_notes, crud_formula_options
 
 
 class TabletCustomerRepository:
@@ -10,7 +10,7 @@ class TabletCustomerRepository:
     côté formulaire tablette (aglae-form).
     """
 
-    def search_by_contact(self, email: Optional[str], phone: Optional[str]) -> Optional[Dict[str, Any]]:
+    def search_by_contact(self, email: str | None, phone: str | None) -> dict[str, Any] | None:
         """
         Retrouve un client par email (prioritaire) puis par téléphone.
         En cas de plusieurs correspondances possibles, retourne la première trouvée.
@@ -35,7 +35,7 @@ class TabletCustomerRepository:
         finally:
             connection.close()
 
-    def get_formula_history(self, customer_id: int) -> List[Dict[str, Any]]:
+    def get_formula_history(self, customer_id: int) -> list[dict[str, Any]]:
         """Historique des formules d'un client, plus récentes en premier."""
         connection = get_connection()
         if not connection:
@@ -46,7 +46,7 @@ class TabletCustomerRepository:
         finally:
             connection.close()
 
-    def get_formula_detail(self, formula_id: int) -> Optional[Dict[str, Any]]:
+    def get_formula_detail(self, formula_id: int) -> dict[str, Any] | None:
         """Détail complet d'une formule (infos + notes tête/cœur/fond)."""
         connection = get_connection()
         if not connection:
@@ -58,15 +58,21 @@ class TabletCustomerRepository:
                 return None
 
             formula["top_notes"] = crud_notes.get_notes_by_type(connection, "top_note", formula_id)
-            formula["heart_notes"] = crud_notes.get_notes_by_type(connection, "heart_note", formula_id)
-            formula["base_notes"] = crud_notes.get_notes_by_type(connection, "base_note", formula_id)
-            formula["booster_notes"] = crud_notes.get_notes_by_type(connection, "booster_note", formula_id)
+            formula["heart_notes"] = crud_notes.get_notes_by_type(
+                connection, "heart_note", formula_id
+            )
+            formula["base_notes"] = crud_notes.get_notes_by_type(
+                connection, "base_note", formula_id
+            )
+            formula["booster_notes"] = crud_notes.get_notes_by_type(
+                connection, "booster_note", formula_id
+            )
             formula["options"] = crud_formula_options.get_by_formula(connection, formula_id)
             return formula
         finally:
             connection.close()
 
-    def reuse_formula(self, formula_id: int) -> Optional[Dict[str, Any]]:
+    def reuse_formula(self, formula_id: int) -> dict[str, Any] | None:
         """Incrémente le compteur de réutilisation d'une formule existante."""
         connection = get_connection()
         if not connection:

@@ -1,11 +1,13 @@
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
-from app.schemas.export_schemas import ExportRequest
 import csv
 import io
-from typing import Dict, List
+
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
+
+from app.schemas.export_schemas import ExportRequest
 
 router = APIRouter()
+
 
 @router.post("/generate-csv")
 async def generate_csv(request: ExportRequest):
@@ -25,15 +27,10 @@ async def generate_csv(request: ExportRequest):
             "téléphone",
             "profession",
             "ville",
-            "pays"
+            "pays",
         ]
 
-        writer = csv.DictWriter(
-            output,
-            fieldnames=fieldnames,
-            delimiter=";",
-            lineterminator="\n"
-        )
+        writer = csv.DictWriter(output, fieldnames=fieldnames, delimiter=";", lineterminator="\n")
 
         # Écrire l'en-tête
         writer.writeheader()
@@ -48,7 +45,7 @@ async def generate_csv(request: ExportRequest):
                 "téléphone": user.phone,
                 "profession": user.job,
                 "ville": user.city,
-                "pays": user.country
+                "pays": user.country,
             }
             writer.writerow(row)
 
@@ -60,12 +57,12 @@ async def generate_csv(request: ExportRequest):
         csv_stream = io.StringIO(csv_content)
 
         return StreamingResponse(
-            io.BytesIO(csv_content.encode('utf-8')),
+            io.BytesIO(csv_content.encode("utf-8")),
             media_type="text/csv",
-            headers={
-                "Content-Disposition": "attachment; filename=export_users.csv"
-            }
+            headers={"Content-Disposition": "attachment; filename=export_users.csv"},
         )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erreur lors de la génération du CSV: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Erreur lors de la génération du CSV: {str(e)}"
+        )

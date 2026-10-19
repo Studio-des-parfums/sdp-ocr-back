@@ -1,4 +1,3 @@
-from typing import Optional
 import pymysql
 
 
@@ -7,8 +6,8 @@ def _insert_note(
     table_name: str,
     formula_id: int,
     name: str,
-    quantity: Optional[str],
-) -> Optional[int]:
+    quantity: str | None,
+) -> int | None:
     """
     Helper générique pour insérer une note dans une table donnée.
     """
@@ -32,8 +31,8 @@ def _insert_note(
             return None
 
         query = f"""
-            INSERT INTO {table_name} ({', '.join(columns)})
-            VALUES ({', '.join(placeholders)})
+            INSERT INTO {table_name} ({", ".join(columns)})
+            VALUES ({", ".join(placeholders)})
         """
         cursor.execute(query, values)
 
@@ -55,8 +54,8 @@ def create_top_note(
     connection: pymysql.connections.Connection,
     formula_id: int,
     name: str,
-    quantity: Optional[str],
-) -> Optional[int]:
+    quantity: str | None,
+) -> int | None:
     return _insert_note(connection, "top_note", formula_id, name, quantity)
 
 
@@ -64,8 +63,8 @@ def create_heart_note(
     connection: pymysql.connections.Connection,
     formula_id: int,
     name: str,
-    quantity: Optional[str],
-) -> Optional[int]:
+    quantity: str | None,
+) -> int | None:
     return _insert_note(connection, "heart_note", formula_id, name, quantity)
 
 
@@ -73,8 +72,8 @@ def create_base_note(
     connection: pymysql.connections.Connection,
     formula_id: int,
     name: str,
-    quantity: Optional[str],
-) -> Optional[int]:
+    quantity: str | None,
+) -> int | None:
     return _insert_note(connection, "base_note", formula_id, name, quantity)
 
 
@@ -82,8 +81,8 @@ def create_booster_note(
     connection: pymysql.connections.Connection,
     formula_id: int,
     name: str,
-    quantity: Optional[str],
-) -> Optional[int]:
+    quantity: str | None,
+) -> int | None:
     return _insert_note(connection, "booster_note", formula_id, name, quantity)
 
 
@@ -91,8 +90,8 @@ def update_note(
     connection: pymysql.connections.Connection,
     table_name: str,
     note_id: int,
-    name: Optional[str] = None,
-    quantity: Optional[str] = None,
+    name: str | None = None,
+    quantity: str | None = None,
 ) -> bool:
     """
     Met à jour une note dans une table donnée.
@@ -130,7 +129,7 @@ def update_note(
 
         query = f"""
             UPDATE {table_name}
-            SET {', '.join(updates)}
+            SET {", ".join(updates)}
             WHERE id = %s
         """
         cursor.execute(query, values)
@@ -263,4 +262,3 @@ def get_notes_by_type(
     finally:
         if cursor is not None:
             cursor.close()
-

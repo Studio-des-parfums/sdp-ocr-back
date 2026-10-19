@@ -6,10 +6,11 @@ Tourne dans le process web via APScheduler (pas de worker/cron séparé déploy�
 Idempotent : chaque formule traitée est marquée `review_email_sent_at` avant de
 passer à la suivante, pour ne jamais redemander un avis deux fois.
 """
+
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from app.database.connection import get_connection
 from app.crud import crud_formula
+from app.database.connection import get_connection
 from app.services.email.review_request_service import send_review_request_email
 
 REVIEW_DELAY_HOURS = 24
@@ -38,7 +39,9 @@ def send_pending_review_emails():
                 perfume_name=item.get("perfume_name"),
             )
             if not result.get("success"):
-                print(f"review_scheduler: échec envoi formule {item['formula_id']} : {result.get('message')}")
+                print(
+                    f"review_scheduler: échec envoi formule {item['formula_id']} : {result.get('message')}"
+                )
 
     except Exception as e:
         print(f"review_scheduler: erreur job : {e}")

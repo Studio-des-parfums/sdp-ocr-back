@@ -1,14 +1,14 @@
 import re
-from datetime import datetime, date
-from typing import Optional, Union
+from datetime import date, datetime
+
 import dateparser
 
 
 def parse_and_resolve_formula_date(
-    raw_date: Optional[Union[str, date, datetime]],
-    raw_reference: Optional[str] = None,
-    created_at: Optional[Union[datetime, date]] = None,
-) -> Optional[date]:
+    raw_date: str | date | datetime | None,
+    raw_reference: str | None = None,
+    created_at: datetime | date | None = None,
+) -> date | None:
     """
     Formate et résout une date de formule à partir de la colonne `formula.date`.
     Comme les données proviennent de l'OCR manuscrit ou de saisies manuelles non formatées,
@@ -29,7 +29,7 @@ def parse_and_resolve_formula_date(
     if isinstance(raw_date, date):
         return raw_date
 
-    dt: Optional[date] = None
+    dt: date | None = None
 
     if raw_date:
         s = str(raw_date).strip()

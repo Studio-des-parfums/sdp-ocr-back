@@ -1,10 +1,10 @@
-from typing import Dict, Any, Optional, Tuple
-from app.database import get_connection
+from typing import Any
+
 from app.crud import crud_customer, crud_customer_review
-from app.services.email import email_validator, email_domain_corrector, email_domain_validator
+from app.database import get_connection
 from app.services.country import country_corrector
-from app.services.phone import phone_validator, phone_intelligence_validator
-from app.services.city import city_normalizer
+from app.services.email import email_domain_corrector, email_domain_validator, email_validator
+from app.services.phone import phone_intelligence_validator, phone_validator
 
 
 class CustomerBusinessService:
@@ -12,7 +12,9 @@ class CustomerBusinessService:
     Service pour la logique métier des customers (validation, règles business)
     """
 
-    def insert_customer_if_not_exists(self, extracted_data: Dict[str, Any], v2: bool = False) -> Tuple[Optional[int], str]:
+    def insert_customer_if_not_exists(
+        self, extracted_data: dict[str, Any], v2: bool = False
+    ) -> tuple[int | None, str]:
         """
         Insère un customer dans la base pour chaque PDF traité (peu importe les données)
         Gère la détection de doublons, corrections d'email/phone et l'insertion dans customers_review si nécessaire
@@ -37,7 +39,7 @@ class CustomerBusinessService:
 
         def _review_data():
             """Retourne customer_data enrichi avec v2 pour insertion dans customers_review"""
-            return {**customer_data, 'v2': v2}
+            return {**customer_data, "v2": v2}
 
         try:
             # Si erreur sur le numéro de téléphone, mettre dans customers_review
@@ -48,27 +50,29 @@ class CustomerBusinessService:
 
             # Si l'email a été corrigé, mettre dans customers_review avec type "Modifié"
             if was_email_corrected:
-                print(f"Customer avec email corrigé → customers_review (type: Modifié)")
+                print("Customer avec email corrigé → customers_review (type: Modifié)")
                 review_id = crud_customer_review.create(connection, _review_data(), "Modifié")
                 return review_id, "customer_review"
 
             # Si des notes ont été corrigées, mettre dans customers_review
             if notes_were_corrected:
-                print(f"Customer avec notes corrigées → customers_review (type: Modifié - Note)")
-                review_id = crud_customer_review.create(connection, _review_data(), "Modifié - Note")
+                print("Customer avec notes corrigées → customers_review (type: Modifié - Note)")
+                review_id = crud_customer_review.create(
+                    connection, _review_data(), "Modifié - Note"
+                )
                 return review_id, "customer_review"
 
             # Vérifier si le customer existe déjà (seulement si on a email ou téléphone)
-            if customer_data.get('email') or customer_data.get('phone'):
+            if customer_data.get("email") or customer_data.get("phone"):
                 duplicate_type = self._check_duplicate_type(
-                    connection,
-                    customer_data.get('email'),
-                    customer_data.get('phone')
+                    connection, customer_data.get("email"), customer_data.get("phone")
                 )
                 if duplicate_type:
                     print(f"Customer doublon détecté : {duplicate_type}")
                     # Insérer dans customers_review avec le type de doublon
-                    review_id = crud_customer_review.create(connection, _review_data(), duplicate_type)
+                    review_id = crud_customer_review.create(
+                        connection, _review_data(), duplicate_type
+                    )
                     return review_id, "customer_review"
 
             # Insérer le customer TOUJOURS (même complètement vide)
@@ -78,7 +82,9 @@ class CustomerBusinessService:
         finally:
             connection.close()
 
-    def _map_ocr_to_customer(self, extracted_data: Dict[str, Any]) -> Tuple[Dict[str, str], bool, Optional[str]]:
+    def _map_ocr_to_customer(
+        self, extracted_data: dict[str, Any]
+    ) -> tuple[dict[str, str], bool, str | None]:
         """
         Mappe les données OCR vers les champs customer et valide l'email et le téléphone
 
@@ -91,20 +97,23 @@ class CustomerBusinessService:
             - was_email_corrected: True si l'email a été corrigé (domaine, extension, ponctuation)
             - phone_error: Type d'erreur téléphone ("Erreur - Numéro", "Modifié", None)
         """
+
         def safe_strip(value):
             """Fonction helper pour éviter les erreurs None.strip()"""
             if value is None:
                 return None
             return str(value).strip() or None
 
-        email = safe_strip(extracted_data.get('email'))
+        email = safe_strip(extracted_data.get("email"))
         verified_email = None
         verified_domain = None
         was_email_corrected = False
 
         # Corriger le domaine email s'il contient une faute
         if email:
-            corrected_email, was_corrected, original_domain = email_domain_corrector.correct_email(email)
+            corrected_email, was_corrected, original_domain = email_domain_corrector.correct_email(
+                email
+            )
 
             if was_corrected:
                 was_email_corrected = True
@@ -124,18 +133,20 @@ class CustomerBusinessService:
             print(f"Résultat validation : {verified_email}")
 
         # Corriger le pays s'il contient une erreur
-        country = safe_strip(extracted_data.get('pays'))
+        country = safe_strip(extracted_data.get("pays"))
         if country:
             corrected_country, was_country_corrected = country_corrector.correct_country(country)
             country = corrected_country  # Utiliser le pays corrigé
 
         # Valider et normaliser le téléphone (APRÈS avoir le pays corrigé)
-        phone = safe_strip(extracted_data.get('tel'))
+        phone = safe_strip(extracted_data.get("tel"))
         phone_error = None
         verified_phone = None
 
         if phone:
-            normalized_phone, was_phone_modified, error_type = phone_validator.validate_phone_number(phone, country)
+            normalized_phone, was_phone_modified, error_type = (
+                phone_validator.validate_phone_number(phone, country)
+            )
 
             if error_type == "invalid_length":
                 # Numéro invalide → Erreur
@@ -156,22 +167,21 @@ class CustomerBusinessService:
             print(f"Résultat validation téléphone : {verified_phone}")
 
         customer_data = {
-            'first_name': safe_strip(extracted_data.get('prenom')),
-            'last_name': safe_strip(extracted_data.get('nom')),
-            'email': email,
-            'phone': phone,
-            'job': safe_strip(extracted_data.get('profession')),
-            'city': safe_strip(extracted_data.get('ville')),
-            'country': country,
-            'verified_email': verified_email,
-            'verified_domain': verified_domain,
-            'verified_phone': verified_phone
+            "first_name": safe_strip(extracted_data.get("prenom")),
+            "last_name": safe_strip(extracted_data.get("nom")),
+            "email": email,
+            "phone": phone,
+            "job": safe_strip(extracted_data.get("profession")),
+            "city": safe_strip(extracted_data.get("ville")),
+            "country": country,
+            "verified_email": verified_email,
+            "verified_domain": verified_domain,
+            "verified_phone": verified_phone,
         }
 
         return customer_data, was_email_corrected, phone_error
 
-    def _check_duplicate_type(self, connection, email: Optional[str],
-                             phone: Optional[str]) -> Optional[str]:
+    def _check_duplicate_type(self, connection, email: str | None, phone: str | None) -> str | None:
         """
         Vérifie si un customer existe déjà et retourne le type de doublon
 
@@ -204,7 +214,7 @@ class CustomerBusinessService:
 
         return None
 
-    def create_customer_with_validation(self, customer_data: Dict[str, Any]) -> Optional[int]:
+    def create_customer_with_validation(self, customer_data: dict[str, Any]) -> int | None:
         """
         Crée un nouveau customer avec validation d'email et correction du domaine
 
@@ -215,33 +225,37 @@ class CustomerBusinessService:
             ID du customer créé ou None si erreur
         """
         # Corriger le domaine email s'il contient une faute
-        email = customer_data.get('email')
+        email = customer_data.get("email")
         if email:
-            corrected_email, was_corrected, original_domain = email_domain_corrector.correct_email(email)
+            corrected_email, was_corrected, original_domain = email_domain_corrector.correct_email(
+                email
+            )
 
             if was_corrected:
-                customer_data['email'] = corrected_email
+                customer_data["email"] = corrected_email
                 print(f"📧 Domaine corrigé : {email} → {corrected_email}")
 
         # Vérifier le domaine via MX DNS
-        email = customer_data.get('email')
-        if email and 'verified_domain' not in customer_data:
+        email = customer_data.get("email")
+        if email and "verified_domain" not in customer_data:
             is_valid_domain, details = email_domain_validator.verify_email_domain(email)
-            customer_data['verified_domain'] = is_valid_domain
+            customer_data["verified_domain"] = is_valid_domain
             print(f"🔍 Vérification domaine : {email} → {is_valid_domain} ({details})")
 
         # Valider l'email si présent
-        email = customer_data.get('email')
-        if email and 'verified_email' not in customer_data:
+        email = customer_data.get("email")
+        if email and "verified_email" not in customer_data:
             print(f"Validation de l'email : {email}")
-            customer_data['verified_email'] = email_validator.validate_email_sync(email)
+            customer_data["verified_email"] = email_validator.validate_email_sync(email)
             print(f"Résultat validation : {customer_data['verified_email']}")
 
         # Valider le téléphone si présent
-        phone = customer_data.get('phone')
-        if phone and 'verified_phone' not in customer_data:
+        phone = customer_data.get("phone")
+        if phone and "verified_phone" not in customer_data:
             print(f"Validation du téléphone : {phone}")
-            customer_data['verified_phone'] = phone_intelligence_validator.verify_phone_number(phone)
+            customer_data["verified_phone"] = phone_intelligence_validator.verify_phone_number(
+                phone
+            )
             print(f"Résultat validation téléphone : {customer_data['verified_phone']}")
 
         connection = get_connection()
@@ -253,8 +267,9 @@ class CustomerBusinessService:
         finally:
             connection.close()
 
-
-    def update_customer_with_validation(self, customer_id: int, customer_data: Dict[str, Any]) -> bool:
+    def update_customer_with_validation(
+        self, customer_id: int, customer_data: dict[str, Any]
+    ) -> bool:
         """
         Met à jour un customer avec validation d'email et de téléphone si modifiés
 
@@ -279,40 +294,50 @@ class CustomerBusinessService:
             update_data = customer_data.copy()
 
             # Si l'email est modifié, valider et corriger
-            if 'email' in customer_data and customer_data['email'] != existing_customer.get('email'):
-                email = customer_data['email']
+            if "email" in customer_data and customer_data["email"] != existing_customer.get(
+                "email"
+            ):
+                email = customer_data["email"]
                 if email:
                     # Corriger le domaine email s'il contient une faute
-                    corrected_email, was_corrected, original_domain = email_domain_corrector.correct_email(email)
+                    corrected_email, was_corrected, original_domain = (
+                        email_domain_corrector.correct_email(email)
+                    )
 
                     if was_corrected:
-                        update_data['email'] = corrected_email
+                        update_data["email"] = corrected_email
                         print(f"📧 Domaine corrigé : {email} → {corrected_email}")
 
                     # Vérifier le domaine via MX DNS
-                    email = update_data['email']
+                    email = update_data["email"]
                     is_valid_domain, details = email_domain_validator.verify_email_domain(email)
-                    update_data['verified_domain'] = is_valid_domain
+                    update_data["verified_domain"] = is_valid_domain
                     print(f"🔍 Vérification domaine : {email} → {is_valid_domain} ({details})")
 
                     # Valider l'email
                     print(f"Validation de l'email : {email}")
-                    update_data['verified_email'] = email_validator.validate_email_sync(email)
+                    update_data["verified_email"] = email_validator.validate_email_sync(email)
                     print(f"Résultat validation : {update_data['verified_email']}")
 
             # Si le téléphone est modifié, valider
-            if 'phone' in customer_data and customer_data['phone'] != existing_customer.get('phone'):
-                phone = customer_data['phone']
+            if "phone" in customer_data and customer_data["phone"] != existing_customer.get(
+                "phone"
+            ):
+                phone = customer_data["phone"]
                 if phone:
                     print(f"Validation du téléphone : {phone}")
-                    phone_validation_result = phone_intelligence_validator.verify_phone_number(phone)
+                    phone_validation_result = phone_intelligence_validator.verify_phone_number(
+                        phone
+                    )
                     # Ne mettre à jour verified_phone que si l'API a retourné un résultat (True ou False)
                     # Si None (erreur API, rate limit), on garde l'ancienne valeur
                     if phone_validation_result is not None:
-                        update_data['verified_phone'] = phone_validation_result
+                        update_data["verified_phone"] = phone_validation_result
                         print(f"Résultat validation téléphone : {phone_validation_result}")
                     else:
-                        print(f"⚠️ Validation téléphone impossible (API error/rate limit) - verified_phone non modifié")
+                        print(
+                            "⚠️ Validation téléphone impossible (API error/rate limit) - verified_phone non modifié"
+                        )
 
             # Mettre à jour le customer
             return crud_customer.update(connection, customer_id, update_data)
@@ -320,7 +345,7 @@ class CustomerBusinessService:
         finally:
             connection.close()
 
-    def _check_notes_corrections(self, extracted_data: Dict[str, Any]) -> bool:
+    def _check_notes_corrections(self, extracted_data: dict[str, Any]) -> bool:
         """
         Vérifie si des notes de parfum ont été corrigées ou sont inconnues
 
@@ -337,27 +362,27 @@ class CustomerBusinessService:
             raw_notes = extracted_data.get(notes_key) or []
             if not isinstance(raw_notes, list):
                 return False
-            
+
             for note in raw_notes:
                 if not isinstance(note, dict):
                     continue
                 name = (note.get("essence") or "").strip()
                 if not name or name == "---":
                     continue
-                
+
                 # Vérifier si le nom serait corrigé ou inconnu
                 corrected_name = note_corrector.correct_note_name(name)
-                
+
                 # Si la note est inconnue (A définir)
                 if corrected_name == "A définir":
                     print(f"❓ Note inconnue détectée : '{name}' → 'A définir'")
                     return True
-                
+
                 # Si la note a été corrigée
                 if corrected_name != name:
                     print(f"🔧 Note qui sera corrigée détectée : '{name}' → '{corrected_name}'")
                     return True
-            
+
             return False
 
         # Vérifier les trois types de notes

@@ -1,12 +1,11 @@
-from typing import Optional
 import pymysql
 
 
 def register(
     connection: pymysql.connections.Connection,
     device_id: str,
-    device_name: Optional[str] = None,
-) -> Optional[dict]:
+    device_name: str | None = None,
+) -> dict | None:
     cursor = None
     try:
         cursor = connection.cursor()
@@ -29,7 +28,7 @@ def register(
             cursor.close()
 
 
-def verify(connection: pymysql.connections.Connection, device_id: str) -> Optional[dict]:
+def verify(connection: pymysql.connections.Connection, device_id: str) -> dict | None:
     cursor = None
     try:
         cursor = connection.cursor()

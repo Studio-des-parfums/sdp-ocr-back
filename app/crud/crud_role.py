@@ -1,9 +1,9 @@
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Any
+
 import pymysql
 
 
-def create(connection: pymysql.connections.Connection,
-           role_data: Dict[str, Any]) -> Optional[int]:
+def create(connection: pymysql.connections.Connection, role_data: dict[str, Any]) -> int | None:
     """Créer un nouveau rôle"""
     try:
         cursor = connection.cursor()
@@ -13,19 +13,22 @@ def create(connection: pymysql.connections.Connection,
                                customers_review_access, formula_edit, full_access, devices_access)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
-        cursor.execute(query, (
-            role_data.get('name'),
-            role_data.get('csv_download_limit', 0),
-            role_data.get('email_sending', False),
-            role_data.get('pdf_extraction_limit', 0),
-            role_data.get('customers_access', False),
-            role_data.get('customers_edit', False),
-            role_data.get('access_to_extraction', False),
-            role_data.get('customers_review_access', False),
-            role_data.get('formula_edit', False),
-            role_data.get('full_access', False),
-            role_data.get('devices_access', False)
-        ))
+        cursor.execute(
+            query,
+            (
+                role_data.get("name"),
+                role_data.get("csv_download_limit", 0),
+                role_data.get("email_sending", False),
+                role_data.get("pdf_extraction_limit", 0),
+                role_data.get("customers_access", False),
+                role_data.get("customers_edit", False),
+                role_data.get("access_to_extraction", False),
+                role_data.get("customers_review_access", False),
+                role_data.get("formula_edit", False),
+                role_data.get("full_access", False),
+                role_data.get("devices_access", False),
+            ),
+        )
         connection.commit()
         return cursor.lastrowid
     except Exception as e:
@@ -36,8 +39,7 @@ def create(connection: pymysql.connections.Connection,
         cursor.close()
 
 
-def get_by_id(connection: pymysql.connections.Connection,
-              role_id: int) -> Optional[Dict]:
+def get_by_id(connection: pymysql.connections.Connection, role_id: int) -> dict | None:
     """Récupérer un rôle par son ID"""
     try:
         cursor = connection.cursor()
@@ -51,9 +53,12 @@ def get_by_id(connection: pymysql.connections.Connection,
         cursor.close()
 
 
-def get_all(connection: pymysql.connections.Connection,
-            page: int = 1, size: int = 10,
-            search: Optional[str] = None) -> Tuple[List[Dict], int]:
+def get_all(
+    connection: pymysql.connections.Connection,
+    page: int = 1,
+    size: int = 10,
+    search: str | None = None,
+) -> tuple[list[dict], int]:
     """Récupérer tous les rôles avec pagination"""
     try:
         cursor = connection.cursor()
@@ -70,7 +75,7 @@ def get_all(connection: pymysql.connections.Connection,
         # Compter le total
         count_query = f"SELECT COUNT(*) as total FROM roles {where_clause}"
         cursor.execute(count_query, params)
-        total = cursor.fetchone()['total']
+        total = cursor.fetchone()["total"]
 
         # Récupérer les résultats paginés
         offset = (page - 1) * size
@@ -89,13 +94,13 @@ def get_all(connection: pymysql.connections.Connection,
         cursor.close()
 
 
-def update(connection: pymysql.connections.Connection,
-           role_id: int, role_data: Dict[str, Any]) -> bool:
+def update(
+    connection: pymysql.connections.Connection, role_id: int, role_data: dict[str, Any]
+) -> bool:
     """Mettre à jour un rôle"""
     try:
         cursor = connection.cursor()
-        clean_data = {k: v for k, v in role_data.items()
-                      if v is not None}
+        clean_data = {k: v for k, v in role_data.items() if v is not None}
         if not clean_data:
             return False
 
@@ -104,7 +109,7 @@ def update(connection: pymysql.connections.Connection,
 
         query = f"""
             UPDATE roles
-            SET {', '.join(set_clauses)}
+            SET {", ".join(set_clauses)}
             WHERE id = %s
         """
         cursor.execute(query, values)
@@ -118,8 +123,7 @@ def update(connection: pymysql.connections.Connection,
         cursor.close()
 
 
-def delete(connection: pymysql.connections.Connection,
-           role_id: int) -> bool:
+def delete(connection: pymysql.connections.Connection, role_id: int) -> bool:
     """Supprimer un rôle définitivement"""
     try:
         cursor = connection.cursor()

@@ -1,5 +1,4 @@
 import time
-from typing import Dict, List, Optional
 
 import requests
 
@@ -22,16 +21,19 @@ class DashboardRulesService:
     """
 
     def __init__(self):
-        self._ingredients_cache: Optional[Dict[int, str]] = None
+        self._ingredients_cache: dict[int, str] | None = None
         self._ingredients_cache_at: float = 0.0
-        self._rules_cache: Optional[List[dict]] = None
+        self._rules_cache: list[dict] | None = None
         self._rules_cache_at: float = 0.0
 
     # ── Ingrédients (id -> nom) ──
 
-    def _fetch_ingredients(self) -> Dict[int, str]:
+    def _fetch_ingredients(self) -> dict[int, str]:
         now = time.time()
-        if self._ingredients_cache is not None and (now - self._ingredients_cache_at) < _CACHE_TTL_SECONDS:
+        if (
+            self._ingredients_cache is not None
+            and (now - self._ingredients_cache_at) < _CACHE_TTL_SECONDS
+        ):
             return self._ingredients_cache
 
         try:
@@ -43,7 +45,7 @@ class DashboardRulesService:
             response.raise_for_status()
             ingredients = response.json()
 
-            name_by_id: Dict[int, str] = {}
+            name_by_id: dict[int, str] = {}
             for ingredient in ingredients:
                 translations = ingredient.get("translations") or {}
                 name = translations.get("fr") or translations.get("en") or ingredient.get("name")
@@ -60,7 +62,7 @@ class DashboardRulesService:
 
     # ── Règles de dosage max ──
 
-    def _fetch_max_dosage_rules(self) -> List[dict]:
+    def _fetch_max_dosage_rules(self) -> list[dict]:
         now = time.time()
         if self._rules_cache is not None and (now - self._rules_cache_at) < _CACHE_TTL_SECONDS:
             return self._rules_cache
@@ -78,15 +80,17 @@ class DashboardRulesService:
             self._rules_cache_at = now
             return rules
         except Exception as e:
-            logger.warning(f"[DashboardRulesService] Échec récupération /api/ingredient-rules : {e}")
+            logger.warning(
+                f"[DashboardRulesService] Échec récupération /api/ingredient-rules : {e}"
+            )
             return self._rules_cache or []
 
     def get_max_dosage_by_note_name(
         self,
-        box_set: Optional[str],
-        bottle_size: Optional[str],
-        intensity: Optional[str] = None,
-    ) -> Dict[str, float]:
+        box_set: str | None,
+        bottle_size: str | None,
+        intensity: str | None = None,
+    ) -> dict[str, float]:
         """
         Retourne {note_name: max_ml} pour les règles de type max_dosage applicables
         au coffret / à la taille de flacon (et intensité si précisée) donnés.
@@ -99,7 +103,7 @@ class DashboardRulesService:
         name_by_id = self._fetch_ingredients()
         rules = self._fetch_max_dosage_rules()
 
-        max_by_note: Dict[str, float] = {}
+        max_by_note: dict[str, float] = {}
         for rule in rules:
             if not rule.get("is_active", True):
                 continue

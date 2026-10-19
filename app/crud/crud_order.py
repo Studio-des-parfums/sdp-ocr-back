@@ -1,5 +1,6 @@
-from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime
+from typing import Any
+
 import pymysql
 
 
@@ -11,18 +12,14 @@ def _generate_reference(cursor) -> str:
     prefix = f"{year}{month}"
 
     # Compter les commandes existantes pour ce mois
-    cursor.execute(
-        "SELECT COUNT(*) as cnt FROM orders WHERE reference LIKE %s",
-        (f"{prefix}%",)
-    )
-    count = cursor.fetchone()['cnt']
+    cursor.execute("SELECT COUNT(*) as cnt FROM orders WHERE reference LIKE %s", (f"{prefix}%",))
+    count = cursor.fetchone()["cnt"]
     index = count + 1
 
     return f"{prefix}{index:03d}-P"
 
 
-def create(connection: pymysql.connections.Connection,
-           order_data: Dict[str, Any]) -> Optional[int]:
+def create(connection: pymysql.connections.Connection, order_data: dict[str, Any]) -> int | None:
     """Créer une nouvelle commande"""
     try:
         cursor = connection.cursor()
@@ -34,17 +31,20 @@ def create(connection: pymysql.connections.Connection,
             INSERT INTO orders (customer_id, formula_id, comment, allergy, status, type, responsible, desired_date, reference)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
-        cursor.execute(query, (
-            order_data.get('customer_id'),
-            order_data.get('formula_id'),
-            order_data.get('comment'),
-            order_data.get('allergy'),
-            order_data.get('status', 'PENDING'),
-            order_data.get('type'),
-            order_data.get('responsible'),
-            order_data.get('desired_date'),
-            reference
-        ))
+        cursor.execute(
+            query,
+            (
+                order_data.get("customer_id"),
+                order_data.get("formula_id"),
+                order_data.get("comment"),
+                order_data.get("allergy"),
+                order_data.get("status", "PENDING"),
+                order_data.get("type"),
+                order_data.get("responsible"),
+                order_data.get("desired_date"),
+                reference,
+            ),
+        )
         connection.commit()
         return cursor.lastrowid
     except Exception as e:
@@ -55,8 +55,7 @@ def create(connection: pymysql.connections.Connection,
         cursor.close()
 
 
-def get_by_id(connection: pymysql.connections.Connection,
-              order_id: int) -> Optional[Dict]:
+def get_by_id(connection: pymysql.connections.Connection, order_id: int) -> dict | None:
     """Récupérer une commande par son ID"""
     try:
         cursor = connection.cursor()
@@ -70,18 +69,21 @@ def get_by_id(connection: pymysql.connections.Connection,
         cursor.close()
 
 
-def get_all(connection: pymysql.connections.Connection,
-            page: int = 1, size: int = 10,
-            search: Optional[str] = None,
-            customer_id: Optional[int] = None,
-            status: Optional[str] = None,
-            formula_id: Optional[int] = None,
-            date_from: Optional[str] = None,
-            date_to: Optional[str] = None,
-            customer_name: Optional[str] = None,
-            order_type: Optional[str] = None,
-            responsible: Optional[int] = None,
-            reference: Optional[str] = None) -> Tuple[List[Dict], int]:
+def get_all(
+    connection: pymysql.connections.Connection,
+    page: int = 1,
+    size: int = 10,
+    search: str | None = None,
+    customer_id: int | None = None,
+    status: str | None = None,
+    formula_id: int | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    customer_name: str | None = None,
+    order_type: str | None = None,
+    responsible: int | None = None,
+    reference: str | None = None,
+) -> tuple[list[dict], int]:
     """Récupérer toutes les commandes avec pagination et filtres"""
     try:
         cursor = connection.cursor()
@@ -140,12 +142,14 @@ def get_all(connection: pymysql.connections.Connection,
             params.extend([name_param, name_param, name_param])
 
         where_clause = "WHERE " + " AND ".join(where_conditions) if where_conditions else ""
-        join_clause = "LEFT JOIN customers ON orders.customer_id = customers.id" if needs_join else ""
+        join_clause = (
+            "LEFT JOIN customers ON orders.customer_id = customers.id" if needs_join else ""
+        )
 
         # Compter le total
         count_query = f"SELECT COUNT(*) as total FROM orders {join_clause} {where_clause}"
         cursor.execute(count_query, params)
-        total = cursor.fetchone()['total']
+        total = cursor.fetchone()["total"]
 
         # Récupérer les résultats paginés
         offset = (page - 1) * size
@@ -164,13 +168,13 @@ def get_all(connection: pymysql.connections.Connection,
         cursor.close()
 
 
-def update(connection: pymysql.connections.Connection,
-           order_id: int, order_data: Dict[str, Any]) -> bool:
+def update(
+    connection: pymysql.connections.Connection, order_id: int, order_data: dict[str, Any]
+) -> bool:
     """Mettre à jour une commande"""
     try:
         cursor = connection.cursor()
-        clean_data = {k: v for k, v in order_data.items()
-                      if v is not None and k != 'reference'}
+        clean_data = {k: v for k, v in order_data.items() if v is not None and k != "reference"}
         if not clean_data:
             return False
 
@@ -179,7 +183,7 @@ def update(connection: pymysql.connections.Connection,
 
         query = f"""
             UPDATE orders
-            SET {', '.join(set_clauses)}
+            SET {", ".join(set_clauses)}
             WHERE id = %s
         """
         cursor.execute(query, values)
@@ -193,8 +197,7 @@ def update(connection: pymysql.connections.Connection,
         cursor.close()
 
 
-def delete(connection: pymysql.connections.Connection,
-           order_id: int) -> bool:
+def delete(connection: pymysql.connections.Connection, order_id: int) -> bool:
     """Supprimer une commande définitivement"""
     try:
         cursor = connection.cursor()

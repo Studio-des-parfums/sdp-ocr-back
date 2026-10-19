@@ -1,7 +1,7 @@
-from typing import Optional
-
 from fastapi import APIRouter, HTTPException, Query
 
+from app.repositories.tablet_customer_repository import tablet_customer_repository
+from app.repositories.tablet_submission_repository import tablet_submission_repository
 from app.schemas.tablet_schemas import (
     CustomerSearchResult,
     FormulaDetail,
@@ -15,8 +15,6 @@ from app.schemas.tablet_schemas import (
     TabletSubmissionCreate,
     TabletSubmissionResponse,
 )
-from app.repositories.tablet_submission_repository import tablet_submission_repository
-from app.repositories.tablet_customer_repository import tablet_customer_repository
 from app.services.dashboard_rules import dashboard_rules_service
 from app.services.perfumer import perfumer_service
 from app.utils.note_corrector import NoteCorrector
@@ -30,6 +28,7 @@ async def get_notes_catalog():
     Référentiel des notes disponibles pour la composition sur tablette,
     groupées par type (tête / cœur / fond).
     """
+
     def _items(category: str):
         return sorted(
             (
@@ -57,7 +56,11 @@ async def suggest_note_quantities(request: SuggestQuantitiesRequest):
     if not request.top_notes and not request.heart_notes and not request.base_notes:
         raise HTTPException(status_code=422, detail="Au moins une note est requise")
 
-    bottle_size = f"{int(request.total_volume_ml)}ml" if request.total_volume_ml == int(request.total_volume_ml) else None
+    bottle_size = (
+        f"{int(request.total_volume_ml)}ml"
+        if request.total_volume_ml == int(request.total_volume_ml)
+        else None
+    )
     max_dosage_by_note = dashboard_rules_service.get_max_dosage_by_note_name(
         box_set=request.box_set,
         bottle_size=bottle_size,
@@ -75,8 +78,7 @@ async def suggest_note_quantities(request: SuggestQuantitiesRequest):
 
     def _to_items(family: str, notes: list[str]) -> list[SuggestedNoteQuantity]:
         return [
-            SuggestedNoteQuantity(name=note, quantity_ml=quantities[family][note])
-            for note in notes
+            SuggestedNoteQuantity(name=note, quantity_ml=quantities[family][note]) for note in notes
         ]
 
     return SuggestQuantitiesResponse(
@@ -110,8 +112,8 @@ async def create_tablet_submission(submission: TabletSubmissionCreate):
 
 @router.get("/customers/search", response_model=CustomerSearchResult)
 async def search_customer(
-    email: Optional[str] = Query(None),
-    phone: Optional[str] = Query(None),
+    email: str | None = Query(None),
+    phone: str | None = Query(None),
 ):
     """
     Retrouve un client par email (prioritaire) ou téléphone, pour la tablette.

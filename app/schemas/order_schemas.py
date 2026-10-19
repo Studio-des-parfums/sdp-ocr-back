@@ -1,11 +1,13 @@
-from pydantic import BaseModel
-from typing import Optional, List, Any, Dict
-from enum import Enum
 from datetime import datetime
+from enum import Enum
+from typing import Any
+
+from pydantic import BaseModel
 
 
 class OrderStatus(str, Enum):
     """Statuts possibles pour une commande"""
+
     PENDING = "PENDING"
     CONFIRMED = "CONFIRMED"
     IN_PROGRESS = "IN_PROGRESS"
@@ -15,25 +17,30 @@ class OrderStatus(str, Enum):
 
 # ==================== ORDER ITEMS ====================
 
+
 class OrderItemBase(BaseModel):
     """Schéma de base pour les items de commande"""
+
     name: str
     quantity: int
 
 
 class OrderItemCreate(OrderItemBase):
     """Schéma pour la création d'un item de commande"""
+
     pass
 
 
 class OrderItemUpdate(BaseModel):
     """Schéma pour la mise à jour d'un item de commande"""
-    name: Optional[str] = None
-    quantity: Optional[int] = None
+
+    name: str | None = None
+    quantity: int | None = None
 
 
 class OrderItemResponse(OrderItemBase):
     """Schéma de réponse pour un item de commande"""
+
     id: int
     order_id: int
 
@@ -43,44 +50,49 @@ class OrderItemResponse(OrderItemBase):
 
 # ==================== ORDERS ====================
 
+
 class OrderBase(BaseModel):
     """Schéma de base pour les commandes"""
+
     customer_id: int
     formula_id: int
-    comment: Optional[str] = None
-    allergy: Optional[str] = None
-    type: Optional[str] = None
-    responsible: Optional[int] = None
-    desired_date: Optional[str] = None
+    comment: str | None = None
+    allergy: str | None = None
+    type: str | None = None
+    responsible: int | None = None
+    desired_date: str | None = None
 
 
 class OrderCreate(OrderBase):
     """Schéma pour la création d'une commande"""
-    items: Optional[List[OrderItemCreate]] = None
+
+    items: list[OrderItemCreate] | None = None
 
 
 class OrderUpdate(BaseModel):
     """Schéma pour la mise à jour d'une commande"""
-    customer_id: Optional[int] = None
-    formula_id: Optional[int] = None
-    comment: Optional[str] = None
-    allergy: Optional[str] = None
-    status: Optional[OrderStatus] = None
-    type: Optional[str] = None
-    responsible: Optional[int] = None
-    desired_date: Optional[str] = None
+
+    customer_id: int | None = None
+    formula_id: int | None = None
+    comment: str | None = None
+    allergy: str | None = None
+    status: OrderStatus | None = None
+    type: str | None = None
+    responsible: int | None = None
+    desired_date: str | None = None
 
 
 class OrderResponse(OrderBase):
     """Schéma de réponse pour une commande"""
+
     id: int
-    reference: Optional[str] = None
+    reference: str | None = None
     status: OrderStatus
-    date: Optional[datetime] = None
-    desired_date: Optional[datetime] = None
-    items: List[OrderItemResponse] = []
-    customer: Optional[Dict[str, Any]] = None
-    formula: Optional[Dict[str, Any]] = None
+    date: datetime | None = None
+    desired_date: datetime | None = None
+    items: list[OrderItemResponse] = []
+    customer: dict[str, Any] | None = None
+    formula: dict[str, Any] | None = None
 
     class Config:
         from_attributes = True

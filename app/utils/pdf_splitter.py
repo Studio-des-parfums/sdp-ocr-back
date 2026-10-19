@@ -1,13 +1,14 @@
 import io
-from typing import List
+
 import PyPDF2
+
 
 class PDFSplitter:
     """
     PDF splitter using PyPDF2 - pure Python, compatible with all platforms
     """
 
-    def split_pdf_to_pages(self, pdf_bytes: bytes, max_pages: int = None) -> List[bytes]:
+    def split_pdf_to_pages(self, pdf_bytes: bytes, max_pages: int = None) -> list[bytes]:
         """
         Split PDF into individual page PDFs using PyPDF2
 
@@ -51,5 +52,6 @@ class PDFSplitter:
         except Exception as e:
             print(f"PDF splitting failed: {e}")
             raise Exception(f"Cannot split PDF: {e}")
+
 
 pdf_splitter = PDFSplitter()

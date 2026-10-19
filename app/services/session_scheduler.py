@@ -6,10 +6,11 @@ superviseur).
 
 Tourne dans le process web via APScheduler (pas de worker/cron séparé déployé).
 """
+
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from app.database.connection import get_connection
 from app.crud import crud_session
+from app.database.connection import get_connection
 
 INACTIVE_HOURS = 2
 CHECK_INTERVAL_MINUTES = 30
