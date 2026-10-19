@@ -1,14 +1,13 @@
+import json
 import unittest
-import urllib.request
 import urllib.error
 import urllib.parse
-import json
+import urllib.request
 
 BASE_URL = "http://localhost:8000"
 
 
 class TestAnalyticsRoutes(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         # Vérifier que le serveur est bien démarré
@@ -58,19 +57,17 @@ class TestAnalyticsRoutes(unittest.TestCase):
         self.assertIn("group_by doit être", data["detail"])
 
     def test_formulas_count_date_filter(self):
-        status, data = self._get("/formulas/count", {
-            "date_from": "2026-10-01",
-            "date_to": "2026-10-15",
-            "group_by": "day"
-        })
+        status, data = self._get(
+            "/formulas/count",
+            {"date_from": "2026-10-01", "date_to": "2026-10-15", "group_by": "day"},
+        )
         self.assertEqual(status, 200)
         self.assertTrue(all("2026-10-" in item["period"] for item in data["data"]))
 
     def test_formulas_count_inverted_dates(self):
-        status, data = self._get("/formulas/count", {
-            "date_from": "2026-10-15",
-            "date_to": "2026-10-01"
-        })
+        status, data = self._get(
+            "/formulas/count", {"date_from": "2026-10-15", "date_to": "2026-10-01"}
+        )
         self.assertEqual(status, 400)
         self.assertIn("antérieure", data["detail"])
 
@@ -119,19 +116,16 @@ class TestAnalyticsRoutes(unittest.TestCase):
             self.assertIn("count", item)
 
     def test_top_ateliers_date_filter(self):
-        status, data = self._get("/ateliers/top", {
-            "date_from": "2026-01-01",
-            "date_to": "2026-12-31",
-            "limit": 5
-        })
+        status, data = self._get(
+            "/ateliers/top", {"date_from": "2026-01-01", "date_to": "2026-12-31", "limit": 5}
+        )
         self.assertEqual(status, 200)
         self.assertIsInstance(data, list)
 
     def test_top_ateliers_inverted_dates(self):
-        status, data = self._get("/ateliers/top", {
-            "date_from": "2026-12-31",
-            "date_to": "2026-01-01"
-        })
+        status, data = self._get(
+            "/ateliers/top", {"date_from": "2026-12-31", "date_to": "2026-01-01"}
+        )
         self.assertEqual(status, 400)
 
     # -----------------------------------------------------------------------
@@ -187,10 +181,9 @@ class TestAnalyticsRoutes(unittest.TestCase):
             self.assertIn("count", item)
 
     def test_top_options_date_filter(self):
-        status, data = self._get("/options/top", {
-            "date_from": "2026-01-01",
-            "date_to": "2026-12-31"
-        })
+        status, data = self._get(
+            "/options/top", {"date_from": "2026-01-01", "date_to": "2026-12-31"}
+        )
         self.assertEqual(status, 200)
         self.assertIsInstance(data, list)
 
@@ -213,10 +206,9 @@ class TestAnalyticsRoutes(unittest.TestCase):
         self.assertLessEqual(data["unknown_pct"], 100.0)
 
     def test_gender_distribution_empty_period(self):
-        status, data = self._get("/customers/gender", {
-            "date_from": "2040-01-01",
-            "date_to": "2040-12-31"
-        })
+        status, data = self._get(
+            "/customers/gender", {"date_from": "2040-01-01", "date_to": "2040-12-31"}
+        )
         self.assertEqual(status, 200)
         self.assertEqual(data["total"], 0)
         self.assertEqual(data["male_pct"], 0.0)
@@ -264,10 +256,9 @@ class TestAnalyticsRoutes(unittest.TestCase):
 
     def test_loyalty_date_filter_on_new_loyal_by_month(self):
         # En filtrant sur octobre 2026 uniquement, juillet 2026 NE DOIT PAS être présent
-        status, data = self._get("/customers/loyalty", {
-            "date_from": "2026-10-01",
-            "date_to": "2026-10-15"
-        })
+        status, data = self._get(
+            "/customers/loyalty", {"date_from": "2026-10-01", "date_to": "2026-10-15"}
+        )
         self.assertEqual(status, 200)
         months = [item["month"] for item in data["new_loyal_by_month"]]
         self.assertNotIn("2026-07", months)

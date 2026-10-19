@@ -1,12 +1,13 @@
-from typing import Dict, Any, Optional, List, Tuple
-from app.database import get_connection
+from typing import Any
+
 from app.crud import crud_role
+from app.database import get_connection
 
 
 class RoleRepository:
     """Repository pour la gestion des rôles"""
 
-    def create_role(self, role_data: Dict[str, Any]) -> Optional[int]:
+    def create_role(self, role_data: dict[str, Any]) -> int | None:
         """Créer un nouveau rôle"""
         connection = get_connection()
         if not connection:
@@ -19,7 +20,7 @@ class RoleRepository:
         finally:
             connection.close()
 
-    def get_role_by_id(self, role_id: int) -> Optional[Dict[str, Any]]:
+    def get_role_by_id(self, role_id: int) -> dict[str, Any] | None:
         """Récupérer un rôle par son ID"""
         connection = get_connection()
         if not connection:
@@ -29,8 +30,9 @@ class RoleRepository:
         finally:
             connection.close()
 
-    def get_all_roles(self, page: int = 1, size: int = 10,
-                      search: Optional[str] = None) -> Tuple[List[Dict[str, Any]], int]:
+    def get_all_roles(
+        self, page: int = 1, size: int = 10, search: str | None = None
+    ) -> tuple[list[dict[str, Any]], int]:
         """Récupérer tous les rôles avec pagination"""
         connection = get_connection()
         if not connection:
@@ -40,7 +42,7 @@ class RoleRepository:
         finally:
             connection.close()
 
-    def update_role(self, role_id: int, role_data: Dict[str, Any]) -> bool:
+    def update_role(self, role_id: int, role_data: dict[str, Any]) -> bool:
         """Mettre à jour un rôle"""
         connection = get_connection()
         if not connection:

@@ -4,10 +4,10 @@ from app.repositories import device_repository
 from app.schemas.device_schemas import (
     DeviceRegisterRequest,
     DeviceRegisterResponse,
-    DeviceVerifyRequest,
-    DeviceVerifyResponse,
     DeviceRenameRequest,
     DeviceResponse,
+    DeviceVerifyRequest,
+    DeviceVerifyResponse,
 )
 
 router = APIRouter()

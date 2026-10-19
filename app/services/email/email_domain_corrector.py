@@ -1,7 +1,3 @@
-from typing import Optional, Tuple
-import re
-
-
 class EmailDomainCorrector:
     """
     Service pour corriger automatiquement les fautes dans les domaines d'email
@@ -9,65 +5,57 @@ class EmailDomainCorrector:
 
     # Liste des extensions populaires
     POPULAR_EXTENSIONS = [
-        'com',
-        'fr',
-        'net',
-        'org',
-        'eu',
-        'be',
-        'ch',
-        'de',
-        'uk',
-        'it',
-        'es',
-        'ca',
-        'co.uk',
-        'com.fr',
+        "com",
+        "fr",
+        "net",
+        "org",
+        "eu",
+        "be",
+        "ch",
+        "de",
+        "uk",
+        "it",
+        "es",
+        "ca",
+        "co.uk",
+        "com.fr",
     ]
 
     # Liste des domaines populaires
     POPULAR_DOMAINS = [
         # Gmail
-        'gmail.com',
-        'googlemail.com',
-
+        "gmail.com",
+        "googlemail.com",
         # Microsoft
-        'hotmail.com',
-        'hotmail.fr',
-        'outlook.com',
-        'outlook.fr',
-        'live.com',
-        'live.fr',
-        'msn.com',
-
+        "hotmail.com",
+        "hotmail.fr",
+        "outlook.com",
+        "outlook.fr",
+        "live.com",
+        "live.fr",
+        "msn.com",
         # Yahoo
-        'yahoo.com',
-        'yahoo.fr',
-        'ymail.com',
-
+        "yahoo.com",
+        "yahoo.fr",
+        "ymail.com",
         # Orange/Wanadoo
-        'orange.fr',
-        'wanadoo.fr',
-
+        "orange.fr",
+        "wanadoo.fr",
         # Free
-        'free.fr',
-
+        "free.fr",
         # SFR
-        'sfr.fr',
-        'neuf.fr',
-
+        "sfr.fr",
+        "neuf.fr",
         # Apple
-        'icloud.com',
-        'me.com',
-        'mac.com',
-
+        "icloud.com",
+        "me.com",
+        "mac.com",
         # ProtonMail
-        'protonmail.com',
-        'proton.me',
-
+        "protonmail.com",
+        "proton.me",
         # Autres
-        'laposte.net',
-        'aol.com',
+        "laposte.net",
+        "aol.com",
     ]
 
     def levenshtein_distance(self, s1: str, s2: str) -> int:
@@ -120,7 +108,7 @@ class EmailDomainCorrector:
 
         # Si le domaine contient un tiret, c'est probablement un domaine pro personnalisé
         # Ex: mon-entreprise.fr, my-company.com
-        if '-' in domain:
+        if "-" in domain:
             return False
 
         # Si le domaine a plus de 15 caractères, c'est probablement personnalisé
@@ -135,7 +123,7 @@ class EmailDomainCorrector:
 
         return False
 
-    def suggest_domain(self, domain: str, max_distance: int = 2) -> Optional[str]:
+    def suggest_domain(self, domain: str, max_distance: int = 2) -> str | None:
         """
         Suggère une correction pour un domaine mal orthographié
         SEULEMENT si c'est probablement une faute de frappe
@@ -161,7 +149,7 @@ class EmailDomainCorrector:
             return None
 
         best_match = None
-        best_distance = float('inf')
+        best_distance = float("inf")
 
         # Comparer avec tous les domaines populaires
         for popular_domain in self.POPULAR_DOMAINS:
@@ -178,7 +166,7 @@ class EmailDomainCorrector:
 
         return None
 
-    def fix_punctuation(self, email: str) -> Tuple[str, bool]:
+    def fix_punctuation(self, email: str) -> tuple[str, bool]:
         """
         Corrige les problèmes de ponctuation dans l'email
 
@@ -193,33 +181,33 @@ class EmailDomainCorrector:
 
         # Remplacer les virgules par des points dans le domaine
         # contact@gmail,com → contact@gmail.com
-        if '@' in email:
-            local_part, domain = email.rsplit('@', 1)
+        if "@" in email:
+            local_part, domain = email.rsplit("@", 1)
 
             # Remplacer virgule par point
-            if ',' in domain:
-                domain = domain.replace(',', '.')
+            if "," in domain:
+                domain = domain.replace(",", ".")
                 email = f"{local_part}@{domain}"
                 was_corrected = True
                 print(f"🔧 Ponctuation corrigée : {original_email} → {email}")
 
             # Remplacer point-virgule par point
-            if ';' in domain:
-                domain = domain.replace(';', '.')
+            if ";" in domain:
+                domain = domain.replace(";", ".")
                 email = f"{local_part}@{domain}"
                 was_corrected = True
                 print(f"🔧 Ponctuation corrigée : {original_email} → {email}")
 
             # Remplacer deux-points par point
-            if ':' in domain:
-                domain = domain.replace(':', '.')
+            if ":" in domain:
+                domain = domain.replace(":", ".")
                 email = f"{local_part}@{domain}"
                 was_corrected = True
                 print(f"🔧 Ponctuation corrigée : {original_email} → {email}")
 
         return email, was_corrected
 
-    def suggest_extension(self, extension: str, max_distance: int = 1) -> Optional[str]:
+    def suggest_extension(self, extension: str, max_distance: int = 1) -> str | None:
         """
         Suggère une correction pour une extension mal orthographiée
 
@@ -244,7 +232,7 @@ class EmailDomainCorrector:
             return None
 
         best_match = None
-        best_distance = float('inf')
+        best_distance = float("inf")
 
         # Comparer avec toutes les extensions populaires
         for popular_ext in self.POPULAR_EXTENSIONS:
@@ -256,7 +244,7 @@ class EmailDomainCorrector:
 
         return best_match
 
-    def correct_email(self, email: str) -> Tuple[str, bool, Optional[str]]:
+    def correct_email(self, email: str) -> tuple[str, bool, str | None]:
         """
         Corrige automatiquement un email si le domaine contient une faute
 
@@ -285,16 +273,16 @@ class EmailDomainCorrector:
             was_corrected = True
 
         # Vérifier que c'est un email valide
-        if '@' not in email:
-            return email, was_corrected, None if not was_corrected else original_email.split('@')[1]
+        if "@" not in email:
+            return email, was_corrected, None if not was_corrected else original_email.split("@")[1]
 
         # Extraire la partie locale et le domaine
-        local_part, domain = email.rsplit('@', 1)
+        local_part, domain = email.rsplit("@", 1)
 
         # Étape 2 : Corriger l'extension si elle est mal orthographiée
         # Ex: gmail.con → gmail.com, contact.fer → contact.fr
-        if '.' in domain:
-            domain_parts = domain.rsplit('.', 1)
+        if "." in domain:
+            domain_parts = domain.rsplit(".", 1)
             if len(domain_parts) == 2:
                 domain_name, extension = domain_parts
 
@@ -312,10 +300,14 @@ class EmailDomainCorrector:
         if suggested_domain:
             corrected_email = f"{local_part}@{suggested_domain}"
             print(f"📧 Domaine corrigé : {email} → {corrected_email}")
-            return corrected_email, True, original_email.split('@')[1] if '@' in original_email else None
+            return (
+                corrected_email,
+                True,
+                original_email.split("@")[1] if "@" in original_email else None,
+            )
 
         if was_corrected:
-            return email, True, original_email.split('@')[1] if '@' in original_email else None
+            return email, True, original_email.split("@")[1] if "@" in original_email else None
 
         return email, False, None
 

@@ -1,8 +1,9 @@
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Any
+
 import pymysql
 
 
-def create(connection: pymysql.connections.Connection, group_data: Dict[str, Any]) -> Optional[int]:
+def create(connection: pymysql.connections.Connection, group_data: dict[str, Any]) -> int | None:
     """
     Crée un nouveau groupe dans la base de données
 
@@ -21,11 +22,10 @@ def create(connection: pymysql.connections.Connection, group_data: Dict[str, Any
             VALUES (%s, %s, %s)
         """
 
-        cursor.execute(query, (
-            group_data.get('name'),
-            group_data.get('description'),
-            group_data.get('created_by')
-        ))
+        cursor.execute(
+            query,
+            (group_data.get("name"), group_data.get("description"), group_data.get("created_by")),
+        )
 
         connection.commit()
         group_id = cursor.lastrowid
@@ -40,7 +40,7 @@ def create(connection: pymysql.connections.Connection, group_data: Dict[str, Any
         cursor.close()
 
 
-def get_by_name(connection: pymysql.connections.Connection, name: str) -> Optional[Dict[str, Any]]:
+def get_by_name(connection: pymysql.connections.Connection, name: str) -> dict[str, Any] | None:
     """
     Recherche un groupe par son nom (case-insensitive, non supprimé)
 
@@ -54,7 +54,9 @@ def get_by_name(connection: pymysql.connections.Connection, name: str) -> Option
     try:
         cursor = connection.cursor()
 
-        query = "SELECT * FROM `groups` WHERE LOWER(name) = LOWER(%s) AND is_deleted = FALSE LIMIT 1"
+        query = (
+            "SELECT * FROM `groups` WHERE LOWER(name) = LOWER(%s) AND is_deleted = FALSE LIMIT 1"
+        )
         cursor.execute(query, (name,))
         result = cursor.fetchone()
 
@@ -67,8 +69,9 @@ def get_by_name(connection: pymysql.connections.Connection, name: str) -> Option
         cursor.close()
 
 
-def get_by_id(connection: pymysql.connections.Connection, group_id: int,
-              include_deleted: bool = False) -> Optional[Dict[str, Any]]:
+def get_by_id(
+    connection: pymysql.connections.Connection, group_id: int, include_deleted: bool = False
+) -> dict[str, Any] | None:
     """
     Récupère un groupe par son ID
 
@@ -100,8 +103,13 @@ def get_by_id(connection: pymysql.connections.Connection, group_id: int,
         cursor.close()
 
 
-def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int = 10,
-            search: Optional[str] = None, include_deleted: bool = False) -> Tuple[List[Dict[str, Any]], int]:
+def get_all(
+    connection: pymysql.connections.Connection,
+    page: int = 1,
+    size: int = 10,
+    search: str | None = None,
+    include_deleted: bool = False,
+) -> tuple[list[dict[str, Any]], int]:
     """
     Récupère tous les groupes avec pagination et recherche
 
@@ -139,7 +147,7 @@ def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int
         # Compter le total
         count_query = f"SELECT COUNT(*) as total FROM `groups` {where_clause}"
         cursor.execute(count_query, params)
-        total = cursor.fetchone()['total']
+        total = cursor.fetchone()["total"]
 
         # Récupérer les résultats paginés
         offset = (page - 1) * size
@@ -162,8 +170,9 @@ def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int
         cursor.close()
 
 
-def update(connection: pymysql.connections.Connection, group_id: int,
-           group_data: Dict[str, Any]) -> bool:
+def update(
+    connection: pymysql.connections.Connection, group_id: int, group_data: dict[str, Any]
+) -> bool:
     """
     Met à jour un groupe
 
@@ -193,7 +202,7 @@ def update(connection: pymysql.connections.Connection, group_id: int,
 
         query = f"""
             UPDATE `groups`
-            SET {', '.join(set_clauses)}
+            SET {", ".join(set_clauses)}
             WHERE id = %s AND is_deleted = FALSE
         """
 
@@ -283,8 +292,10 @@ def restore(connection: pymysql.connections.Connection, group_id: int) -> bool:
 # CUSTOMER-GROUP RELATIONS
 # ======================================================================
 
-def add_customer_to_group(connection: pymysql.connections.Connection, customer_id: int,
-                         group_id: int, added_by: int) -> bool:
+
+def add_customer_to_group(
+    connection: pymysql.connections.Connection, customer_id: int, group_id: int, added_by: int
+) -> bool:
     """
     Ajoute un customer à un groupe
 
@@ -303,16 +314,19 @@ def add_customer_to_group(connection: pymysql.connections.Connection, customer_i
         # Vérifier si la relation existe déjà
         cursor.execute(
             "SELECT id FROM customer_groups WHERE customer_id = %s AND group_id = %s",
-            (customer_id, group_id)
+            (customer_id, group_id),
         )
         if cursor.fetchone():
             return False  # Relation existe déjà
 
         # Insérer la relation
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO customer_groups (customer_id, group_id, added_by)
             VALUES (%s, %s, %s)
-        """, (customer_id, group_id, added_by))
+        """,
+            (customer_id, group_id, added_by),
+        )
 
         connection.commit()
         return True
@@ -325,8 +339,9 @@ def add_customer_to_group(connection: pymysql.connections.Connection, customer_i
         cursor.close()
 
 
-def remove_customer_from_group(connection: pymysql.connections.Connection, customer_id: int,
-                               group_id: int) -> bool:
+def remove_customer_from_group(
+    connection: pymysql.connections.Connection, customer_id: int, group_id: int
+) -> bool:
     """
     Retire un customer d'un groupe
 
@@ -341,10 +356,13 @@ def remove_customer_from_group(connection: pymysql.connections.Connection, custo
     try:
         cursor = connection.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             DELETE FROM customer_groups
             WHERE customer_id = %s AND group_id = %s
-        """, (customer_id, group_id))
+        """,
+            (customer_id, group_id),
+        )
 
         connection.commit()
         success = cursor.rowcount > 0
@@ -358,8 +376,9 @@ def remove_customer_from_group(connection: pymysql.connections.Connection, custo
         cursor.close()
 
 
-def get_group_customers(connection: pymysql.connections.Connection, group_ids: List[int],
-                       page: int = 1, size: int = 10) -> Tuple[List[Dict[str, Any]], int]:
+def get_group_customers(
+    connection: pymysql.connections.Connection, group_ids: list[int], page: int = 1, size: int = 10
+) -> tuple[list[dict[str, Any]], int]:
     """
     Récupère tous les customers d'un ou plusieurs groupes avec pagination
 
@@ -379,7 +398,7 @@ def get_group_customers(connection: pymysql.connections.Connection, group_ids: L
             return [], 0
 
         # Créer la clause IN pour les group_ids
-        placeholders = ', '.join(['%s'] * len(group_ids))
+        placeholders = ", ".join(["%s"] * len(group_ids))
 
         # Compter le total (DISTINCT pour éviter les doublons si un client est dans plusieurs groupes)
         count_query = f"""
@@ -389,7 +408,7 @@ def get_group_customers(connection: pymysql.connections.Connection, group_ids: L
             WHERE cg.group_id IN ({placeholders})
         """
         cursor.execute(count_query, group_ids)
-        total = cursor.fetchone()['total']
+        total = cursor.fetchone()["total"]
 
         # Récupérer les données avec pagination (DISTINCT pour éviter les doublons)
         offset = (page - 1) * size
@@ -418,7 +437,9 @@ def get_group_customers(connection: pymysql.connections.Connection, group_ids: L
         cursor.close()
 
 
-def get_customer_groups(connection: pymysql.connections.Connection, customer_id: int) -> List[Dict[str, Any]]:
+def get_customer_groups(
+    connection: pymysql.connections.Connection, customer_id: int
+) -> list[dict[str, Any]]:
     """
     Récupère tous les groupes d'un customer
 
@@ -504,8 +525,9 @@ def check_customer_exists(connection: pymysql.connections.Connection, customer_i
         cursor.close()
 
 
-def get_unique_customers_from_groups(connection: pymysql.connections.Connection, 
-                                     group_ids: List[int]) -> List[int]:
+def get_unique_customers_from_groups(
+    connection: pymysql.connections.Connection, group_ids: list[int]
+) -> list[int]:
     """
     Récupère tous les IDs de customers uniques présents dans plusieurs groupes
 
@@ -523,7 +545,7 @@ def get_unique_customers_from_groups(connection: pymysql.connections.Connection,
             return []
 
         # Créer la clause IN pour les group_ids
-        placeholders = ', '.join(['%s'] * len(group_ids))
+        placeholders = ", ".join(["%s"] * len(group_ids))
 
         query = f"""
             SELECT DISTINCT customer_id
@@ -535,7 +557,7 @@ def get_unique_customers_from_groups(connection: pymysql.connections.Connection,
         results = cursor.fetchall()
 
         # Extraire les IDs de la liste de dictionnaires
-        customer_ids = [row['customer_id'] for row in results]
+        customer_ids = [row["customer_id"] for row in results]
 
         return customer_ids
 

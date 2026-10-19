@@ -1,24 +1,25 @@
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
+
 from pydantic import BaseModel
 
 
 class SessionCreate(BaseModel):
-    customer_name: Optional[str] = None
-    customer_email: Optional[str] = None
-    room: Optional[str] = None
+    customer_name: str | None = None
+    customer_email: str | None = None
+    room: str | None = None
 
 
 class SessionResponse(BaseModel):
     id: int
-    customer_name: Optional[str] = None
-    customer_email: Optional[str] = None
-    room: Optional[str] = None
+    customer_name: str | None = None
+    customer_email: str | None = None
+    room: str | None = None
     status: str
     started_at: datetime
-    updated_at: Optional[datetime] = None
-    supervisor_id: Optional[int] = None
-    supervisor_name: Optional[str] = None
+    updated_at: datetime | None = None
+    supervisor_id: int | None = None
+    supervisor_name: str | None = None
 
 
 class AssignSupervisorRequest(BaseModel):

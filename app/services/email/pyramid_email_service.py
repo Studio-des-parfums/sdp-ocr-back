@@ -4,19 +4,18 @@ Email de pyramide olfactive envoyé au client après validation de sa formule
 pour les routes manuelles (test/preview) et app/api/endpoints/tablet.py pour l'envoi
 automatique déclenché à la soumission.
 """
+
 import base64
-from app.crud import crud_formula, crud_customer, crud_notes
+
+from app.crud import crud_customer, crud_formula, crud_notes
+from app.services.email.email_assets import get_logo_image_bytes, get_pyramid_image_bytes
 from app.services.email.email_sender_service import email_sender_service
-from app.services.email.email_assets import get_pyramid_image_bytes, get_logo_image_bytes
 
 
 def _format_notes_html(notes):
     if not notes:
         return "<p style='margin:0'>—</p>"
-    return "".join(
-        f"<p style='margin:3px 0;font-size:14px'>{n['name']}</p>"
-        for n in notes
-    )
+    return "".join(f"<p style='margin:3px 0;font-size:14px'>{n['name']}</p>" for n in notes)
 
 
 def _parse_quantity(note):
@@ -35,7 +34,9 @@ def _sum_quantities(notes):
     return sum(_parse_quantity(n) for n in notes)
 
 
-def build_pyramid_html(customer, formula, top_notes, heart_notes, base_notes, percentages, preview=False):
+def build_pyramid_html(
+    customer, formula, top_notes, heart_notes, base_notes, percentages, preview=False
+):
     """Construit le HTML de la pyramide olfactive.
     Si preview=True, les images sont encodées en base64 data URI pour affichage navigateur.
     Si preview=False, les images utilisent cid: pour l'envoi email.
@@ -93,19 +94,19 @@ def build_pyramid_html(customer, formula, top_notes, heart_notes, base_notes, pe
 
 <tr>
 <td style="font-size:15px;line-height:1.6">
-<p>Bonjour {customer.get("last_name","")} {customer.get("first_name","")},</p>
+<p>Bonjour {customer.get("last_name", "")} {customer.get("first_name", "")},</p>
 
 <p>Nous avons le plaisir de vous transmettre la pyramide olfactive de votre création.</p>
 
 <div style="margin:20px 0; display:flex; justify-content:center;">
     <span style="font-size:22px;font-weight:bold;color:#c00000;border:2px solid #c00000;padding:10px 18px;display:inline-block">
-        {formula.get("perfume_name","")}
+        {formula.get("perfume_name", "")}
     </span>
 </div>
 
 <p>
-Cette composition a été créée le {formula.get("date","")} et enregistrée sous la référence
-<strong>{formula.get("reference","")}</strong>.
+Cette composition a été créée le {formula.get("date", "")} et enregistrée sous la référence
+<strong>{formula.get("reference", "")}</strong>.
 </p>
 </td>
 </tr>
@@ -127,17 +128,17 @@ Cette composition a été créée le {formula.get("date","")} et enregistrée so
 <!-- COLONNE GAUCHE (50%) -->
 <td width="50%" valign="top" style="padding-right:25px">
 
-<h3 style="margin:0 0 8px;font-size:16px;border-bottom:1px solid #ddd">Notes de tête – {percentages['top']}%</h3>
+<h3 style="margin:0 0 8px;font-size:16px;border-bottom:1px solid #ddd">Notes de tête – {percentages["top"]}%</h3>
 {_format_notes_html(top_notes)}
 
 <br>
 
-<h3 style="margin:10px 0 8px;font-size:16px;border-bottom:1px solid #ddd">Notes de cœur – {percentages['heart']}%</h3>
+<h3 style="margin:10px 0 8px;font-size:16px;border-bottom:1px solid #ddd">Notes de cœur – {percentages["heart"]}%</h3>
 {_format_notes_html(heart_notes)}
 
 <br>
 
-<h3 style="margin:10px 0 8px;font-size:16px;border-bottom:1px solid #ddd">Notes de fond – {percentages['base']}%</h3>
+<h3 style="margin:10px 0 8px;font-size:16px;border-bottom:1px solid #ddd">Notes de fond – {percentages["base"]}%</h3>
 {_format_notes_html(base_notes)}
 
 </td>
@@ -234,30 +235,32 @@ def send_pyramid_email_for_formula(connection, formula_id: int) -> dict:
         return {"success": False, "message": "Le client n'a pas d'adresse email"}
 
     subject = "Votre pyramide olfactive – Le Studio des Parfums"
-    body = build_pyramid_html(customer, formula, top_notes, heart_notes, base_notes, percentages, preview=False)
+    body = build_pyramid_html(
+        customer, formula, top_notes, heart_notes, base_notes, percentages, preview=False
+    )
 
     pyramid_image_bytes = get_pyramid_image_bytes()
     logo_image_bytes = get_logo_image_bytes()
     inline_images = []
     if pyramid_image_bytes:
-        inline_images.append({
-            "cid": "pyramid_image",
-            "content": pyramid_image_bytes,
-            "subtype": "png",
-            "filename": "pyramide.png"
-        })
+        inline_images.append(
+            {
+                "cid": "pyramid_image",
+                "content": pyramid_image_bytes,
+                "subtype": "png",
+                "filename": "pyramide.png",
+            }
+        )
     if logo_image_bytes:
-        inline_images.append({
-            "cid": "logo_image",
-            "content": logo_image_bytes,
-            "subtype": "png",
-            "filename": "logoSDP.png"
-        })
+        inline_images.append(
+            {
+                "cid": "logo_image",
+                "content": logo_image_bytes,
+                "subtype": "png",
+                "filename": "logoSDP.png",
+            }
+        )
 
     return email_sender_service.send_email(
-        to_email=to_email,
-        subject=subject,
-        body=body,
-        is_html=True,
-        inline_images=inline_images
+        to_email=to_email, subject=subject, body=body, is_html=True, inline_images=inline_images
     )

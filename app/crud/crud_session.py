@@ -1,13 +1,12 @@
-from typing import Optional
 import pymysql
 
 
 def create(
     connection: pymysql.connections.Connection,
-    customer_name: Optional[str] = None,
-    customer_email: Optional[str] = None,
-    room: Optional[str] = None,
-) -> Optional[int]:
+    customer_name: str | None = None,
+    customer_email: str | None = None,
+    room: str | None = None,
+) -> int | None:
     cursor = None
     try:
         cursor = connection.cursor()
@@ -29,7 +28,7 @@ def create(
 
 def get_active(
     connection: pymysql.connections.Connection,
-    room: Optional[str] = None,
+    room: str | None = None,
 ) -> list[dict]:
     cursor = None
     try:
@@ -60,7 +59,7 @@ def get_active(
 def get_by_id(
     connection: pymysql.connections.Connection,
     session_id: int,
-) -> Optional[dict]:
+) -> dict | None:
     cursor = None
     try:
         cursor = connection.cursor()

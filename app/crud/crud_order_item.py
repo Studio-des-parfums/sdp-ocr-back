@@ -1,9 +1,9 @@
-from typing import Dict, Any, Optional, List
+from typing import Any
+
 import pymysql
 
 
-def create(connection: pymysql.connections.Connection,
-           item_data: Dict[str, Any]) -> Optional[int]:
+def create(connection: pymysql.connections.Connection, item_data: dict[str, Any]) -> int | None:
     """Créer un nouvel item de commande"""
     try:
         cursor = connection.cursor()
@@ -11,11 +11,9 @@ def create(connection: pymysql.connections.Connection,
             INSERT INTO order_items (name, quantity, order_id)
             VALUES (%s, %s, %s)
         """
-        cursor.execute(query, (
-            item_data.get('name'),
-            item_data.get('quantity'),
-            item_data.get('order_id')
-        ))
+        cursor.execute(
+            query, (item_data.get("name"), item_data.get("quantity"), item_data.get("order_id"))
+        )
         connection.commit()
         return cursor.lastrowid
     except Exception as e:
@@ -26,9 +24,9 @@ def create(connection: pymysql.connections.Connection,
         cursor.close()
 
 
-def create_many(connection: pymysql.connections.Connection,
-                order_id: int,
-                items: List[Dict[str, Any]]) -> bool:
+def create_many(
+    connection: pymysql.connections.Connection, order_id: int, items: list[dict[str, Any]]
+) -> bool:
     """Créer plusieurs items de commande"""
     try:
         cursor = connection.cursor()
@@ -37,11 +35,7 @@ def create_many(connection: pymysql.connections.Connection,
             VALUES (%s, %s, %s)
         """
         for item in items:
-            cursor.execute(query, (
-                item.get('name'),
-                item.get('quantity'),
-                order_id
-            ))
+            cursor.execute(query, (item.get("name"), item.get("quantity"), order_id))
         connection.commit()
         return True
     except Exception as e:
@@ -52,8 +46,7 @@ def create_many(connection: pymysql.connections.Connection,
         cursor.close()
 
 
-def get_by_id(connection: pymysql.connections.Connection,
-              item_id: int) -> Optional[Dict]:
+def get_by_id(connection: pymysql.connections.Connection, item_id: int) -> dict | None:
     """Récupérer un item de commande par son ID"""
     try:
         cursor = connection.cursor()
@@ -67,8 +60,7 @@ def get_by_id(connection: pymysql.connections.Connection,
         cursor.close()
 
 
-def get_by_order_id(connection: pymysql.connections.Connection,
-                    order_id: int) -> List[Dict]:
+def get_by_order_id(connection: pymysql.connections.Connection, order_id: int) -> list[dict]:
     """Récupérer tous les items d'une commande"""
     try:
         cursor = connection.cursor()
@@ -82,13 +74,13 @@ def get_by_order_id(connection: pymysql.connections.Connection,
         cursor.close()
 
 
-def update(connection: pymysql.connections.Connection,
-           item_id: int, item_data: Dict[str, Any]) -> bool:
+def update(
+    connection: pymysql.connections.Connection, item_id: int, item_data: dict[str, Any]
+) -> bool:
     """Mettre à jour un item de commande"""
     try:
         cursor = connection.cursor()
-        clean_data = {k: v for k, v in item_data.items()
-                      if v is not None and k != 'order_id'}
+        clean_data = {k: v for k, v in item_data.items() if v is not None and k != "order_id"}
         if not clean_data:
             return False
 
@@ -97,7 +89,7 @@ def update(connection: pymysql.connections.Connection,
 
         query = f"""
             UPDATE order_items
-            SET {', '.join(set_clauses)}
+            SET {", ".join(set_clauses)}
             WHERE id = %s
         """
         cursor.execute(query, values)
@@ -111,8 +103,7 @@ def update(connection: pymysql.connections.Connection,
         cursor.close()
 
 
-def delete(connection: pymysql.connections.Connection,
-           item_id: int) -> bool:
+def delete(connection: pymysql.connections.Connection, item_id: int) -> bool:
     """Supprimer un item de commande"""
     try:
         cursor = connection.cursor()
@@ -128,8 +119,7 @@ def delete(connection: pymysql.connections.Connection,
         cursor.close()
 
 
-def delete_by_order_id(connection: pymysql.connections.Connection,
-                       order_id: int) -> bool:
+def delete_by_order_id(connection: pymysql.connections.Connection, order_id: int) -> bool:
     """Supprimer tous les items d'une commande"""
     try:
         cursor = connection.cursor()

@@ -1,16 +1,15 @@
-import re
 import os
+import re
 import traceback
 import urllib.parse
 
-from fastapi import APIRouter, HTTPException, Query, File, UploadFile
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import Response
-from typing import Optional
 
-from app.repositories.customer_file_repository import customer_file_repository
-from app.services.file import file_storage_service
-from app.schemas.customer_file_schemas import CustomerFileResponse, CustomerFileListResponse
 from app.core.logger import get_logger
+from app.repositories.customer_file_repository import customer_file_repository
+from app.schemas.customer_file_schemas import CustomerFileListResponse, CustomerFileResponse
+from app.services.file import file_storage_service
 
 logger = get_logger(__name__)
 
@@ -27,10 +26,7 @@ async def get_customer_files(customer_id: int):
 
         file_responses = [CustomerFileResponse(**file) for file in files]
 
-        return CustomerFileListResponse(
-            files=file_responses,
-            total=len(file_responses)
-        )
+        return CustomerFileListResponse(files=file_responses, total=len(file_responses))
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
@@ -46,10 +42,7 @@ async def get_customer_review_files(customer_review_id: int):
 
         file_responses = [CustomerFileResponse(**file) for file in files]
 
-        return CustomerFileListResponse(
-            files=file_responses,
-            total=len(file_responses)
-        )
+        return CustomerFileListResponse(files=file_responses, total=len(file_responses))
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur interne: {str(e)}")
@@ -64,10 +57,7 @@ async def get_file(file_id: int):
         file = customer_file_repository.get_customer_file_by_id(file_id)
 
         if not file:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Fichier avec ID {file_id} non trouvé"
-            )
+            raise HTTPException(status_code=404, detail=f"Fichier avec ID {file_id} non trouvé")
 
         return CustomerFileResponse(**file)
 
@@ -87,29 +77,25 @@ async def get_file_content(file_id: int):
         file = customer_file_repository.get_customer_file_by_id(file_id)
 
         if not file:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Fichier avec ID {file_id} non trouvé"
-            )
+            raise HTTPException(status_code=404, detail=f"Fichier avec ID {file_id} non trouvé")
 
         # Récupérer le contenu du fichier
-        file_bytes = file_storage_service.get_file_bytes(file['file_path'])
+        file_bytes = file_storage_service.get_file_bytes(file["file_path"])
 
         if not file_bytes:
             raise HTTPException(
-                status_code=404,
-                detail=f"Contenu du fichier non trouvé: {file['file_path']}"
+                status_code=404, detail=f"Contenu du fichier non trouvé: {file['file_path']}"
             )
 
         # Déterminer le media type
-        media_type = file.get('file_type', 'application/octet-stream')
+        media_type = file.get("file_type", "application/octet-stream")
 
         return Response(
             content=file_bytes,
             media_type=media_type,
             headers={
-                'Content-Disposition': f"inline; filename*=UTF-8''{urllib.parse.quote(file['file_name'])}"
-            }
+                "Content-Disposition": f"inline; filename*=UTF-8''{urllib.parse.quote(file['file_name'])}"
+            },
         )
 
     except HTTPException:
@@ -135,9 +121,10 @@ async def restore_bulk(zip_file: UploadFile = File(...)):
     4. Écrit le PDF de la page au file_path BDD dans S3
     5. Régénère l'image PNG associée
     """
-    import zipfile
     import io as _io
     import unicodedata
+    import zipfile
+
     from app.utils.pdf_splitter import pdf_splitter
 
     def fix_zip_filename(name: str) -> str:
@@ -145,13 +132,13 @@ async def restore_bulk(zip_file: UploadFile = File(...)):
         try:
             # macOS stocke en UTF-8 NFD sans flag UTF-8 → Python lit en CP437
             # On annule : NFC → encode CP437 → decode UTF-8
-            return unicodedata.normalize('NFC', name).encode('cp437').decode('utf-8')
+            return unicodedata.normalize("NFC", name).encode("cp437").decode("utf-8")
         except (UnicodeDecodeError, UnicodeEncodeError):
             return name
 
     def normalize(s: str) -> str:
         """NFD + espaces→underscores pour comparaison uniforme"""
-        return unicodedata.normalize('NFD', s).replace(' ', '_')
+        return unicodedata.normalize("NFD", s).replace(" ", "_")
 
     try:
         zip_bytes = await zip_file.read()
@@ -165,9 +152,9 @@ async def restore_bulk(zip_file: UploadFile = File(...)):
         # file_name format en BDD : "{timestamp}_page_{page}_{original_name}.pdf"
         all_pdfs = customer_file_repository.get_all_pdf_files()
         db_index = {}
-        pattern = re.compile(r'^\d+_page_(\d+)_(.+)\.pdf$')
+        pattern = re.compile(r"^\d+_page_(\d+)_(.+)\.pdf$")
         for row in all_pdfs:
-            m = pattern.match(row['file_name'])
+            m = pattern.match(row["file_name"])
             if m:
                 page_num = int(m.group(1))
                 original_name = normalize(m.group(2))
@@ -176,17 +163,18 @@ async def restore_bulk(zip_file: UploadFile = File(...)):
         # Index images : file_name (sans extension) → db_record
         # file_name format en BDD : "{pdf_basename}_page_1.png"
         all_images = customer_file_repository.get_all_image_files()
-        img_index = {os.path.splitext(row['file_name'])[0]: row for row in all_images}
+        img_index = {os.path.splitext(row["file_name"])[0]: row for row in all_images}
 
         print(f"📋 Index BDD — {len(db_index)} PDFs, {len(img_index)} images")
 
         restored, skipped, errors = [], [], []
 
         zip_buf.seek(0)
-        with zipfile.ZipFile(zip_buf, 'r') as zf:
+        with zipfile.ZipFile(zip_buf, "r") as zf:
             pdf_entries = [
-                n for n in zf.namelist()
-                if n.lower().endswith('.pdf') and not os.path.basename(n).startswith('._')
+                n
+                for n in zf.namelist()
+                if n.lower().endswith(".pdf") and not os.path.basename(n).startswith("._")
             ]
             print(f"📦 ZIP reçu — {len(pdf_entries)} PDFs originaux à traiter")
 
@@ -197,7 +185,9 @@ async def restore_bulk(zip_file: UploadFile = File(...)):
 
                 # Normaliser le nom : NFD + espaces→underscores, retirer .pdf
                 normalized_name = normalize(os.path.splitext(filename)[0])
-                print(f"🔍 ZIP clé: {repr(normalized_name)} bytes={normalized_name.encode('utf-8')}")
+                print(
+                    f"🔍 ZIP clé: {repr(normalized_name)} bytes={normalized_name.encode('utf-8')}"
+                )
 
                 try:
                     pdf_bytes_orig = zf.read(entry)
@@ -213,29 +203,37 @@ async def restore_bulk(zip_file: UploadFile = File(...)):
 
                         if not db_file:
                             skipped.append(f"{filename} page {page_num}")
-                            print(f"   ⚠️ Page {page_num} — aucune correspondance en BDD pour clé {key}")
+                            print(
+                                f"   ⚠️ Page {page_num} — aucune correspondance en BDD pour clé {key}"
+                            )
                             continue
 
-                        file_path = db_file['file_path']
+                        file_path = db_file["file_path"]
                         try:
                             # Écrire le PDF de la page au chemin BDD
                             file_storage_service._write(file_path, page_pdf_bytes)
-                            customer_file_repository.update_customer_file(db_file['id'], {'new_url': True})
+                            customer_file_repository.update_customer_file(
+                                db_file["id"], {"new_url": True}
+                            )
 
                             # Régénérer l'image PNG et écrire au chemin BDD de l'image
                             images = file_storage_service.convert_pdf_to_images(page_pdf_bytes)
-                            pdf_basename = os.path.splitext(db_file['file_name'])[0]
+                            pdf_basename = os.path.splitext(db_file["file_name"])[0]
                             for j, (img_bytes, ext) in enumerate(images):
-                                img_key = f"{pdf_basename}_page_{j+1}"
+                                img_key = f"{pdf_basename}_page_{j + 1}"
                                 img_db = img_index.get(img_key)
                                 if img_db:
-                                    file_storage_service._write(img_db['file_path'], img_bytes)
-                                    customer_file_repository.update_customer_file(img_db['id'], {'new_url': True})
+                                    file_storage_service._write(img_db["file_path"], img_bytes)
+                                    customer_file_repository.update_customer_file(
+                                        img_db["id"], {"new_url": True}
+                                    )
                                     print(f"   🖼️ Image restaurée → {img_db['file_path']}")
                                 else:
                                     # Fallback : écrire au chemin dérivé du PDF
                                     base = os.path.splitext(file_path)[0]
-                                    file_storage_service._write(f"{base}_page_{j+1}.{ext}", img_bytes)
+                                    file_storage_service._write(
+                                        f"{base}_page_{j + 1}.{ext}", img_bytes
+                                    )
 
                             restored.append(file_path)
                             print(f"   ✅ Page {page_num} restaurée → {file_path}")
@@ -275,19 +273,19 @@ async def restore_file(file_id: int, file: UploadFile = File(...)):
             raise HTTPException(status_code=404, detail=f"Fichier {file_id} non trouvé en BDD")
 
         file_bytes = await file.read()
-        file_path = db_file['file_path']
+        file_path = db_file["file_path"]
 
         # Écrire directement au chemin enregistré en BDD
         file_storage_service._write(file_path, file_bytes)
 
         # Si c'est un PDF, régénérer l'image associée
         regenerated_images = []
-        if db_file.get('file_type') == 'application/pdf':
+        if db_file.get("file_type") == "application/pdf":
             try:
                 images = file_storage_service.convert_pdf_to_images(file_bytes)
                 base = os.path.splitext(file_path)[0]
                 for i, (img_bytes, ext) in enumerate(images):
-                    img_path = f"{base}_page_{i+1}.{ext}"
+                    img_path = f"{base}_page_{i + 1}.{ext}"
                     file_storage_service._write(img_path, img_bytes)
                     regenerated_images.append(img_path)
             except Exception as e:
@@ -317,42 +315,38 @@ async def download_file(file_id: int):
         file = customer_file_repository.get_customer_file_by_id(file_id)
 
         if not file:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Fichier avec ID {file_id} non trouvé"
-            )
+            raise HTTPException(status_code=404, detail=f"Fichier avec ID {file_id} non trouvé")
 
-        file_path = file['file_path']
-        file_name = file['file_name']
-        media_type = 'application/pdf'
+        file_path = file["file_path"]
+        file_name = file["file_name"]
+        media_type = "application/pdf"
 
         # Si c'est une image, chercher le PDF correspondant
-        if file.get('file_type', '').startswith('image/'):
+        if file.get("file_type", "").startswith("image/"):
             pdf_path = file_storage_service.get_pdf_path_from_image(file_path)
             if pdf_path:
                 file_path = pdf_path
                 # Générer le nom du PDF à partir du nom de l'image
-                match = re.match(r'(.+)_page_\d+\.\w+$', file_name)
+                match = re.match(r"(.+)_page_\d+\.\w+$", file_name)
                 if match:
                     file_name = f"{match.group(1)}.pdf"
                 else:
-                    file_name = file_name.rsplit('.', 1)[0] + '.pdf'
+                    file_name = file_name.rsplit(".", 1)[0] + ".pdf"
 
         # Récupérer le contenu du fichier
         file_bytes = file_storage_service.get_file_bytes(file_path)
 
         if not file_bytes:
             raise HTTPException(
-                status_code=404,
-                detail=f"Contenu du fichier non trouvé: {file_path}"
+                status_code=404, detail=f"Contenu du fichier non trouvé: {file_path}"
             )
 
         return Response(
             content=file_bytes,
             media_type=media_type,
             headers={
-                'Content-Disposition': f"attachment; filename*=UTF-8''{urllib.parse.quote(file_name)}"
-            }
+                "Content-Disposition": f"attachment; filename*=UTF-8''{urllib.parse.quote(file_name)}"
+            },
         )
 
     except HTTPException:
@@ -371,8 +365,7 @@ async def get_formula_file(formula_id: int):
 
         if not file:
             raise HTTPException(
-                status_code=404,
-                detail=f"Aucun fichier trouvé pour la formule {formula_id}"
+                status_code=404, detail=f"Aucun fichier trouvé pour la formule {formula_id}"
             )
 
         return CustomerFileResponse(**file)
@@ -393,28 +386,26 @@ async def get_formula_file_content(formula_id: int):
 
         if not file:
             raise HTTPException(
-                status_code=404,
-                detail=f"Aucun fichier trouvé pour la formule {formula_id}"
+                status_code=404, detail=f"Aucun fichier trouvé pour la formule {formula_id}"
             )
 
         # Récupérer le contenu du fichier
-        file_bytes = file_storage_service.get_file_bytes(file['file_path'])
+        file_bytes = file_storage_service.get_file_bytes(file["file_path"])
 
         if not file_bytes:
             raise HTTPException(
-                status_code=404,
-                detail=f"Contenu du fichier non trouvé: {file['file_path']}"
+                status_code=404, detail=f"Contenu du fichier non trouvé: {file['file_path']}"
             )
 
         # Déterminer le media type
-        media_type = file.get('file_type', 'application/octet-stream')
+        media_type = file.get("file_type", "application/octet-stream")
 
         return Response(
             content=file_bytes,
             media_type=media_type,
             headers={
-                'Content-Disposition': f"inline; filename*=UTF-8''{urllib.parse.quote(file['file_name'])}"
-            }
+                "Content-Disposition": f"inline; filename*=UTF-8''{urllib.parse.quote(file['file_name'])}"
+            },
         )
 
     except HTTPException:
@@ -434,50 +425,46 @@ async def get_formula_file_thumbnail(formula_id: int):
 
         if not file:
             raise HTTPException(
-                status_code=404,
-                detail=f"Aucun fichier trouvé pour la formule {formula_id}"
+                status_code=404, detail=f"Aucun fichier trouvé pour la formule {formula_id}"
             )
 
         # Si c'est une image, retourner directement
-        if file.get('file_type', '').startswith('image/'):
-            file_bytes = file_storage_service.get_file_bytes(file['file_path'])
+        if file.get("file_type", "").startswith("image/"):
+            file_bytes = file_storage_service.get_file_bytes(file["file_path"])
 
             if not file_bytes:
                 raise HTTPException(
-                    status_code=404,
-                    detail=f"Contenu du fichier non trouvé: {file['file_path']}"
+                    status_code=404, detail=f"Contenu du fichier non trouvé: {file['file_path']}"
                 )
 
             return Response(
                 content=file_bytes,
-                media_type=file.get('file_type', 'image/jpeg'),
+                media_type=file.get("file_type", "image/jpeg"),
                 headers={
-                    'Content-Disposition': f"inline; filename*=UTF-8''{urllib.parse.quote(file['file_name'])}"
-                }
+                    "Content-Disposition": f"inline; filename*=UTF-8''{urllib.parse.quote(file['file_name'])}"
+                },
             )
 
         # Si c'est un PDF, générer une miniature
-        if file.get('file_type') == 'application/pdf':
-            thumbnail_bytes = file_storage_service.get_pdf_thumbnail(file['file_path'])
+        if file.get("file_type") == "application/pdf":
+            thumbnail_bytes = file_storage_service.get_pdf_thumbnail(file["file_path"])
 
             if not thumbnail_bytes:
                 raise HTTPException(
-                    status_code=500,
-                    detail="Erreur lors de la génération de la miniature"
+                    status_code=500, detail="Erreur lors de la génération de la miniature"
                 )
 
             return Response(
                 content=thumbnail_bytes,
-                media_type='image/png',
+                media_type="image/png",
                 headers={
-                    'Content-Disposition': f"inline; filename*=UTF-8''thumbnail_{urllib.parse.quote(file['file_name'])}.png"
-                }
+                    "Content-Disposition": f"inline; filename*=UTF-8''thumbnail_{urllib.parse.quote(file['file_name'])}.png"
+                },
             )
 
         # Type de fichier non supporté
         raise HTTPException(
-            status_code=400,
-            detail="Type de fichier non supporté pour la génération de miniature"
+            status_code=400, detail="Type de fichier non supporté pour la génération de miniature"
         )
 
     except HTTPException:

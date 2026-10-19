@@ -1,17 +1,17 @@
-from fastapi import APIRouter, HTTPException, Request, Query
-from typing import Optional
 import math
 
-from app.schemas.login_history_schemas import (
-    LoginHistoryCreate,
-    LoginHistoryResponse,
-    LoginHistoryListResponse
-)
+from fastapi import APIRouter, HTTPException, Query, Request
+
 from app.repositories.login_history_repository import login_history_repository
 from app.repositories.user_repository import user_repository
+from app.schemas.login_history_schemas import (
+    LoginHistoryCreate,
+    LoginHistoryListResponse,
+)
 from app.services.geolocation import geolocation_service
 
 router = APIRouter()
+
 
 def get_client_ip(request: Request) -> str:
     """
@@ -32,6 +32,7 @@ def get_client_ip(request: Request) -> str:
     client_host = getattr(request.client, "host", "127.0.0.1")
     return client_host
 
+
 @router.post("/record", response_model=dict)
 async def record_log(request: Request, login_data: LoginHistoryCreate):
     """
@@ -44,8 +45,7 @@ async def record_log(request: Request, login_data: LoginHistoryCreate):
     user = user_repository.get_user_by_id(login_data.user_id)
     if not user:
         raise HTTPException(
-            status_code=404,
-            detail=f"Utilisateur avec ID {login_data.user_id} non trouvé"
+            status_code=404, detail=f"Utilisateur avec ID {login_data.user_id} non trouvé"
         )
 
     # Récupérer l'IP du client
@@ -60,13 +60,12 @@ async def record_log(request: Request, login_data: LoginHistoryCreate):
         ip_address=client_ip,
         city=location["city"],
         country=location["country"],
-        log_type=login_data.type
+        log_type=login_data.type,
     )
 
     if not record_id:
         raise HTTPException(
-            status_code=500,
-            detail="Erreur lors de l'enregistrement de la connexion"
+            status_code=500, detail="Erreur lors de l'enregistrement de la connexion"
         )
 
     return {
@@ -75,14 +74,15 @@ async def record_log(request: Request, login_data: LoginHistoryCreate):
         "record_id": record_id,
         "type": login_data.type,
         "ip_address": client_ip,
-        "location": location
+        "location": location,
     }
+
 
 @router.get("/user/{user_id}", response_model=LoginHistoryListResponse)
 async def get_user_logs(
     user_id: int,
     page: int = Query(1, ge=1, description="Numéro de page"),
-    size: int = Query(10, ge=1, le=100, description="Taille de la page")
+    size: int = Query(10, ge=1, le=100, description="Taille de la page"),
 ):
     """
     Récupère tous les logs (connexions + déconnexions) d'un utilisateur spécifique
@@ -90,51 +90,36 @@ async def get_user_logs(
     # Vérifier que l'utilisateur existe
     user = user_repository.get_user_by_id(user_id)
     if not user:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Utilisateur avec ID {user_id} non trouvé"
-        )
+        raise HTTPException(status_code=404, detail=f"Utilisateur avec ID {user_id} non trouvé")
 
     # Récupérer l'historique
     records, total = login_history_repository.get_login_history_by_user(
-        user_id=user_id,
-        page=page,
-        size=size
+        user_id=user_id, page=page, size=size
     )
 
     # Calculer le nombre total de pages
     total_pages = math.ceil(total / size) if total > 0 else 0
 
     return LoginHistoryListResponse(
-        records=records,
-        total=total,
-        page=page,
-        size=size,
-        total_pages=total_pages
+        records=records, total=total, page=page, size=size, total_pages=total_pages
     )
+
 
 @router.get("/", response_model=LoginHistoryListResponse)
 async def get_all_logs(
     page: int = Query(1, ge=1, description="Numéro de page"),
-    size: int = Query(10, ge=1, le=100, description="Taille de la page")
+    size: int = Query(10, ge=1, le=100, description="Taille de la page"),
 ):
     """
     Récupère tous les logs (connexions + déconnexions) de tous les utilisateurs
     Inclut les informations utilisateur (email, nom, prénom)
     """
     # Récupérer l'historique complet
-    records, total = login_history_repository.get_all_login_history(
-        page=page,
-        size=size
-    )
+    records, total = login_history_repository.get_all_login_history(page=page, size=size)
 
     # Calculer le nombre total de pages
     total_pages = math.ceil(total / size) if total > 0 else 0
 
     return LoginHistoryListResponse(
-        records=records,
-        total=total,
-        page=page,
-        size=size,
-        total_pages=total_pages
+        records=records, total=total, page=page, size=size, total_pages=total_pages
     )

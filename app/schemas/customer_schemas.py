@@ -1,68 +1,79 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional, List
 from datetime import datetime
+
+from pydantic import BaseModel
 
 
 class NoteSchema(BaseModel):
     """
     Schéma pour une note (tête / cœur / fond) d'une formule
     """
+
     id: int
     name: str
-    quantity: Optional[str] = None
+    quantity: str | None = None
 
 
 class FormulaWithNotes(BaseModel):
     """
     Schéma pour une formule avec ses notes associées
     """
+
     id: int
-    customer_id: Optional[int] = None
-    file_id: Optional[int] = None
-    reference: Optional[str] = None
-    perfume_name: Optional[str] = None
-    top_notes: List[NoteSchema] = []
-    heart_notes: List[NoteSchema] = []
-    base_notes: List[NoteSchema] = []
+    customer_id: int | None = None
+    file_id: int | None = None
+    reference: str | None = None
+    perfume_name: str | None = None
+    top_notes: list[NoteSchema] = []
+    heart_notes: list[NoteSchema] = []
+    base_notes: list[NoteSchema] = []
 
 
 class CustomerBase(BaseModel):
     """Schema de base pour les customers"""
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    email: Optional[str] = None
-    phone: Optional[str] = None
-    job: Optional[str] = None
-    city: Optional[str] = None
-    country: Optional[str] = None
-    date: Optional[str] = None
-    verified_email: Optional[bool] = None
-    verified_domain: Optional[bool] = None
-    verified_phone: Optional[bool] = None
+
+    first_name: str | None = None
+    last_name: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    job: str | None = None
+    city: str | None = None
+    country: str | None = None
+    date: str | None = None
+    verified_email: bool | None = None
+    verified_domain: bool | None = None
+    verified_phone: bool | None = None
+
 
 class CustomerCreate(CustomerBase):
     """Schema pour créer un customer"""
+
     pass
+
 
 class CustomerUpdate(CustomerBase):
     """Schema pour modifier un customer"""
+
     pass
+
 
 class CustomerResponse(CustomerBase):
     """Schema de réponse avec l'ID"""
+
     id: int
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-    verified_email: Optional[bool] = None
-    verified_domain: Optional[bool] = None
-    verified_phone: Optional[bool] = None
-    formulas: List[FormulaWithNotes] = []
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    verified_email: bool | None = None
+    verified_domain: bool | None = None
+    verified_phone: bool | None = None
+    formulas: list[FormulaWithNotes] = []
 
     class Config:
         from_attributes = True
 
+
 class CustomerListResponse(BaseModel):
     """Schema pour la liste des customers"""
+
     customers: list[CustomerResponse]
     total: int
     page: int
@@ -71,23 +82,27 @@ class CustomerListResponse(BaseModel):
 
 class CustomerBulkUpdateItem(CustomerBase):
     """Schema pour un item de mise à jour en masse"""
+
     id: int
 
 
 class CustomerBulkUpdateRequest(BaseModel):
     """Schema pour la requête de mise à jour en masse"""
-    customers: List[CustomerBulkUpdateItem]
+
+    customers: list[CustomerBulkUpdateItem]
 
 
 class CustomerBulkUpdateResultItem(BaseModel):
     """Schema pour le résultat d'un item de mise à jour en masse"""
+
     id: int
     success: bool
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class CustomerBulkUpdateResponse(BaseModel):
     """Schema pour la réponse de mise à jour en masse"""
-    updated: List[CustomerBulkUpdateResultItem]
+
+    updated: list[CustomerBulkUpdateResultItem]
     total_requested: int
     total_updated: int

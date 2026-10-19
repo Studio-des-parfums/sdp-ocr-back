@@ -1,6 +1,7 @@
 import base64
+
 import requests
-from typing import Optional, List, Dict
+
 from app.core.config import settings
 
 RESEND_API_URL = "https://api.resend.com/emails"
@@ -15,26 +16,28 @@ class EmailSenderService:
         self.from_name = settings.RESEND_FROM_NAME
 
     def _build_attachments(
-        self,
-        attachments: List[Dict] = None,
-        inline_images: List[Dict] = None
-    ) -> List[Dict]:
+        self, attachments: list[dict] = None, inline_images: list[dict] = None
+    ) -> list[dict]:
         """
         Convertit pièces jointes et images inline au format attendu par Resend
         (content en base64, image inline via content_id référencé par cid: dans le HTML).
         """
         result = []
         for attachment in attachments or []:
-            result.append({
-                "filename": attachment["filename"],
-                "content": base64.b64encode(attachment["content"]).decode("utf-8"),
-            })
+            result.append(
+                {
+                    "filename": attachment["filename"],
+                    "content": base64.b64encode(attachment["content"]).decode("utf-8"),
+                }
+            )
         for img in inline_images or []:
-            result.append({
-                "filename": img.get("filename", "image.png"),
-                "content": base64.b64encode(img["content"]).decode("utf-8"),
-                "content_id": img["cid"],
-            })
+            result.append(
+                {
+                    "filename": img.get("filename", "image.png"),
+                    "content": base64.b64encode(img["content"]).decode("utf-8"),
+                    "content_id": img["cid"],
+                }
+            )
         return result
 
     def send_email(
@@ -43,9 +46,9 @@ class EmailSenderService:
         subject: str,
         body: str,
         is_html: bool = False,
-        attachments: List[Dict] = None,
-        inline_images: List[Dict] = None,
-        cc: Optional[str] = None
+        attachments: list[dict] = None,
+        inline_images: list[dict] = None,
+        cc: str | None = None,
     ) -> dict:
         """
         Envoyer un email avec support des pieces jointes et images inline.
@@ -66,7 +69,7 @@ class EmailSenderService:
             if not self.api_key or not self.from_email:
                 return {
                     "success": False,
-                    "message": "Configuration Resend manquante (RESEND_API_KEY ou RESEND_FROM_EMAIL)"
+                    "message": "Configuration Resend manquante (RESEND_API_KEY ou RESEND_FROM_EMAIL)",
                 }
 
             payload = {
@@ -96,24 +99,18 @@ class EmailSenderService:
             if response.status_code >= 400:
                 return {
                     "success": False,
-                    "message": f"Erreur Resend ({response.status_code}): {response.text}"
+                    "message": f"Erreur Resend ({response.status_code}): {response.text}",
                 }
 
-            return {
-                "success": True,
-                "message": f"Email envoye avec succes a {to_email}"
-            }
+            return {"success": True, "message": f"Email envoye avec succes a {to_email}"}
 
         except requests.RequestException as e:
             return {
                 "success": False,
-                "message": f"Erreur reseau lors de l'envoi via Resend: {str(e)}"
+                "message": f"Erreur reseau lors de l'envoi via Resend: {str(e)}",
             }
         except Exception as e:
-            return {
-                "success": False,
-                "message": f"Erreur inattendue: {str(e)}"
-            }
+            return {"success": False, "message": f"Erreur inattendue: {str(e)}"}
 
     def send_test_email(self, to_email: str) -> dict:
         """

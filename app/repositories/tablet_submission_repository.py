@@ -1,11 +1,11 @@
 from datetime import datetime
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
+from app.crud import crud_customer, crud_formula, crud_formula_options, crud_notes
 from app.database import get_connection
-from app.crud import crud_customer, crud_formula, crud_notes, crud_formula_options
+from app.schemas.tablet_schemas import TabletSubmissionCreate
 from app.services.customer import customer_business_service
 from app.services.phone import phone_validator
-from app.schemas.tablet_schemas import TabletSubmissionCreate
 
 
 class TabletSubmissionRepository:
@@ -18,7 +18,7 @@ class TabletSubmissionRepository:
 
     def create_submission(
         self, submission: TabletSubmissionCreate
-    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    ) -> tuple[dict[str, Any] | None, str | None]:
         """
         Enregistre une soumission tablette : retrouve ou crée le client,
         puis crée la formule et ses notes.
@@ -57,7 +57,8 @@ class TabletSubmissionRepository:
                 customer_id = existing["id"]
                 # Compléter uniquement les champs vides du client existant
                 missing = {
-                    k: v for k, v in customer_fields.items()
+                    k: v
+                    for k, v in customer_fields.items()
                     if v is not None and not existing.get(k)
                 }
                 if missing:
@@ -77,9 +78,7 @@ class TabletSubmissionRepository:
                     connection, submission.reused_from_formula_id
                 )
             if reference is None:
-                reference = crud_formula.generate_tablet_reference(
-                    connection, now.strftime("%y%m")
-                )
+                reference = crud_formula.generate_tablet_reference(connection, now.strftime("%y%m"))
             formula_id = crud_formula.create(
                 connection,
                 customer_id=customer_id,
@@ -119,7 +118,7 @@ class TabletSubmissionRepository:
             connection.close()
 
     @staticmethod
-    def _normalize_phone(phone: Optional[str], country: Optional[str]) -> Optional[str]:
+    def _normalize_phone(phone: str | None, country: str | None) -> str | None:
         phone = (phone or "").strip() or None
         if not phone:
             return None
@@ -132,10 +131,10 @@ class TabletSubmissionRepository:
     @staticmethod
     def _build_customer_fields(
         submission: TabletSubmissionCreate,
-        email: Optional[str],
-        phone: Optional[str],
-    ) -> Dict[str, Any]:
-        def clean(value: Optional[str]) -> Optional[str]:
+        email: str | None,
+        phone: str | None,
+    ) -> dict[str, Any]:
+        def clean(value: str | None) -> str | None:
             if value is None:
                 return None
             return str(value).strip() or None

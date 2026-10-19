@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-from typing import List
 
 
 class UserData(BaseModel):
@@ -14,4 +13,4 @@ class UserData(BaseModel):
 
 
 class ExportRequest(BaseModel):
-    data: List[UserData]
+    data: list[UserData]

@@ -1,6 +1,7 @@
-from typing import Dict, Any, Optional, List, Tuple
-from app.database import get_connection
+from typing import Any
+
 from app.crud import crud_group
+from app.database import get_connection
 from app.services.group import group_business_service
 
 
@@ -9,7 +10,7 @@ class GroupRepository:
     Repository pour gérer l'accès aux données groupes (Data Access Layer)
     """
 
-    def create_group(self, group_data: Dict[str, Any]) -> Optional[int]:
+    def create_group(self, group_data: dict[str, Any]) -> int | None:
         """
         Crée un nouveau groupe
 
@@ -31,7 +32,7 @@ class GroupRepository:
         finally:
             connection.close()
 
-    def get_group_by_id(self, group_id: int) -> Optional[Dict[str, Any]]:
+    def get_group_by_id(self, group_id: int) -> dict[str, Any] | None:
         """
         Récupère un groupe par son ID (seulement les non supprimés)
 
@@ -50,8 +51,13 @@ class GroupRepository:
         finally:
             connection.close()
 
-    def get_all_groups(self, page: int = 1, size: int = 10, search: Optional[str] = None,
-                      include_deleted: bool = False) -> Tuple[List[Dict[str, Any]], int]:
+    def get_all_groups(
+        self,
+        page: int = 1,
+        size: int = 10,
+        search: str | None = None,
+        include_deleted: bool = False,
+    ) -> tuple[list[dict[str, Any]], int]:
         """
         Récupère tous les groupes avec pagination et recherche
 
@@ -73,7 +79,7 @@ class GroupRepository:
         finally:
             connection.close()
 
-    def update_group(self, group_id: int, group_data: Dict[str, Any]) -> bool:
+    def update_group(self, group_id: int, group_data: dict[str, Any]) -> bool:
         """
         Met à jour un groupe
 
@@ -156,8 +162,9 @@ class GroupRepository:
     # CUSTOMER-GROUP RELATIONS
     # ======================================================================
 
-    def add_customers_to_group(self, group_id: int, customer_ids: List[int],
-                              added_by: int) -> Dict[str, Any]:
+    def add_customers_to_group(
+        self, group_id: int, customer_ids: list[int], added_by: int
+    ) -> dict[str, Any]:
         """
         Ajoute plusieurs customers à un groupe
         Délègue à group_business_service
@@ -172,7 +179,7 @@ class GroupRepository:
         """
         return group_business_service.add_customers_to_group(group_id, customer_ids, added_by)
 
-    def remove_customers_from_group(self, group_id: int, customer_ids: List[int]) -> Dict[str, Any]:
+    def remove_customers_from_group(self, group_id: int, customer_ids: list[int]) -> dict[str, Any]:
         """
         Retire plusieurs customers d'un groupe
         Délègue à group_business_service
@@ -186,8 +193,9 @@ class GroupRepository:
         """
         return group_business_service.remove_customers_from_group(group_id, customer_ids)
 
-    def get_group_customers(self, group_ids: List[int], page: int = 1,
-                           size: int = 10) -> Tuple[List[Dict[str, Any]], int]:
+    def get_group_customers(
+        self, group_ids: list[int], page: int = 1, size: int = 10
+    ) -> tuple[list[dict[str, Any]], int]:
         """
         Récupère tous les customers d'un ou plusieurs groupes avec pagination
 
@@ -208,7 +216,7 @@ class GroupRepository:
         finally:
             connection.close()
 
-    def get_customer_groups(self, customer_id: int) -> List[Dict[str, Any]]:
+    def get_customer_groups(self, customer_id: int) -> list[dict[str, Any]]:
         """
         Récupère tous les groupes d'un customer
 
@@ -227,7 +235,7 @@ class GroupRepository:
         finally:
             connection.close()
 
-    def find_or_create_group(self, group_name: str) -> Optional[int]:
+    def find_or_create_group(self, group_name: str) -> int | None:
         """
         Cherche un groupe par nom. S'il n'existe pas, le crée.
 
@@ -245,13 +253,11 @@ class GroupRepository:
             existing = crud_group.get_by_name(connection, group_name)
             if existing:
                 print(f"Groupe '{group_name}' trouvé (ID: {existing['id']})")
-                return existing['id']
+                return existing["id"]
 
-            group_id = crud_group.create(connection, {
-                'name': group_name,
-                'description': None,
-                'created_by': None
-            })
+            group_id = crud_group.create(
+                connection, {"name": group_name, "description": None, "created_by": None}
+            )
             if group_id:
                 print(f"Groupe '{group_name}' créé (ID: {group_id})")
             return group_id
@@ -274,12 +280,19 @@ class GroupRepository:
             return False
 
         try:
-            return crud_group.add_customer_to_group(connection, customer_id, group_id, added_by=None)
+            return crud_group.add_customer_to_group(
+                connection, customer_id, group_id, added_by=None
+            )
         finally:
             connection.close()
 
-    def merge_groups(self, source_group_ids: List[int], new_group_name: str,
-                    description: Optional[str], created_by: int) -> Dict[str, Any]:
+    def merge_groups(
+        self,
+        source_group_ids: list[int],
+        new_group_name: str,
+        description: str | None,
+        created_by: int,
+    ) -> dict[str, Any]:
         """
         Fusionne plusieurs groupes en créant un nouveau groupe avec tous les customers uniques
 
@@ -294,17 +307,14 @@ class GroupRepository:
         """
         connection = get_connection()
         if not connection:
-            return {
-                "success": False,
-                "message": "Erreur de connexion à la base de données"
-            }
+            return {"success": False, "message": "Erreur de connexion à la base de données"}
 
         try:
             # Valider qu'il y a au moins 2 groupes
             if len(source_group_ids) < 2:
                 return {
                     "success": False,
-                    "message": "Au moins 2 groupes sont requis pour la fusion"
+                    "message": "Au moins 2 groupes sont requis pour la fusion",
                 }
 
             # Vérifier que tous les groupes existent
@@ -312,22 +322,19 @@ class GroupRepository:
                 if not crud_group.check_group_exists(connection, group_id):
                     return {
                         "success": False,
-                        "message": f"Le groupe {group_id} n'existe pas ou est supprimé"
+                        "message": f"Le groupe {group_id} n'existe pas ou est supprimé",
                     }
 
             # Créer le nouveau groupe
             new_group_data = {
                 "name": new_group_name,
                 "description": description,
-                "created_by": created_by
+                "created_by": created_by,
             }
             new_group_id = crud_group.create(connection, new_group_data)
 
             if not new_group_id:
-                return {
-                    "success": False,
-                    "message": "Erreur lors de la création du nouveau groupe"
-                }
+                return {"success": False, "message": "Erreur lors de la création du nouveau groupe"}
 
             # Récupérer tous les customers uniques des groupes sources
             unique_customer_ids = crud_group.get_unique_customers_from_groups(
@@ -337,7 +344,9 @@ class GroupRepository:
             # Ajouter tous les customers au nouveau groupe
             added_count = 0
             for customer_id in unique_customer_ids:
-                if crud_group.add_customer_to_group(connection, customer_id, new_group_id, created_by):
+                if crud_group.add_customer_to_group(
+                    connection, customer_id, new_group_id, created_by
+                ):
                     added_count += 1
 
             # Récupérer le groupe créé
@@ -348,15 +357,12 @@ class GroupRepository:
                 "message": f"Fusion réussie : {added_count} clients ajoutés au nouveau groupe",
                 "new_group": new_group,
                 "source_group_ids": source_group_ids,
-                "total_customers": added_count
+                "total_customers": added_count,
             }
 
         except Exception as e:
             print(f"Erreur lors de la fusion des groupes : {e}")
-            return {
-                "success": False,
-                "message": f"Erreur lors de la fusion : {str(e)}"
-            }
+            return {"success": False, "message": f"Erreur lors de la fusion : {str(e)}"}
         finally:
             connection.close()
 

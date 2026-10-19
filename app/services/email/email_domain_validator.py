@@ -1,5 +1,4 @@
 import dns.resolver
-from typing import Tuple
 
 
 class EmailDomainValidator:
@@ -7,7 +6,7 @@ class EmailDomainValidator:
     Service pour vérifier si un domaine email peut recevoir des emails (via MX records)
     """
 
-    def check_domain_has_mx(self, domain: str) -> Tuple[bool, str]:
+    def check_domain_has_mx(self, domain: str) -> tuple[bool, str]:
         """
         Vérifie si un domaine possède des enregistrements MX (serveurs mail)
 
@@ -28,7 +27,7 @@ class EmailDomainValidator:
         """
         try:
             # Interroger les serveurs DNS pour les enregistrements MX
-            mx_records = dns.resolver.resolve(domain, 'MX')
+            mx_records = dns.resolver.resolve(domain, "MX")
 
             # Extraire la liste des serveurs mail
             mx_hosts = [str(mx.exchange) for mx in mx_records]
@@ -54,7 +53,7 @@ class EmailDomainValidator:
             # Autre erreur
             return False, f"Error: {str(e)}"
 
-    def verify_email_domain(self, email: str) -> Tuple[bool, str]:
+    def verify_email_domain(self, email: str) -> tuple[bool, str]:
         """
         Vérifie si le domaine d'un email peut recevoir des emails
 
@@ -71,11 +70,11 @@ class EmailDomainValidator:
             >>> verify_email_domain("contact@domaine-faux.com")
             (False, "Domain does not exist")
         """
-        if '@' not in email:
+        if "@" not in email:
             return False, "Invalid email format (no @)"
 
         # Extraire le domaine
-        domain = email.split('@')[1].strip().lower()
+        domain = email.split("@")[1].strip().lower()
 
         if not domain:
             return False, "Empty domain"

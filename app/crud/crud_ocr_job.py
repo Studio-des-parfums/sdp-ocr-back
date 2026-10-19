@@ -1,13 +1,10 @@
-from typing import Dict, Any, Optional
 import json
+from typing import Any
+
 import pymysql
 
 
-def create(
-    connection: pymysql.connections.Connection,
-    job_id: str,
-    filename: str
-) -> bool:
+def create(connection: pymysql.connections.Connection, job_id: str, filename: str) -> bool:
     """
     Crée un nouveau job OCR en base, statut initial 'pending'
 
@@ -39,10 +36,7 @@ def create(
         cursor.close()
 
 
-def get_by_id(
-    connection: pymysql.connections.Connection,
-    job_id: str
-) -> Optional[Dict[str, Any]]:
+def get_by_id(connection: pymysql.connections.Connection, job_id: str) -> dict[str, Any] | None:
     """
     Récupère un job OCR par son ID
 
@@ -67,8 +61,8 @@ def get_by_id(
         if not row:
             return None
 
-        if row.get('result'):
-            row['result'] = json.loads(row['result'])
+        if row.get("result"):
+            row["result"] = json.loads(row["result"])
 
         return row
 
@@ -80,9 +74,7 @@ def get_by_id(
 
 
 def update(
-    connection: pymysql.connections.Connection,
-    job_id: str,
-    job_data: Dict[str, Any]
+    connection: pymysql.connections.Connection, job_id: str, job_data: dict[str, Any]
 ) -> bool:
     """
     Met à jour un job OCR (statut, progression, résultat, erreur...)
@@ -99,8 +91,8 @@ def update(
         cursor = connection.cursor()
 
         clean_data = dict(job_data)
-        if 'result' in clean_data and clean_data['result'] is not None:
-            clean_data['result'] = json.dumps(clean_data['result'], ensure_ascii=False)
+        if "result" in clean_data and clean_data["result"] is not None:
+            clean_data["result"] = json.dumps(clean_data["result"], ensure_ascii=False)
 
         if not clean_data:
             return False
@@ -111,7 +103,7 @@ def update(
 
         query = f"""
             UPDATE ocr_jobs
-            SET {', '.join(set_clauses)}
+            SET {", ".join(set_clauses)}
             WHERE id = %s
         """
         cursor.execute(query, values)
@@ -127,10 +119,7 @@ def update(
         cursor.close()
 
 
-def delete_older_than(
-    connection: pymysql.connections.Connection,
-    days: int
-) -> int:
+def delete_older_than(connection: pymysql.connections.Connection, days: int) -> int:
     """
     Supprime les jobs OCR plus vieux que N jours (nettoyage périodique)
 

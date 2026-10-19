@@ -4,16 +4,16 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
+from app.repositories.customer_file_repository import customer_file_repository
+from app.repositories.customer_repository import customer_repository
+from app.repositories.formula_repository import formula_repository
 from app.schemas.formula_schemas import (
+    FormulaDeleteResponse,
     FormulaResponse,
     FormulaUpdateNotes,
-    FormulaDeleteResponse,
 )
-from app.repositories.formula_repository import formula_repository
-from app.repositories.customer_repository import customer_repository
-from app.repositories.customer_file_repository import customer_file_repository
-from app.services.pdf.formula_sheet_pdf_service import generate_formula_sheet_pdf
 from app.services.file.file_storage_service import file_storage_service
+from app.services.pdf.formula_sheet_pdf_service import generate_formula_sheet_pdf
 
 router = APIRouter()
 
@@ -25,10 +25,7 @@ async def get_formula(formula_id: int):
     """
     formula = formula_repository.get_formula_by_id(formula_id)
     if not formula:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Formule avec ID {formula_id} non trouvée"
-        )
+        raise HTTPException(status_code=404, detail=f"Formule avec ID {formula_id} non trouvée")
 
     return FormulaResponse(**formula)
 
@@ -45,10 +42,7 @@ async def get_formula_pdf(formula_id: int):
     """
     formula = formula_repository.get_formula_by_id(formula_id)
     if not formula:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Formule avec ID {formula_id} non trouvée"
-        )
+        raise HTTPException(status_code=404, detail=f"Formule avec ID {formula_id} non trouvée")
 
     customer = {}
     if formula.get("customer_id"):
@@ -62,9 +56,7 @@ async def get_formula_pdf(formula_id: int):
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={
-            "Content-Disposition": f"attachment; filename*=UTF-8''{safe_filename}"
-        },
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{safe_filename}"},
     )
 
 
@@ -80,10 +72,7 @@ async def generate_and_persist_formula_pdf(formula_id: int):
     """
     formula = formula_repository.get_formula_by_id(formula_id)
     if not formula:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Formule avec ID {formula_id} non trouvée"
-        )
+        raise HTTPException(status_code=404, detail=f"Formule avec ID {formula_id} non trouvée")
 
     customer = {}
     if formula.get("customer_id"):
@@ -97,7 +86,8 @@ async def generate_and_persist_formula_pdf(formula_id: int):
     existing_file_id = formula.get("file_id")
     existing_file = (
         customer_file_repository.get_customer_file_by_id(existing_file_id)
-        if existing_file_id else None
+        if existing_file_id
+        else None
     )
 
     file_path, _ = file_storage_service.save_file_for_customer(
@@ -107,39 +97,41 @@ async def generate_and_persist_formula_pdf(formula_id: int):
     )
 
     if existing_file:
-        updated = customer_file_repository.update_customer_file(existing_file_id, {
-            "file_path": file_path,
-            "file_name": original_filename,
-            "file_type": "application/pdf",
-            "file_size": len(pdf_bytes),
-            "uploaded_at": datetime.now(),
-        })
+        updated = customer_file_repository.update_customer_file(
+            existing_file_id,
+            {
+                "file_path": file_path,
+                "file_name": original_filename,
+                "file_type": "application/pdf",
+                "file_size": len(pdf_bytes),
+                "uploaded_at": datetime.now(),
+            },
+        )
         if not updated:
             raise HTTPException(
-                status_code=500,
-                detail="Erreur lors de la mise à jour de la fiche existante"
+                status_code=500, detail="Erreur lors de la mise à jour de la fiche existante"
             )
         file_storage_service.delete_file(existing_file["file_path"])
         file_id = existing_file_id
     else:
-        file_id = customer_file_repository.create_customer_file({
-            "customer_id": formula.get("customer_id"),
-            "customer_review_id": None,
-            "file_path": file_path,
-            "file_name": original_filename,
-            "file_type": "application/pdf",
-            "file_size": len(pdf_bytes),
-            "uploaded_at": datetime.now(),
-        })
+        file_id = customer_file_repository.create_customer_file(
+            {
+                "customer_id": formula.get("customer_id"),
+                "customer_review_id": None,
+                "file_path": file_path,
+                "file_name": original_filename,
+                "file_type": "application/pdf",
+                "file_size": len(pdf_bytes),
+                "uploaded_at": datetime.now(),
+            }
+        )
         if not file_id:
             raise HTTPException(
-                status_code=500,
-                detail="Erreur lors de l'enregistrement du fichier"
+                status_code=500, detail="Erreur lors de l'enregistrement du fichier"
             )
         if not formula_repository.set_file_id(formula_id, file_id):
             raise HTTPException(
-                status_code=500,
-                detail="Erreur lors de l'association du fichier à la formule"
+                status_code=500, detail="Erreur lors de l'association du fichier à la formule"
             )
 
     updated_formula = formula_repository.get_formula_by_id(formula_id)
@@ -171,10 +163,7 @@ async def update_formula_notes(formula_id: int, notes_update: FormulaUpdateNotes
     # Vérifier que la formule existe
     existing_formula = formula_repository.get_formula_by_id(formula_id)
     if not existing_formula:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Formule avec ID {formula_id} non trouvée"
-        )
+        raise HTTPException(status_code=404, detail=f"Formule avec ID {formula_id} non trouvée")
 
     # Convertir les NoteUpdate en dict pour le repository
     top_notes_dict = None
@@ -210,10 +199,7 @@ async def update_formula_notes(formula_id: int, notes_update: FormulaUpdateNotes
     )
 
     if not success:
-        raise HTTPException(
-            status_code=500,
-            detail="Erreur lors de la mise à jour des notes"
-        )
+        raise HTTPException(status_code=500, detail="Erreur lors de la mise à jour des notes")
 
     # Récupérer la formule mise à jour
     updated_formula = formula_repository.get_formula_by_id(formula_id)
@@ -228,22 +214,16 @@ async def delete_formula(formula_id: int):
     # Vérifier que la formule existe
     existing_formula = formula_repository.get_formula_by_id(formula_id)
     if not existing_formula:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Formule avec ID {formula_id} non trouvée"
-        )
+        raise HTTPException(status_code=404, detail=f"Formule avec ID {formula_id} non trouvée")
 
     # Supprimer la formule
     success = formula_repository.delete_formula(formula_id)
 
     if not success:
-        raise HTTPException(
-            status_code=500,
-            detail="Erreur lors de la suppression de la formule"
-        )
+        raise HTTPException(status_code=500, detail="Erreur lors de la suppression de la formule")
 
     return FormulaDeleteResponse(
         success=True,
         message=f"Formule {formula_id} et ses notes supprimées avec succès",
-        formula_id=formula_id
+        formula_id=formula_id,
     )

@@ -1,5 +1,4 @@
 import re
-from typing import Optional
 
 
 class CityNormalizer:
@@ -9,9 +8,21 @@ class CityNormalizer:
 
     # Prépositions et articles qui restent en minuscules
     LOWERCASE_WORDS = [
-        'de', 'du', 'des', 'le', 'la', 'les', 'l',
-        'sur', 'sous', 'en', 'aux', 'et', 'à',
-        'lez', 'lès',  # Utilisé dans les noms de villes françaises
+        "de",
+        "du",
+        "des",
+        "le",
+        "la",
+        "les",
+        "l",
+        "sur",
+        "sous",
+        "en",
+        "aux",
+        "et",
+        "à",
+        "lez",
+        "lès",  # Utilisé dans les noms de villes françaises
     ]
 
     def remove_numbers(self, city: str) -> str:
@@ -38,10 +49,10 @@ class CityNormalizer:
             return city
 
         # Retirer tous les chiffres
-        cleaned = re.sub(r'\d+', '', city)
+        cleaned = re.sub(r"\d+", "", city)
 
         # Nettoyer les espaces multiples
-        cleaned = re.sub(r'\s+', ' ', cleaned)
+        cleaned = re.sub(r"\s+", " ", cleaned)
 
         # Retirer les espaces au début et à la fin
         cleaned = cleaned.strip()
@@ -146,16 +157,16 @@ class CityNormalizer:
                 continue
 
             # Si c'est un séparateur (espace, tiret, apostrophe), le garder tel quel
-            if part in [' ', '-', "'"]:
+            if part in [" ", "-", "'"]:
                 normalized_parts.append(part)
                 continue
 
             # C'est un mot, le capitaliser
-            is_first_word = (word_index == 0)
+            is_first_word = word_index == 0
             normalized_parts.append(self.capitalize_word(part, is_first_word))
             word_index += 1
 
-        normalized = ''.join(normalized_parts)
+        normalized = "".join(normalized_parts)
 
         print(f"🏙️ Ville normalisée : {city} → {normalized}")
 

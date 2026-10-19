@@ -1,9 +1,16 @@
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Any
+
 import pymysql
 
 
-def create(connection: pymysql.connections.Connection, user_id: int, ip_address: str,
-          city: str, country: str, log_type: str) -> Optional[int]:
+def create(
+    connection: pymysql.connections.Connection,
+    user_id: int,
+    ip_address: str,
+    city: str,
+    country: str,
+    log_type: str,
+) -> int | None:
     """
     Enregistre une nouvelle connexion ou déconnexion
 
@@ -40,8 +47,9 @@ def create(connection: pymysql.connections.Connection, user_id: int, ip_address:
         cursor.close()
 
 
-def get_by_user(connection: pymysql.connections.Connection, user_id: int,
-               page: int = 1, size: int = 10) -> Tuple[List[Dict[str, Any]], int]:
+def get_by_user(
+    connection: pymysql.connections.Connection, user_id: int, page: int = 1, size: int = 10
+) -> tuple[list[dict[str, Any]], int]:
     """
     Récupère l'historique des connexions d'un utilisateur avec pagination
 
@@ -60,7 +68,7 @@ def get_by_user(connection: pymysql.connections.Connection, user_id: int,
         # Compter le total
         count_query = "SELECT COUNT(*) as total FROM login_history WHERE user_id = %s"
         cursor.execute(count_query, (user_id,))
-        total = cursor.fetchone()['total']
+        total = cursor.fetchone()["total"]
 
         # Récupérer les résultats paginés
         offset = (page - 1) * size
@@ -84,8 +92,9 @@ def get_by_user(connection: pymysql.connections.Connection, user_id: int,
         cursor.close()
 
 
-def get_all(connection: pymysql.connections.Connection, page: int = 1,
-           size: int = 10) -> Tuple[List[Dict[str, Any]], int]:
+def get_all(
+    connection: pymysql.connections.Connection, page: int = 1, size: int = 10
+) -> tuple[list[dict[str, Any]], int]:
     """
     Récupère tout l'historique des connexions avec pagination
 
@@ -103,7 +112,7 @@ def get_all(connection: pymysql.connections.Connection, page: int = 1,
         # Compter le total
         count_query = "SELECT COUNT(*) as total FROM login_history"
         cursor.execute(count_query)
-        total = cursor.fetchone()['total']
+        total = cursor.fetchone()["total"]
 
         # Récupérer les résultats paginés avec informations utilisateur
         offset = (page - 1) * size

@@ -1,7 +1,9 @@
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
+
 
 class Settings:
     MISTRAL_API_KEY: str = os.getenv("MISTRAL_API_KEY")
@@ -32,5 +34,6 @@ class Settings:
     AWS_S3_BUCKET: str = os.getenv("AWS_S3_BUCKET", "")
     AWS_S3_REGION: str = os.getenv("AWS_S3_REGION", "us-east-1")
     AWS_S3_ENDPOINT: str = os.getenv("AWS_S3_ENDPOINT", "")  # laisser vide pour AWS natif
+
 
 settings = Settings()

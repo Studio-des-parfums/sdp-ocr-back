@@ -1,5 +1,4 @@
 import requests
-from typing import Optional
 
 
 class PhoneIntelligenceValidator:
@@ -11,7 +10,7 @@ class PhoneIntelligenceValidator:
         self.api_key = api_key
         self.api_url = "https://phoneintelligence.abstractapi.com/v1/"
 
-    def verify_phone_number(self, phone: str, country_code: str = "33") -> Optional[bool]:
+    def verify_phone_number(self, phone: str, country_code: str = "33") -> bool | None:
         """
         Vérifie la validité d'un numéro de téléphone via AbstractAPI
 
@@ -64,12 +63,7 @@ class PhoneIntelligenceValidator:
         try:
             # Appel API
             response = requests.get(
-                self.api_url,
-                params={
-                    "api_key": self.api_key,
-                    "phone": cleaned_phone
-                },
-                timeout=5
+                self.api_url, params={"api_key": self.api_key, "phone": cleaned_phone}, timeout=5
             )
 
             if response.status_code == 200:
@@ -85,7 +79,9 @@ class PhoneIntelligenceValidator:
                     country = location.get("country_name", "Unknown")
                     carrier = data.get("phone_carrier", {})
                     phone_type = carrier.get("line_type", "Unknown")
-                    print(f"✅ Numéro vérifié via AbstractAPI: {phone} → Valide ({country}, {phone_type})")
+                    print(
+                        f"✅ Numéro vérifié via AbstractAPI: {phone} → Valide ({country}, {phone_type})"
+                    )
                 else:
                     print(f"❌ Numéro vérifié via AbstractAPI: {phone} → Invalide")
 
@@ -97,7 +93,9 @@ class PhoneIntelligenceValidator:
                 return None
 
             else:
-                print(f"⚠️ Erreur API AbstractAPI Phone Intelligence (status {response.status_code}): {response.text}")
+                print(
+                    f"⚠️ Erreur API AbstractAPI Phone Intelligence (status {response.status_code}): {response.text}"
+                )
                 return None
 
         except requests.exceptions.Timeout:

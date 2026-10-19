@@ -1,16 +1,16 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Query
-from typing import Optional
 import json
+
+from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
 
 from app.repositories import session_repository
 from app.schemas.session_schemas import (
-    SessionCreate,
-    SessionResponse,
-    AssignSupervisorRequest,
-    SingleAnswerUpdate,
-    SessionAnswersUpdate,
-    SessionDetailResponse,
     AnswerEntry,
+    AssignSupervisorRequest,
+    SessionAnswersUpdate,
+    SessionCreate,
+    SessionDetailResponse,
+    SessionResponse,
+    SingleAnswerUpdate,
 )
 
 router = APIRouter()
@@ -47,6 +47,7 @@ manager = ConnectionManager()
 
 
 # ── REST endpoints ──
+
 
 @router.post("/sessions", response_model=dict)
 async def create_session(payload: SessionCreate):
@@ -85,7 +86,7 @@ async def assign_supervisor(session_id: int, payload: AssignSupervisorRequest):
 
 
 @router.get("/sessions/active", response_model=list[SessionResponse])
-async def list_active_sessions(room: Optional[str] = Query(None)):
+async def list_active_sessions(room: str | None = Query(None)):
     sessions = session_repository.get_active_sessions(room=room)
     return [SessionResponse(**s) for s in sessions]
 
@@ -105,7 +106,9 @@ async def get_session_detail(session_id: int):
 @router.put("/sessions/{session_id}/answers")
 async def update_session_answers(session_id: int, payload: SessionAnswersUpdate):
     for entry in payload.answers:
-        ok, err = session_repository.upsert_answer(session_id, entry.question_key, str(entry.answer_value))
+        ok, err = session_repository.upsert_answer(
+            session_id, entry.question_key, str(entry.answer_value)
+        )
         if not ok:
             raise HTTPException(status_code=500, detail=f"Erreur mise a jour reponse: {err}")
     return {"status": "updated"}
@@ -113,7 +116,9 @@ async def update_session_answers(session_id: int, payload: SessionAnswersUpdate)
 
 @router.post("/sessions/{session_id}/answer")
 async def update_single_answer(session_id: int, payload: SingleAnswerUpdate):
-    ok, err = session_repository.upsert_answer(session_id, payload.question_key, str(payload.answer_value))
+    ok, err = session_repository.upsert_answer(
+        session_id, payload.question_key, str(payload.answer_value)
+    )
     if not ok:
         raise HTTPException(status_code=500, detail=f"Erreur mise a jour reponse: {err}")
     msg = json.dumps({"question_key": payload.question_key, "answer_value": payload.answer_value})
@@ -122,6 +127,7 @@ async def update_single_answer(session_id: int, payload: SingleAnswerUpdate):
 
 
 # ── WebSocket endpoint (temps réel) ──
+
 
 @router.websocket("/ws/session/{session_id}")
 async def websocket_endpoint(ws: WebSocket, session_id: int):

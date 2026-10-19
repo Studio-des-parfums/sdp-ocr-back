@@ -1,7 +1,7 @@
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from app.database import get_connection
 from app.crud import crud_analytics
+from app.database import get_connection
 
 
 class AnalyticsRepository:
@@ -16,10 +16,10 @@ class AnalyticsRepository:
 
     def get_formula_count_by_date(
         self,
-        date_from: Optional[str] = None,
-        date_to: Optional[str] = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
         group_by: str = "month",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Nombre de formules créées, avec décomposition temporelle.
 
@@ -32,7 +32,9 @@ class AnalyticsRepository:
         if not connection:
             return {"total": 0, "group_by": group_by, "period_label": group_by, "data": []}
         try:
-            return crud_analytics.get_formula_count_by_date(connection, date_from, date_to, group_by)
+            return crud_analytics.get_formula_count_by_date(
+                connection, date_from, date_to, group_by
+            )
         finally:
             connection.close()
 
@@ -40,7 +42,7 @@ class AnalyticsRepository:
     # 2. Meilleurs mois / jours de l'année
     # ------------------------------------------------------------------
 
-    def get_best_periods(self, limit: int = 10) -> Dict[str, Any]:
+    def get_best_periods(self, limit: int = 10) -> dict[str, Any]:
         """
         Classement des mois, jours de la semaine et années par nombre de formules.
         """
@@ -59,15 +61,17 @@ class AnalyticsRepository:
     def get_top_ateliers(
         self,
         limit: int = 10,
-        date_from: Optional[str] = None,
-        date_to: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        date_from: str | None = None,
+        date_to: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Ateliers les plus fréquentés (par nombre de formules)."""
         connection = get_connection()
         if not connection:
             return []
         try:
-            return crud_analytics.get_top_ateliers(connection, limit=limit, date_from=date_from, date_to=date_to)
+            return crud_analytics.get_top_ateliers(
+                connection, limit=limit, date_from=date_from, date_to=date_to
+            )
         finally:
             connection.close()
 
@@ -78,10 +82,10 @@ class AnalyticsRepository:
     def get_top_notes(
         self,
         limit: int = 20,
-        note_type: Optional[str] = None,
-        date_from: Optional[str] = None,
-        date_to: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        note_type: str | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+    ) -> dict[str, Any]:
         """
         Notes (essences) les plus utilisées.
 
@@ -92,8 +96,9 @@ class AnalyticsRepository:
         if not connection:
             return {}
         try:
-            return crud_analytics.get_top_notes(connection, limit=limit, note_type=note_type,
-                                                 date_from=date_from, date_to=date_to)
+            return crud_analytics.get_top_notes(
+                connection, limit=limit, note_type=note_type, date_from=date_from, date_to=date_to
+            )
         finally:
             connection.close()
 
@@ -104,15 +109,17 @@ class AnalyticsRepository:
     def get_top_options(
         self,
         limit: int = 20,
-        date_from: Optional[str] = None,
-        date_to: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        date_from: str | None = None,
+        date_to: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Options les plus choisies."""
         connection = get_connection()
         if not connection:
             return []
         try:
-            return crud_analytics.get_top_options(connection, limit=limit, date_from=date_from, date_to=date_to)
+            return crud_analytics.get_top_options(
+                connection, limit=limit, date_from=date_from, date_to=date_to
+            )
         finally:
             connection.close()
 
@@ -122,15 +129,25 @@ class AnalyticsRepository:
 
     def get_gender_distribution(
         self,
-        date_from: Optional[str] = None,
-        date_to: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        date_from: str | None = None,
+        date_to: str | None = None,
+    ) -> dict[str, Any]:
         """Pourcentage clients Homme / Femme / Non renseigné."""
         connection = get_connection()
         if not connection:
-            return {"male": 0, "female": 0, "unknown": 0, "total": 0, "male_pct": 0.0, "female_pct": 0.0, "unknown_pct": 0.0}
+            return {
+                "male": 0,
+                "female": 0,
+                "unknown": 0,
+                "total": 0,
+                "male_pct": 0.0,
+                "female_pct": 0.0,
+                "unknown_pct": 0.0,
+            }
         try:
-            return crud_analytics.get_gender_distribution(connection, date_from=date_from, date_to=date_to)
+            return crud_analytics.get_gender_distribution(
+                connection, date_from=date_from, date_to=date_to
+            )
         finally:
             connection.close()
 
@@ -141,15 +158,17 @@ class AnalyticsRepository:
     def get_top_locations(
         self,
         limit: int = 20,
-        date_from: Optional[str] = None,
-        date_to: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        date_from: str | None = None,
+        date_to: str | None = None,
+    ) -> dict[str, Any]:
         """Classement des villes et pays par nombre de clients."""
         connection = get_connection()
         if not connection:
             return {"top_countries": [], "top_cities": []}
         try:
-            return crud_analytics.get_top_locations(connection, limit=limit, date_from=date_from, date_to=date_to)
+            return crud_analytics.get_top_locations(
+                connection, limit=limit, date_from=date_from, date_to=date_to
+            )
         finally:
             connection.close()
 
@@ -160,9 +179,9 @@ class AnalyticsRepository:
     def get_loyalty_rate(
         self,
         min_formulas: int = 2,
-        date_from: Optional[str] = None,
-        date_to: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        date_from: str | None = None,
+        date_to: str | None = None,
+    ) -> dict[str, Any]:
         """
         Taux de fidélité des clients.
 
@@ -180,8 +199,9 @@ class AnalyticsRepository:
                 "new_loyal_by_month": [],
             }
         try:
-            return crud_analytics.get_loyalty_rate(connection, min_formulas=min_formulas,
-                                                    date_from=date_from, date_to=date_to)
+            return crud_analytics.get_loyalty_rate(
+                connection, min_formulas=min_formulas, date_from=date_from, date_to=date_to
+            )
         finally:
             connection.close()
 

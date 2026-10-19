@@ -1,7 +1,9 @@
-from typing import Dict, Any, Optional, List
+from typing import Any
+
 import pymysql.cursors
-from app.database import get_connection
+
 from app.crud import crud_customer_file
+from app.database import get_connection
 
 
 class CustomerFileRepository:
@@ -9,7 +11,7 @@ class CustomerFileRepository:
     Repository pour gérer l'accès aux données customer_files (Data Access Layer)
     """
 
-    def create_customer_file(self, file_data: Dict[str, Any]) -> Optional[int]:
+    def create_customer_file(self, file_data: dict[str, Any]) -> int | None:
         """
         Crée un nouveau customer_file
 
@@ -28,7 +30,7 @@ class CustomerFileRepository:
         finally:
             connection.close()
 
-    def get_customer_file_by_id(self, file_id: int) -> Optional[Dict[str, Any]]:
+    def get_customer_file_by_id(self, file_id: int) -> dict[str, Any] | None:
         """
         Récupère un customer_file par son ID
 
@@ -47,7 +49,7 @@ class CustomerFileRepository:
         finally:
             connection.close()
 
-    def get_files_by_customer_id(self, customer_id: int) -> List[Dict[str, Any]]:
+    def get_files_by_customer_id(self, customer_id: int) -> list[dict[str, Any]]:
         """
         Récupère tous les fichiers d'un customer
 
@@ -66,7 +68,7 @@ class CustomerFileRepository:
         finally:
             connection.close()
 
-    def get_files_by_customer_review_id(self, customer_review_id: int) -> List[Dict[str, Any]]:
+    def get_files_by_customer_review_id(self, customer_review_id: int) -> list[dict[str, Any]]:
         """
         Récupère tous les fichiers d'un customer_review
 
@@ -85,7 +87,7 @@ class CustomerFileRepository:
         finally:
             connection.close()
 
-    def update_customer_file(self, file_id: int, file_data: Dict[str, Any]) -> bool:
+    def update_customer_file(self, file_id: int, file_data: dict[str, Any]) -> bool:
         """
         Met à jour un customer_file
 
@@ -138,11 +140,7 @@ class CustomerFileRepository:
         finally:
             connection.close()
 
-    def transfer_files_to_customer(
-        self,
-        customer_review_id: int,
-        customer_id: int
-    ) -> bool:
+    def transfer_files_to_customer(self, customer_review_id: int, customer_id: int) -> bool:
         """
         Transfère tous les fichiers d'un customer_review vers un customer
 
@@ -159,14 +157,12 @@ class CustomerFileRepository:
 
         try:
             return crud_customer_file.transfer_files_to_customer(
-                connection,
-                customer_review_id,
-                customer_id
+                connection, customer_review_id, customer_id
             )
         finally:
             connection.close()
 
-    def get_all_pdf_files(self) -> List[Dict[str, Any]]:
+    def get_all_pdf_files(self) -> list[dict[str, Any]]:
         """Récupère tous les customer_files de type PDF"""
         connection = get_connection()
         if not connection:
@@ -180,7 +176,7 @@ class CustomerFileRepository:
         finally:
             connection.close()
 
-    def get_all_image_files(self) -> List[Dict[str, Any]]:
+    def get_all_image_files(self) -> list[dict[str, Any]]:
         """Récupère tous les customer_files de type image"""
         connection = get_connection()
         if not connection:
@@ -194,7 +190,7 @@ class CustomerFileRepository:
         finally:
             connection.close()
 
-    def get_file_by_formula_id(self, formula_id: int) -> Optional[Dict[str, Any]]:
+    def get_file_by_formula_id(self, formula_id: int) -> dict[str, Any] | None:
         """
         Récupère le fichier associé à une formule
 

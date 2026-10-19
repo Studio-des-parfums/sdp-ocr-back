@@ -1,12 +1,22 @@
 from fastapi import APIRouter, HTTPException
-from app.schemas.email_schemas import EmailTestRequest, PyramidRequest, EmailResponse, PyramidPreviewResponse
+
+from app.database.connection import get_connection
+from app.schemas.email_schemas import (
+    EmailResponse,
+    EmailTestRequest,
+    PyramidPreviewResponse,
+    PyramidRequest,
+)
 from app.services.email.email_sender_service import email_sender_service
 from app.services.email.pyramid_email_service import (
     build_pyramid_html as _build_pyramid_html,
+)
+from app.services.email.pyramid_email_service import (
     get_pyramid_data as _get_pyramid_data_raw,
+)
+from app.services.email.pyramid_email_service import (
     send_pyramid_email_for_formula,
 )
-from app.database.connection import get_connection
 
 router = APIRouter()
 
@@ -48,13 +58,15 @@ async def preview_pyramid_email(request: PyramidRequest):
         )
 
         subject = "Votre pyramide olfactive – Le Studio des Parfums"
-        html = _build_pyramid_html(customer, formula, top_notes, heart_notes, base_notes, percentages, preview=True)
+        html = _build_pyramid_html(
+            customer, formula, top_notes, heart_notes, base_notes, percentages, preview=True
+        )
 
         return PyramidPreviewResponse(
             subject=subject,
             html=html,
             to_email=customer.get("email"),
-            customer_name=f"{customer.get('last_name', '')} {customer.get('first_name', '')}".strip()
+            customer_name=f"{customer.get('last_name', '')} {customer.get('first_name', '')}".strip(),
         )
 
     except HTTPException:

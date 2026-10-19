@@ -1,13 +1,11 @@
-from typing import Optional
-
-from app.database import get_connection
 from app.crud import crud_device
+from app.database import get_connection
 
 
 def register_device(
     device_id: str,
-    device_name: Optional[str] = None,
-) -> Optional[dict]:
+    device_name: str | None = None,
+) -> dict | None:
     conn = get_connection()
     if not conn:
         return None
@@ -17,7 +15,7 @@ def register_device(
         conn.close()
 
 
-def verify_device(device_id: str) -> Optional[dict]:
+def verify_device(device_id: str) -> dict | None:
     conn = get_connection()
     if not conn:
         return None

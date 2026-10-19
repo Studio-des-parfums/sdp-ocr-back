@@ -1,14 +1,12 @@
-import os
-import shutil
-import re
-from typing import Optional, Tuple, List
-from datetime import datetime
-from pdf2image import convert_from_bytes
-from PIL import Image, ImageOps
 import io
+import os
+import re
+from datetime import datetime
+
 import boto3
 from botocore.exceptions import ClientError
-
+from pdf2image import convert_from_bytes
+from PIL import Image, ImageOps
 
 # Mode de stockage : "local" ou "s3"
 STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local")
@@ -84,7 +82,7 @@ class FileStorageService:
     # Lecture
     # ------------------------------------------------------------------
 
-    def get_file_bytes(self, relative_path: str) -> Optional[bytes]:
+    def get_file_bytes(self, relative_path: str) -> bytes | None:
         try:
             if STORAGE_BACKEND == "s3":
                 response = _get_s3_client().get_object(
@@ -132,7 +130,7 @@ class FileStorageService:
     # Sauvegarde
     # ------------------------------------------------------------------
 
-    def save_file_temporary(self, file_bytes: bytes, original_filename: str) -> Tuple[str, str]:
+    def save_file_temporary(self, file_bytes: bytes, original_filename: str) -> tuple[str, str]:
         filename = self._generate_filename(original_filename)
         self._write(filename, file_bytes)
         print(f"📁 Fichier sauvegardé: {filename}")
@@ -143,7 +141,7 @@ class FileStorageService:
         file_bytes: bytes,
         customer_id: int,
         original_filename: str,
-    ) -> Tuple[str, str]:
+    ) -> tuple[str, str]:
         filename = self._generate_filename(original_filename)
         self._write(filename, file_bytes)
         print(f"📁 Fichier sauvegardé: {filename}")
@@ -157,7 +155,7 @@ class FileStorageService:
     # Conversion PDF → images
     # ------------------------------------------------------------------
 
-    def convert_pdf_to_images(self, pdf_bytes: bytes, dpi: int = 200) -> List[Tuple[bytes, str]]:
+    def convert_pdf_to_images(self, pdf_bytes: bytes, dpi: int = 200) -> list[tuple[bytes, str]]:
         try:
             images = convert_from_bytes(pdf_bytes, dpi=dpi, fmt="png")
             result = []
@@ -167,7 +165,7 @@ class FileStorageService:
                 buf = io.BytesIO()
                 image.save(buf, format="PNG")
                 result.append((buf.getvalue(), "png"))
-                print(f"🖼️ Page {i+1}/{len(images)} convertie en image PNG")
+                print(f"🖼️ Page {i + 1}/{len(images)} convertie en image PNG")
             return result
         except Exception as e:
             print(f"❌ Erreur conversion PDF → Image: {e}")
@@ -176,10 +174,10 @@ class FileStorageService:
     def save_pdf_and_images(
         self,
         pdf_bytes: bytes,
-        customer_id: Optional[int],
+        customer_id: int | None,
         original_filename: str,
-        customer_review_id: Optional[int] = None,
-    ) -> Tuple[str, List[str]]:
+        customer_review_id: int | None = None,
+    ) -> tuple[str, list[str]]:
         # Tous les fichiers à la racine du bucket, sans sous-dossiers
         pdf_filename = self._generate_filename(original_filename)
         self._write(pdf_filename, pdf_bytes)
@@ -190,7 +188,7 @@ class FileStorageService:
         base_filename = os.path.splitext(pdf_filename)[0]
 
         for i, (img_bytes, ext) in enumerate(images):
-            img_filename = f"{base_filename}_page_{i+1}.{ext}"
+            img_filename = f"{base_filename}_page_{i + 1}.{ext}"
             self._write(img_filename, img_bytes)
             image_paths.append(img_filename)
 
@@ -223,7 +221,7 @@ class FileStorageService:
     # Utilitaires lecture
     # ------------------------------------------------------------------
 
-    def get_pdf_path_from_image(self, image_relative_path: str) -> Optional[str]:
+    def get_pdf_path_from_image(self, image_relative_path: str) -> str | None:
         try:
             # Tous les fichiers sont à la racine : on extrait juste le nom de base
             filename = os.path.basename(image_relative_path)
@@ -244,7 +242,7 @@ class FileStorageService:
             print(f"❌ Erreur recherche PDF: {e}")
             return None
 
-    def get_pdf_thumbnail(self, relative_path: str, dpi: int = 150) -> Optional[bytes]:
+    def get_pdf_thumbnail(self, relative_path: str, dpi: int = 150) -> bytes | None:
         try:
             pdf_bytes = self.get_file_bytes(relative_path)
             if not pdf_bytes:

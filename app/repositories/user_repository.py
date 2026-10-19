@@ -1,6 +1,7 @@
-from typing import Dict, Any, Optional, List, Tuple
-from app.database import get_connection
+from typing import Any
+
 from app.crud import crud_user
+from app.database import get_connection
 
 
 class UserRepository:
@@ -8,7 +9,7 @@ class UserRepository:
     Repository pour gérer l'accès aux données users (Data Access Layer)
     """
 
-    def create_user(self, user_data: Dict[str, Any]) -> Optional[int]:
+    def create_user(self, user_data: dict[str, Any]) -> int | None:
         """
         Crée un nouveau user
 
@@ -30,7 +31,7 @@ class UserRepository:
         finally:
             connection.close()
 
-    def get_user_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
+    def get_user_by_id(self, user_id: int) -> dict[str, Any] | None:
         """
         Récupère un user par son ID
 
@@ -49,7 +50,7 @@ class UserRepository:
         finally:
             connection.close()
 
-    def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+    def get_user_by_email(self, email: str) -> dict[str, Any] | None:
         """
         Récupère un user par son email
 
@@ -68,7 +69,7 @@ class UserRepository:
         finally:
             connection.close()
 
-    def get_user_by_identifier(self, identifier: str) -> Optional[Dict[str, Any]]:
+    def get_user_by_identifier(self, identifier: str) -> dict[str, Any] | None:
         """
         Récupère un user par son identifiant unique
 
@@ -87,9 +88,15 @@ class UserRepository:
         finally:
             connection.close()
 
-    def get_all_users(self, page: int = 1, size: int = 10, search: Optional[str] = None,
-                     role_id: Optional[int] = None, team: Optional[str] = None,
-                     is_online: Optional[bool] = None) -> Tuple[List[Dict[str, Any]], int]:
+    def get_all_users(
+        self,
+        page: int = 1,
+        size: int = 10,
+        search: str | None = None,
+        role_id: int | None = None,
+        team: str | None = None,
+        is_online: bool | None = None,
+    ) -> tuple[list[dict[str, Any]], int]:
         """
         Récupère tous les users avec pagination et filtres
 
@@ -113,7 +120,7 @@ class UserRepository:
         finally:
             connection.close()
 
-    def update_user(self, user_id: int, user_data: Dict[str, Any]) -> bool:
+    def update_user(self, user_id: int, user_data: dict[str, Any]) -> bool:
         """
         Met à jour un user
 
@@ -192,7 +199,7 @@ class UserRepository:
         finally:
             connection.close()
 
-    def get_online_users(self) -> List[Dict[str, Any]]:
+    def get_online_users(self) -> list[dict[str, Any]]:
         """
         Récupère tous les users en ligne
 
@@ -208,7 +215,7 @@ class UserRepository:
         finally:
             connection.close()
 
-    def get_users_by_team(self, team: str) -> List[Dict[str, Any]]:
+    def get_users_by_team(self, team: str) -> list[dict[str, Any]]:
         """
         Récupère tous les users d'une équipe
 
@@ -227,7 +234,7 @@ class UserRepository:
         finally:
             connection.close()
 
-    def get_users_by_role_id(self, role_id: int) -> List[Dict[str, Any]]:
+    def get_users_by_role_id(self, role_id: int) -> list[dict[str, Any]]:
         """
         Récupère tous les users d'un rôle
 
@@ -284,7 +291,7 @@ class UserRepository:
         finally:
             connection.close()
 
-    def get_user_quotas(self, user_id: int) -> Optional[Dict[str, Any]]:
+    def get_user_quotas(self, user_id: int) -> dict[str, Any] | None:
         """
         Récupère les quotas actuels d'un utilisateur
 

@@ -1,7 +1,8 @@
-import os
 import base64
+import os
 from io import BytesIO
-from weasyprint import HTML, CSS
+
+from weasyprint import HTML
 from weasyprint.text.fonts import FontConfiguration
 
 # Chemin vers l'image de la pyramide
@@ -29,7 +30,7 @@ def generate_pyramid_html(
     top_notes: list,
     heart_notes: list,
     base_notes: list,
-    pyramid_image_base64: str = None
+    pyramid_image_base64: str = None,
 ) -> str:
     """
     Genere le HTML pour la pyramide olfactive.
@@ -41,7 +42,7 @@ def generate_pyramid_html(
             return "<p>Aucune</p>"
         html = ""
         for note in notes:
-            quantity = f" ({note['quantity']})" if note.get('quantity') else ""
+            quantity = f" ({note['quantity']})" if note.get("quantity") else ""
             html += f"<p style='margin: 2px 0;'>{note['name']}{quantity}</p>"
         return html
 
@@ -196,7 +197,7 @@ def generate_pyramid_pdf(
     reference: str,
     top_notes: list,
     heart_notes: list,
-    base_notes: list
+    base_notes: list,
 ) -> bytes:
     """
     Genere un PDF de la pyramide olfactive.
@@ -217,7 +218,7 @@ def generate_pyramid_pdf(
         top_notes=top_notes,
         heart_notes=heart_notes,
         base_notes=base_notes,
-        pyramid_image_base64=pyramid_image_base64
+        pyramid_image_base64=pyramid_image_base64,
     )
 
     # Convertir en PDF
@@ -233,5 +234,5 @@ def generate_pyramid_pdf(
 pyramid_pdf_service = {
     "generate_html": generate_pyramid_html,
     "generate_pdf": generate_pyramid_pdf,
-    "get_pyramid_image_base64": get_pyramid_image_base64
+    "get_pyramid_image_base64": get_pyramid_image_base64,
 }

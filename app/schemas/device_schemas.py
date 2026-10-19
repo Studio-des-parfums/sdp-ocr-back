@@ -1,17 +1,17 @@
 from datetime import datetime
-from typing import Optional
+
 from pydantic import BaseModel
 
 
 class DeviceRegisterRequest(BaseModel):
     device_id: str
-    device_name: Optional[str] = None
+    device_name: str | None = None
 
 
 class DeviceRegisterResponse(BaseModel):
     id: int
     device_id: str
-    device_name: Optional[str] = None
+    device_name: str | None = None
     status: str = "pending"
 
 
@@ -22,7 +22,7 @@ class DeviceVerifyRequest(BaseModel):
 class DeviceVerifyResponse(BaseModel):
     authorized: bool
     device_id: str
-    status: Optional[str] = None
+    status: str | None = None
 
 
 class DeviceRenameRequest(BaseModel):
@@ -32,8 +32,8 @@ class DeviceRenameRequest(BaseModel):
 class DeviceResponse(BaseModel):
     id: int
     device_id: str
-    device_name: Optional[str] = None
+    device_name: str | None = None
     registered_at: datetime
-    last_seen_at: Optional[datetime] = None
+    last_seen_at: datetime | None = None
     status: str
-    decided_at: Optional[datetime] = None
+    decided_at: datetime | None = None

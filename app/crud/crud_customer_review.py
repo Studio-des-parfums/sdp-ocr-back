@@ -1,10 +1,12 @@
-from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime
+from typing import Any
+
 import pymysql
 
 
-def create(connection: pymysql.connections.Connection, customer_data: Dict[str, Any],
-          review_type: str) -> Optional[int]:
+def create(
+    connection: pymysql.connections.Connection, customer_data: dict[str, Any], review_type: str
+) -> int | None:
     """
     Insère un customer dans la table customers_review avec un type spécifique
 
@@ -24,15 +26,15 @@ def create(connection: pymysql.connections.Connection, customer_data: Dict[str, 
 
         if clean_data:
             # Ajouter le type à la liste des colonnes
-            clean_data['type'] = review_type
+            clean_data["type"] = review_type
 
             columns = list(clean_data.keys())
             placeholders = ["%s"] * len(columns)
             values = list(clean_data.values())
 
             query = f"""
-                INSERT INTO customers_review ({', '.join(columns)})
-                VALUES ({', '.join(placeholders)})
+                INSERT INTO customers_review ({", ".join(columns)})
+                VALUES ({", ".join(placeholders)})
             """
             cursor.execute(query, values)
         else:
@@ -53,7 +55,7 @@ def create(connection: pymysql.connections.Connection, customer_data: Dict[str, 
         cursor.close()
 
 
-def get_by_id(connection: pymysql.connections.Connection, review_id: int) -> Optional[Dict[str, Any]]:
+def get_by_id(connection: pymysql.connections.Connection, review_id: int) -> dict[str, Any] | None:
     """
     Récupère un customer_review par son ID
 
@@ -85,11 +87,15 @@ def get_by_id(connection: pymysql.connections.Connection, review_id: int) -> Opt
         cursor.close()
 
 
-def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int = 10,
-           review_type: Optional[str] = None,
-           search: Optional[str] = None,
-           v2: bool = False,
-           has_reference: Optional[bool] = None) -> Tuple[List[Dict[str, Any]], int]:
+def get_all(
+    connection: pymysql.connections.Connection,
+    page: int = 1,
+    size: int = 10,
+    review_type: str | None = None,
+    search: str | None = None,
+    v2: bool = False,
+    has_reference: bool | None = None,
+) -> tuple[list[dict[str, Any]], int]:
     """
     Récupère tous les customer_reviews avec pagination et filtres optionnels
 
@@ -158,7 +164,7 @@ def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int
             {where_clause}
         """
         cursor.execute(count_query, params)
-        total = cursor.fetchone()['total']
+        total = cursor.fetchone()["total"]
 
         # Récupérer les résultats paginés
         offset = (page - 1) * size
@@ -185,8 +191,9 @@ def get_all(connection: pymysql.connections.Connection, page: int = 1, size: int
         cursor.close()
 
 
-def update(connection: pymysql.connections.Connection, review_id: int,
-          customer_data: Dict[str, Any]) -> bool:
+def update(
+    connection: pymysql.connections.Connection, review_id: int, customer_data: dict[str, Any]
+) -> bool:
     """
     Met à jour un customer_review
 
@@ -225,7 +232,7 @@ def update(connection: pymysql.connections.Connection, review_id: int,
 
         query = f"""
             UPDATE customers_review
-            SET {', '.join(set_clauses)}
+            SET {", ".join(set_clauses)}
             WHERE id = %s
         """
 
@@ -273,7 +280,7 @@ def delete(connection: pymysql.connections.Connection, review_id: int) -> bool:
         cursor.close()
 
 
-def transfer_to_customers(connection: pymysql.connections.Connection, review_id: int) -> Optional[int]:
+def transfer_to_customers(connection: pymysql.connections.Connection, review_id: int) -> int | None:
     """
     Transfère un customer_review vers la table customers puis le supprime de customers_review
     Si l'email existe déjà dans customers, fusionne avec le customer existant au lieu de créer un nouveau
@@ -297,7 +304,7 @@ def transfer_to_customers(connection: pymysql.connections.Connection, review_id:
             return None
 
         # 2. Vérifier si l'email existe déjà dans customers
-        email = review_data.get('email')
+        email = review_data.get("email")
         existing_customer_id = None
 
         if email:
@@ -306,43 +313,54 @@ def transfer_to_customers(connection: pymysql.connections.Connection, review_id:
             existing_customer = cursor.fetchone()
 
             if existing_customer:
-                existing_customer_id = existing_customer['id']
+                existing_customer_id = existing_customer["id"]
                 print(f"📧 Email {email} existe déjà dans customers (ID: {existing_customer_id})")
-                print(f"🔄 Fusion: Les fichiers et formules de customer_review {review_id} seront transférés vers customer {existing_customer_id}")
+                print(
+                    f"🔄 Fusion: Les fichiers et formules de customer_review {review_id} seront transférés vers customer {existing_customer_id}"
+                )
 
         # 3a. Si email existe déjà → Fusionner
         if existing_customer_id:
             # Mettre à jour les informations du customer existant
-            customer_data = {k: v for k, v in review_data.items()
-                           if k not in ['id', 'created_at', 'updated_at', 'type'] and v is not None and v != ""}
+            customer_data = {
+                k: v
+                for k, v in review_data.items()
+                if k not in ["id", "created_at", "updated_at", "type"] and v is not None and v != ""
+            }
             if customer_data:
                 set_clauses = [f"{col} = %s" for col in customer_data.keys()]
                 values = list(customer_data.values())
                 values.append(existing_customer_id)
                 update_query = f"""
                     UPDATE customers
-                    SET {', '.join(set_clauses)}
+                    SET {", ".join(set_clauses)}
                     WHERE id = %s
                 """
                 cursor.execute(update_query, values)
 
             # Transférer les fichiers de customer_review vers le customer existant
             from app.crud import crud_customer_file, crud_formula
-            crud_customer_file.transfer_files_to_customer(connection, review_id, existing_customer_id)
+
+            crud_customer_file.transfer_files_to_customer(
+                connection, review_id, existing_customer_id
+            )
 
             # Transférer les formules de customer_review vers le customer existant
             crud_formula.transfer_formulas_to_customer(connection, review_id, existing_customer_id)
 
             # Déplacer physiquement les fichiers du dossier pending vers le dossier du customer
             from app.services.file import file_storage_service
+
             files = crud_customer_file.get_by_customer_review_id(connection, review_id)
             for file in files:
                 try:
-                    old_path = file['file_path']
-                    if 'pending' in old_path:
-                        new_path = file_storage_service.move_file_to_customer(old_path, existing_customer_id)
+                    old_path = file["file_path"]
+                    if "pending" in old_path:
+                        new_path = file_storage_service.move_file_to_customer(
+                            old_path, existing_customer_id
+                        )
                         # Mettre à jour le chemin dans la base de données
-                        crud_customer_file.update(connection, file['id'], {'file_path': new_path})
+                        crud_customer_file.update(connection, file["id"], {"file_path": new_path})
                 except Exception as e:
                     print(f"⚠️ Erreur déplacement fichier {file['id']}: {e}")
 
@@ -351,18 +369,23 @@ def transfer_to_customers(connection: pymysql.connections.Connection, review_id:
             cursor.execute(delete_query, (review_id,))
 
             connection.commit()
-            print(f"✅ Fusion terminée: customer_review {review_id} fusionné avec customer {existing_customer_id}")
+            print(
+                f"✅ Fusion terminée: customer_review {review_id} fusionné avec customer {existing_customer_id}"
+            )
             return existing_customer_id
 
         # 3b. Si email n'existe pas → Créer nouveau customer
         else:
             # Préparer les données pour customers (sans id, created_at, updated_at, type)
-            customer_data = {k: v for k, v in review_data.items()
-                           if k not in ['id', 'created_at', 'updated_at', 'type'] and v is not None and v != ""}
+            customer_data = {
+                k: v
+                for k, v in review_data.items()
+                if k not in ["id", "created_at", "updated_at", "type"] and v is not None and v != ""
+            }
 
             # La colonne customers.date est NOT NULL sans valeur par défaut
-            if 'date' not in customer_data:
-                customer_data['date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            if "date" not in customer_data:
+                customer_data["date"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
             # Insérer dans customers
             if customer_data:
@@ -371,8 +394,8 @@ def transfer_to_customers(connection: pymysql.connections.Connection, review_id:
                 values = list(customer_data.values())
 
                 insert_query = f"""
-                    INSERT INTO customers ({', '.join(columns)})
-                    VALUES ({', '.join(placeholders)})
+                    INSERT INTO customers ({", ".join(columns)})
+                    VALUES ({", ".join(placeholders)})
                 """
                 cursor.execute(insert_query, values)
             else:
@@ -384,6 +407,7 @@ def transfer_to_customers(connection: pymysql.connections.Connection, review_id:
 
             # Transférer les fichiers vers le nouveau customer
             from app.crud import crud_customer_file, crud_formula
+
             crud_customer_file.transfer_files_to_customer(connection, review_id, customer_id)
 
             # Transférer les formules vers le nouveau customer
@@ -391,14 +415,15 @@ def transfer_to_customers(connection: pymysql.connections.Connection, review_id:
 
             # Déplacer physiquement les fichiers du dossier pending vers le dossier du customer
             from app.services.file import file_storage_service
+
             files = crud_customer_file.get_by_customer_id(connection, customer_id)
             for file in files:
                 try:
-                    old_path = file['file_path']
-                    if 'pending' in old_path:
+                    old_path = file["file_path"]
+                    if "pending" in old_path:
                         new_path = file_storage_service.move_file_to_customer(old_path, customer_id)
                         # Mettre à jour le chemin dans la base de données
-                        crud_customer_file.update(connection, file['id'], {'file_path': new_path})
+                        crud_customer_file.update(connection, file["id"], {"file_path": new_path})
                 except Exception as e:
                     print(f"⚠️ Erreur déplacement fichier {file['id']}: {e}")
 
@@ -407,7 +432,9 @@ def transfer_to_customers(connection: pymysql.connections.Connection, review_id:
             cursor.execute(delete_query, (review_id,))
 
             connection.commit()
-            print(f"✅ Nouveau customer créé (ID: {customer_id}) depuis customer_review {review_id}")
+            print(
+                f"✅ Nouveau customer créé (ID: {customer_id}) depuis customer_review {review_id}"
+            )
             return customer_id
 
     except Exception as e:
