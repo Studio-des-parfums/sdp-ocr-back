@@ -5,7 +5,7 @@ Ce script teste la fonctionnalité de correction automatique des fautes
 dans les domaines email (ex: gmil.com → gmail.com)
 """
 
-from app.services.email_domain_corrector import email_domain_corrector
+from app.services.email.email_domain_corrector import email_domain_corrector
 
 
 def test_gmail_corrections():

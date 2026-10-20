@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 
 from app.crud import crud_formula, crud_formula_options, crud_notes
@@ -392,6 +393,118 @@ class FormulaRepository:
             print(f"❌ Erreur mise à jour notes formule {formula_id}: {e}")
             connection.rollback()
             return False
+        finally:
+            connection.close()
+
+    def duplicate_formula(self, formula_id: int) -> dict[str, Any] | None:
+        """
+        Duplique une formule existante et toutes ses notes/options.
+        La nouvelle référence sera {ref}-2, -3 si on re-duplique, etc.
+        Et si on duplique une formule déjà dupliquée ({ref}-2), elle deviendra {ref}-2-2.
+
+        Args:
+            formula_id: ID de la formule à dupliquer
+
+        Returns:
+            Dictionnaire complet de la nouvelle formule dupliquée avec ses notes, ou None si échec.
+        """
+        connection = get_connection()
+        if not connection:
+            return None
+
+        try:
+            # 1. Récupérer la formule source
+            source = crud_formula.get_by_id(connection, formula_id)
+            if not source:
+                print(f"❌ Formule source {formula_id} introuvable pour duplication")
+                return None
+
+            # 2. Récupérer les notes et options existantes
+            top_notes = crud_notes.get_notes_by_type(connection, "top_note", formula_id)
+            heart_notes = crud_notes.get_notes_by_type(connection, "heart_note", formula_id)
+            base_notes = crud_notes.get_notes_by_type(connection, "base_note", formula_id)
+            booster_notes = crud_notes.get_notes_by_type(connection, "booster_note", formula_id)
+            options = crud_formula_options.get_by_formula(connection, formula_id)
+
+            # 3. Générer la nouvelle référence ({ref}-2, {ref}-3... ou {ref}-2-2 si déjà dupliquée)
+            new_reference = crud_formula.generate_reused_reference(connection, formula_id)
+            if not new_reference:
+                new_reference = f"FORMULE-{formula_id}-2"
+
+            # 4. Créer la nouvelle formule (file_id=None, source='duplicate')
+            now_str = datetime.now().strftime("%Y-%m-%d")
+            new_formula_id = crud_formula.create(
+                connection,
+                customer_id=source.get("customer_id"),
+                file_id=None,
+                customer_review_id=source.get("customer_review_id"),
+                reference=new_reference,
+                perfume_name=source.get("perfume_name"),
+                date=now_str,
+                quantity=source.get("quantity"),
+                source="duplicate",
+                supervisor_id=source.get("supervisor_id"),
+                box_type=source.get("box_type"),
+                atelier_id=source.get("atelier_id"),
+                atelier_name=source.get("atelier_name"),
+                comment=source.get("comment"),
+            )
+            if not new_formula_id:
+                return None
+
+            # 5. Cloner les notes
+            for note in top_notes:
+                crud_notes.create_top_note(
+                    connection, new_formula_id, note["name"], note.get("quantity")
+                )
+            for note in heart_notes:
+                crud_notes.create_heart_note(
+                    connection, new_formula_id, note["name"], note.get("quantity")
+                )
+            for note in base_notes:
+                crud_notes.create_base_note(
+                    connection, new_formula_id, note["name"], note.get("quantity")
+                )
+            for note in booster_notes:
+                crud_notes.create_booster_note(
+                    connection, new_formula_id, note["name"], note.get("quantity")
+                )
+
+            # 6. Cloner les options
+            for option_name in options:
+                crud_formula_options.create(connection, new_formula_id, option_name)
+
+            # 7. Incrémenter le reuse_count sur la formule parente
+            crud_formula.increment_reuse_count(connection, formula_id)
+
+            # 8. Récupérer la formule nouvellement créée avec ses notes
+            new_formula = crud_formula.get_by_id(connection, new_formula_id)
+            if new_formula:
+                new_formula["top_notes"] = crud_notes.get_notes_by_type(
+                    connection, "top_note", new_formula_id
+                )
+                new_formula["heart_notes"] = crud_notes.get_notes_by_type(
+                    connection, "heart_note", new_formula_id
+                )
+                new_formula["base_notes"] = crud_notes.get_notes_by_type(
+                    connection, "base_note", new_formula_id
+                )
+                new_formula["booster_notes"] = crud_notes.get_notes_by_type(
+                    connection, "booster_note", new_formula_id
+                )
+                new_formula["options"] = crud_formula_options.get_by_formula(
+                    connection, new_formula_id
+                )
+
+            print(
+                f"✅ Formule {formula_id} dupliquée avec succès -> {new_formula_id} ({new_reference})"
+            )
+            return new_formula
+
+        except Exception as e:
+            print(f"❌ Erreur duplication formule {formula_id}: {e}")
+            connection.rollback()
+            return None
         finally:
             connection.close()
 

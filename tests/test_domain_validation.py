@@ -8,7 +8,7 @@ from pathlib import Path
 # Ajouter le répertoire parent au path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.services.email_domain_validator import email_domain_validator
+from app.services.email.email_domain_validator import email_domain_validator
 
 
 def test_email_domains():

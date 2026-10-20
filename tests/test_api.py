@@ -7,7 +7,7 @@ Stratégie :
 - On vérifie : code HTTP, structure JSON, gestion des 404 / 400 / 422 / 500.
 """
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Données fictives stables
@@ -314,6 +314,90 @@ class TestFormulas:
         with patch(f"{_FORM_REPO}.get_formula_by_id", return_value=None):
             r = client.delete(f"{self.BASE}/9999")
         assert r.status_code == 404
+
+    def test_duplicate_201(self, client):
+        duplicated = {
+            **FORMULA,
+            "id": 2,
+            "reference": "REF-001-2",
+        }
+        with (
+            patch(f"{_FORM_REPO}.get_formula_by_id", return_value=FORMULA),
+            patch(f"{_FORM_REPO}.duplicate_formula", return_value=duplicated),
+        ):
+            r = client.post(f"{self.BASE}/1/duplicate")
+        assert r.status_code == 201
+        assert r.json()["id"] == 2
+        assert r.json()["reference"] == "REF-001-2"
+
+    def test_duplicate_404(self, client):
+        with patch(f"{_FORM_REPO}.get_formula_by_id", return_value=None):
+            r = client.post(f"{self.BASE}/9999/duplicate")
+        assert r.status_code == 404
+
+    def test_duplicate_500_on_error(self, client):
+        with (
+            patch(f"{_FORM_REPO}.get_formula_by_id", return_value=FORMULA),
+            patch(f"{_FORM_REPO}.duplicate_formula", return_value=None),
+        ):
+            r = client.post(f"{self.BASE}/1/duplicate")
+        assert r.status_code == 500
+
+
+class TestGenerateReusedReference:
+    def test_first_duplicate(self):
+        from app.crud.crud_formula import generate_reused_reference
+
+        conn = MagicMock()
+        cursor = conn.cursor.return_value
+        cursor.fetchone.return_value = {"reference": "202610001"}
+        cursor.fetchall.return_value = []
+        ref = generate_reused_reference(conn, 1)
+        assert ref == "202610001-2"
+
+    def test_second_duplicate(self):
+        from app.crud.crud_formula import generate_reused_reference
+
+        conn = MagicMock()
+        cursor = conn.cursor.return_value
+        cursor.fetchone.return_value = {"reference": "202610001"}
+        cursor.fetchall.return_value = [{"reference": "202610001-2"}]
+        ref = generate_reused_reference(conn, 1)
+        assert ref == "202610001-3"
+
+    def test_third_duplicate_with_nested_duplicate(self):
+        from app.crud.crud_formula import generate_reused_reference
+
+        conn = MagicMock()
+        cursor = conn.cursor.return_value
+        cursor.fetchone.return_value = {"reference": "202610001"}
+        cursor.fetchall.return_value = [
+            {"reference": "202610001-2"},
+            {"reference": "202610001-3"},
+            {"reference": "202610001-2-2"},
+        ]
+        ref = generate_reused_reference(conn, 1)
+        assert ref == "202610001-4"
+
+    def test_duplicate_of_duplicate(self):
+        from app.crud.crud_formula import generate_reused_reference
+
+        conn = MagicMock()
+        cursor = conn.cursor.return_value
+        cursor.fetchone.return_value = {"reference": "202610001-2"}
+        cursor.fetchall.return_value = []
+        ref = generate_reused_reference(conn, 2)
+        assert ref == "202610001-2-2"
+
+    def test_duplicate_of_duplicate_second_time(self):
+        from app.crud.crud_formula import generate_reused_reference
+
+        conn = MagicMock()
+        cursor = conn.cursor.return_value
+        cursor.fetchone.return_value = {"reference": "202610001-2"}
+        cursor.fetchall.return_value = [{"reference": "202610001-2-2"}]
+        ref = generate_reused_reference(conn, 2)
+        assert ref == "202610001-2-3"
 
 
 # ══════════════════════════════════════════════════════════════════════════════

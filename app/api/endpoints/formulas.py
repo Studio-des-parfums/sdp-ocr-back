@@ -227,3 +227,21 @@ async def delete_formula(formula_id: int):
         message=f"Formule {formula_id} et ses notes supprimées avec succès",
         formula_id=formula_id,
     )
+
+
+@router.post("/{formula_id}/duplicate", response_model=FormulaResponse, status_code=201)
+async def duplicate_formula(formula_id: int):
+    """
+    Duplique une formule et toutes ses notes/options.
+    La nouvelle référence deviendra {ref}-2, -3 si on la reduplique, -4...
+    Et si on duplique une dupliquée ({ref}-2), ça fera {ref}-2-2.
+    """
+    existing_formula = formula_repository.get_formula_by_id(formula_id)
+    if not existing_formula:
+        raise HTTPException(status_code=404, detail=f"Formule avec ID {formula_id} non trouvée")
+
+    new_formula = formula_repository.duplicate_formula(formula_id)
+    if not new_formula:
+        raise HTTPException(status_code=500, detail="Erreur lors de la duplication de la formule")
+
+    return FormulaResponse(**new_formula)

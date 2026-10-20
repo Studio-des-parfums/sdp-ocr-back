@@ -15,6 +15,7 @@ def create(
     box_type: str | None = None,
     atelier_id: int | None = None,
     atelier_name: str | None = None,
+    comment: str | None = None,
 ) -> int | None:
     """
     Crée une nouvelle formule liée à un customer (ou customer_review) et à un fichier.
@@ -62,6 +63,8 @@ def create(
             data["atelier_id"] = atelier_id
         if atelier_name is not None:
             data["atelier_name"] = atelier_name
+        if comment is not None:
+            data["comment"] = comment
 
         columns = list(data.keys())
         placeholders = ["%s"] * len(columns)
@@ -366,15 +369,19 @@ def generate_reused_reference(
             return None
 
         prefix = f"{source_reference}-"
+        escaped_ref = source_reference.replace("=", "==").replace("%", "=%").replace("_", "=_")
+        escaped_prefix = f"{escaped_ref}-"
         cursor.execute(
-            "SELECT reference FROM formula WHERE reference LIKE %s",
-            (f"{prefix}%",),
+            "SELECT reference FROM formula WHERE reference LIKE %s ESCAPE '='",
+            (f"{escaped_prefix}%",),
         )
         last_sequence = 1
         for row in cursor.fetchall():
-            suffix = row["reference"][len(prefix) :]
-            if suffix.isdigit():
-                last_sequence = max(last_sequence, int(suffix))
+            ref = row.get("reference") or ""
+            if ref.startswith(prefix):
+                suffix = ref[len(prefix) :]
+                if suffix.isdigit():
+                    last_sequence = max(last_sequence, int(suffix))
 
         return f"{prefix}{last_sequence + 1}"
 
