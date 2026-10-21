@@ -21,6 +21,7 @@ from app.repositories.ocr_job_repository import ocr_job_repository
 from app.schemas.ocr_schemas import DocumentType, OCRResponse, ProcessedPage
 from app.services.file import file_storage_service
 from app.utils.data_extractor import data_extractor
+from app.utils.date_parser import resolve_ocr_date
 from app.utils.document_classifier import document_classifier
 from app.utils.pdf_splitter import pdf_splitter
 
@@ -122,6 +123,12 @@ async def _process_pdf_job(job_id: str, pdf_content: bytes, filename: str, v2: b
                         raw_text = ocr_response["pages"][0].get("markdown", "")
                     doc_type, confidence = document_classifier.classify_document(raw_text)
                     extracted_data = data_extractor.extract_data(raw_text, doc_type)
+
+                # Sécurité date : s'assurer que la date est déduite de l'identifiant si manquante
+                if doc_type == DocumentType.STUDIO_PARFUMS and not extracted_data.get("date"):
+                    inferred_d = resolve_ocr_date(extracted_data.get("date"), extracted_data.get("identifiant"))
+                    if inferred_d:
+                        extracted_data["date"] = inferred_d
 
                 if doc_type == DocumentType.STUDIO_PARFUMS:
                     try:
@@ -488,6 +495,12 @@ async def upload_pdf_for_ocr(file: UploadFile = File(...)):
 
                 if not extracted_data:
                     extracted_data = data_extractor.extract_data(raw_text, doc_type)
+
+                # Sécurité date : s'assurer que la date est déduite de l'identifiant si manquante
+                if doc_type == DocumentType.STUDIO_PARFUMS and not extracted_data.get("date"):
+                    inferred_d = resolve_ocr_date(extracted_data.get("date"), extracted_data.get("identifiant"))
+                    if inferred_d:
+                        extracted_data["date"] = inferred_d
 
                 # Extraire les notes de parfum depuis les tableaux
                 if doc_type == DocumentType.STUDIO_PARFUMS:

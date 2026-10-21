@@ -6,6 +6,7 @@ import requests
 
 from app.core.config import settings
 from app.schemas.ocr_schemas import MistralDocumentAnnotation
+from app.utils.date_parser import resolve_ocr_date
 
 try:
     from mistralai import Mistral
@@ -163,6 +164,10 @@ class MistralOCRClient:
                     except Exception:
                         pass
                 if isinstance(ann, dict):
+                    # Normalisation / déduction de la date via identifiant si manquante
+                    resolved_date = resolve_ocr_date(ann.get("date"), ann.get("identifiant"))
+                    if resolved_date:
+                        ann["date"] = resolved_date
                     data["document_annotation"] = ann
         except Exception:
             pass

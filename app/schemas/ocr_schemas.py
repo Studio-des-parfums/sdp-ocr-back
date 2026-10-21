@@ -110,11 +110,14 @@ class MistralDocumentAnnotation(BaseModel):
     date: str | None = Field(
         default=None,
         description=(
-            "Date explicitement renseignée dans le champ Date ou Date "
-            "de création. Format YYYY-MM-DD uniquement si le jour, le mois "
-            "et l'année sont déterminables sans ambiguïté. Ne pas déduire "
-            "la date de l'identifiant, sauf si une règle métier externe "
-            "et validée l'autorise. Sinon null."
+            "Date de création de la fiche au format YYYY-MM-DD. "
+            "1. Rechercher en priorité la date manuscrite dans le champ 'Date' ou 'Date de création' "
+            "(en haut de fiche ou dans les coordonnées ; ne pas confondre avec Date de naissance) "
+            "et la convertir au format YYYY-MM-DD (ex: 14/07/2026 -> 2026-07-14, 02/01/22 -> 2022-01-02). "
+            "2. Règle essentielle : si la date n'est pas renseignée ou est illisible dans le champ date, "
+            "la déduire obligatoirement à partir du numéro identifiant si celui-ci commence par la date au format YYYYMMDD "
+            "(ex: identifiant 202607145 -> date 2026-07-14, identifiant 202201021 -> date 2022-01-02). "
+            "3. Renvoyer null uniquement si aucune date n'est écrite et que l'identifiant ne commence pas par une date valide."
         ),
     )
 

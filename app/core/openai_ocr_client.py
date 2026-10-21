@@ -11,6 +11,7 @@ from PIL import Image, ImageOps
 from app.core.config import settings
 from app.core.logger import get_logger
 from app.schemas.ocr_schemas import DocumentAnnotation, DocumentType
+from app.utils.date_parser import resolve_ocr_date
 
 logger = get_logger(__name__)
 
@@ -141,7 +142,11 @@ class OpenAIOCRClient:
             "2. Fiche Studio des Parfums :\n"
             "   - 'identifiant' : le numéro de création manuscrit (généralement 8 à 10 chiffres, commençant souvent par 20 ou 82...). Ne pas inventer de chiffres.\n"
             "   - 'genre' : la civilité cochée (Mr, Mme, Mlle, Ms). Ne pas déduire du prénom.\n"
-            "   - 'nom', 'prenom', 'date', 'ville', 'pays', 'tel', 'email', 'profession', 'date_naissance', 'groupe' : transcrire fidèlement ce qui est écrit.\n"
+            "   - 'nom', 'prenom', 'ville', 'pays', 'tel', 'email', 'profession', 'date_naissance', 'groupe' : transcrire fidèlement ce qui est écrit.\n"
+            "   - 'date' : la date de création du parfum au format YYYY-MM-DD.\n"
+            "     * Chercher prioritairement la date manuscrite dans le champ 'Date' ou 'Date de création' (en haut de fiche ou bloc coordonnées ; ne pas confondre avec Date de naissance) et la convertir en YYYY-MM-DD (ex: '14/07/2026' -> '2026-07-14', '02/01/22' -> '2022-01-02').\n"
+            "     * RÈGLE IMPORTANTE : si la date n'est pas renseignée ou est illisible dans le champ date, déduire impérativement la date depuis l'identifiant (numéro de création). L'identifiant commence par la date au format YYYYMMDD (ex: identifiant '202607145' -> date '2026-07-14' car 2026/07/14 + index 5 ; identifiant '202201021' -> date '2022-01-02').\n"
+            "     * Renvoyer null uniquement si aucune date n'est renseignée et que l'identifiant ne commence pas par une date valide.\n"
             "   - Pour l'email, sois très vigilant sur l'orthographe manuscrite, l'arobase et le nom de domaine.\n"
             "   - Pour les tableaux 'notes_de_tete', 'notes_de_coeur', 'notes_de_fond' : extraire chaque essence manuscrite dans 'essence' et sa quantité manuscrite en ml dans 'quantite_ml' (ex: '1', '2', '1+1', '0.5'). Ignorer les en-têtes et textes imprimés.\n"
             "3. Tout champ illisible ou non renseigné doit être null."
@@ -211,6 +216,17 @@ class OpenAIOCRClient:
 
             content = fallback_response.choices[0].message.content or "{}"
             ann_dict = json.loads(content)
+
+        # Post-traitement de la date : normalisation ou déduction via identifiant si date absente
+        raw_date = ann_dict.get("date")
+        identifiant = ann_dict.get("identifiant")
+        resolved_date = resolve_ocr_date(raw_date, identifiant)
+        if resolved_date:
+            if resolved_date != raw_date:
+                logger.info(
+                    f"[OpenAI OCR] Date normalisée/déduite : '{raw_date}' -> '{resolved_date}' (identifiant: {identifiant})"
+                )
+            ann_dict["date"] = resolved_date
 
         markdown_text = _generate_markdown_from_annotation(ann_dict)
 
