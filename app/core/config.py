@@ -1,17 +1,23 @@
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
+# Charge le fichier .env situé à la racine de sdp-ocr-back
+env_path = Path(__file__).resolve().parent.parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
 load_dotenv()
 
 
 class Settings:
-    MISTRAL_API_KEY: str = os.getenv("MISTRAL_API_KEY")
+    MISTRAL_API_KEY: str = os.getenv("MISTRAL_API_KEY", "")
     PROJECT_NAME: str = "SDP OCR Backend"
 
-    # OpenAI (répartition intelligente des quantités de notes olfactives)
+    # OpenAI (OCR et répartition intelligente des quantités de notes olfactives)
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    OPENAI_OCR_MODEL: str = os.getenv("OPENAI_OCR_MODEL", "gpt-6-luna")
 
     # Dashboard SDP (règles de dosage max par ingrédient/coffret/flacon)
     DASHBOARD_API_URL: str = os.getenv(

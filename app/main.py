@@ -32,7 +32,7 @@ from app.services.session_scheduler import start_session_scheduler
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="Backend API for PDF OCR processing with Mistral",
+    description="Backend API for PDF OCR processing with OpenAI",
     version="1.0.0",
 )
 
@@ -95,7 +95,7 @@ app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytic
 async def root():
     return {
         "message": "Welcome to SDP OCR Backend",
-        "description": "PDF handwriting OCR service using Mistral",
+        "description": "PDF handwriting OCR service using OpenAI",
         "endpoints": {
             "health": "/health",
             "upload_pdf": "/api/v1/ocr/upload-pdf",

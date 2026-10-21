@@ -8,7 +8,11 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from app.core.logger import get_logger
-from app.core.mistral_client import mistral_ocr_client
+from app.core.mistral_client import mistral_ocr_client as mistral_legacy_client
+from app.core.openai_ocr_client import openai_ocr_client
+
+# Alias de compatibilité
+mistral_ocr_client = openai_ocr_client
 from app.repositories.customer_file_repository import customer_file_repository
 from app.repositories.customer_repository import customer_repository
 from app.repositories.formula_repository import formula_repository
@@ -105,11 +109,11 @@ async def _process_pdf_job(job_id: str, pdf_content: bytes, filename: str, v2: b
                         )
                     elif is_schema_echo:
                         logger.warning(
-                            f"[Job {job_id}] [Page {page_number}] Mistral a renvoyé le schéma → fallback OCR"
+                            f"[Job {job_id}] [Page {page_number}] Réponse invalide (écho de schéma) → fallback OCR"
                         )
                 except Exception as e:
                     logger.error(
-                        f"[Job {job_id}] [Page {page_number}] Échec annotations → fallback OCR: {e}"
+                        f"[Job {job_id}] [Page {page_number}] Échec extraction schéma → fallback OCR: {e}"
                     )
 
                 if not extracted_data:
@@ -142,9 +146,13 @@ async def _process_pdf_job(job_id: str, pdf_content: bytes, filename: str, v2: b
                                 tables_content
                             )
                             extracted_data.update(perfume_notes)
+                        elif extracted_data.get("notes_de_tete") or extracted_data.get("notes_de_coeur") or extracted_data.get("notes_de_fond"):
+                            logger.info(
+                                f"[Job {job_id}] [Page {page_number}] Notes extraites directement depuis le schéma JSON"
+                            )
                         else:
                             logger.warning(
-                                f"[Job {job_id}] [Page {page_number}] Aucun tableau trouvé"
+                                f"[Job {job_id}] [Page {page_number}] Aucun tableau ni note trouvés"
                             )
 
                         logger.info(
@@ -412,7 +420,7 @@ async def upload_pdf_for_ocr(file: UploadFile = File(...)):
         total_blank_sheets = 0
         total_studio_parfums = 0
 
-        logger.info(f"Traitement de {len(page_pdfs)} pages avec Mistral OCR")
+        logger.info(f"Traitement de {len(page_pdfs)} pages avec OpenAI OCR (gpt-6-luna)")
         for i, page_pdf_bytes in enumerate(page_pdfs):
             page_number = i + 1
             try:
@@ -426,7 +434,7 @@ async def upload_pdf_for_ocr(file: UploadFile = File(...)):
                 ocr_response = None
 
                 try:
-                    ann_response = await mistral_ocr_client.process_pdf_annotations(page_pdf_bytes)
+                    ann_response = await openai_ocr_client.process_pdf_annotations(page_pdf_bytes)
                     ann = (
                         ann_response.get("document_annotation")
                         or ann_response.get("document_annotations")
@@ -453,17 +461,17 @@ async def upload_pdf_for_ocr(file: UploadFile = File(...)):
                         )
                     elif is_schema_echo:
                         logger.warning(
-                            f"[Page {page_number}] Mistral a renvoyé le schéma au lieu des données → fallback OCR"
+                            f"[Page {page_number}] Réponse invalide (écho de schéma) → fallback OCR"
                         )
                     else:
                         logger.warning(
                             f"[Page {page_number}] Annotations non exploitables → fallback OCR"
                         )
                 except Exception as e:
-                    logger.error(f"[Page {page_number}] Échec annotations → fallback OCR: {e}")
+                    logger.error(f"[Page {page_number}] Échec extraction schéma → fallback OCR: {e}")
 
                 if not extracted_data:
-                    ocr_response = await mistral_ocr_client.process_pdf_ocr(page_pdf_bytes)
+                    ocr_response = await openai_ocr_client.process_pdf_ocr(page_pdf_bytes)
 
                     if "pages" in ocr_response and len(ocr_response["pages"]) > 0:
                         raw_text = ocr_response["pages"][0].get("markdown", "")
@@ -512,9 +520,16 @@ async def upload_pdf_for_ocr(file: UploadFile = File(...)):
                                 f"cœur={len(perfume_notes.get('notes_de_coeur', []))}, "
                                 f"fond={len(perfume_notes.get('notes_de_fond', []))}"
                             )
+                        elif extracted_data.get("notes_de_tete") or extracted_data.get("notes_de_coeur") or extracted_data.get("notes_de_fond"):
+                            logger.info(
+                                f"[Page {page_number}] Notes extraites via le schéma JSON: "
+                                f"tête={len(extracted_data.get('notes_de_tete', []))}, "
+                                f"cœur={len(extracted_data.get('notes_de_coeur', []))}, "
+                                f"fond={len(extracted_data.get('notes_de_fond', []))}"
+                            )
                         else:
                             logger.warning(
-                                f"[Page {page_number}] Aucun tableau trouvé dans la réponse API"
+                                f"[Page {page_number}] Aucun tableau ni note trouvés dans la réponse"
                             )
 
                     except Exception as e:
@@ -609,6 +624,127 @@ async def get_job_status(job_id: str):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
+
+
+# ======================================================================
+# COMPARAISON MISTRAL VS OPENAI (TEST / BENCHMARK)
+# ======================================================================
+
+
+@router.post("/compare")
+async def compare_ocr_engines(file: UploadFile = File(...)):
+    """
+    Compare les résultats, les coûts et la durée d'exécution entre Mistral OCR
+    et OpenAI Vision (gpt-6-luna) sur un même fichier PDF ou image.
+    """
+    if not file.filename.lower().endswith((".pdf", ".png", ".jpg", ".jpeg")):
+        raise HTTPException(
+            status_code=400,
+            detail="Le fichier doit être un PDF ou une image (PNG/JPEG)",
+        )
+
+    content = await file.read()
+    if not content or len(content) < 50:
+        raise HTTPException(status_code=400, detail="Fichier vide ou invalide")
+
+    if content.startswith(b"%PDF"):
+        try:
+            page_bytes_list = pdf_splitter.split_pdf_to_pages(content)
+        except Exception as e:
+            logger.error(f"Erreur découpage PDF: {e}")
+            page_bytes_list = [content]
+    else:
+        page_bytes_list = [content]
+
+    total_pages = len(page_bytes_list)
+    logger.info(f"[Compare OCR] Début du comparatif sur {total_pages} page(s) pour {file.filename}")
+
+    # --- 1. Mistral OCR ---
+    mistral_start = time.perf_counter()
+    mistral_extracted_pages = []
+    mistral_error = None
+    try:
+        for page_bytes in page_bytes_list:
+            ann_resp = await mistral_legacy_client.process_pdf_annotations(page_bytes)
+            ann = (
+                ann_resp.get("document_annotation")
+                or ann_resp.get("document_annotations")
+                or ann_resp.get("annotation")
+            )
+            mistral_extracted_pages.append(ann or ann_resp)
+    except Exception as e:
+        logger.error(f"[Compare OCR] Erreur Mistral: {e}")
+        mistral_error = str(e)
+    mistral_duration = round(time.perf_counter() - mistral_start, 3)
+
+    # Coût Mistral : 10$ / 1 000 pages = 0.010$ par page
+    mistral_cost_usd = round(total_pages * 0.010, 5)
+
+    # --- 2. OpenAI OCR (gpt-6-luna) ---
+    openai_start = time.perf_counter()
+    openai_extracted_pages = []
+    openai_error = None
+    openai_usage_total = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    try:
+        for page_bytes in page_bytes_list:
+            oai_resp = await openai_ocr_client.process_pdf_annotations(page_bytes)
+            ann = oai_resp.get("document_annotation")
+            usage = oai_resp.get("usage") or {}
+            openai_usage_total["prompt_tokens"] += usage.get("prompt_tokens", 0)
+            openai_usage_total["completion_tokens"] += usage.get("completion_tokens", 0)
+            openai_usage_total["total_tokens"] += usage.get("total_tokens", 0)
+            openai_extracted_pages.append(ann or oai_resp)
+    except Exception as e:
+        logger.error(f"[Compare OCR] Erreur OpenAI: {e}")
+        openai_error = str(e)
+    openai_duration = round(time.perf_counter() - openai_start, 3)
+
+    # Coût OpenAI (gpt-6-luna) : Input 2.50$ / 1M tokens, Output 10.00$ / 1M tokens
+    openai_cost_usd = round(
+        (openai_usage_total["prompt_tokens"] * 2.50 / 1_000_000)
+        + (openai_usage_total["completion_tokens"] * 10.00 / 1_000_000),
+        5,
+    )
+
+    cheaper = "openai" if openai_cost_usd < mistral_cost_usd else "mistral"
+    faster = "openai" if openai_duration < mistral_duration else "mistral"
+
+    return {
+        "filename": file.filename,
+        "total_pages": total_pages,
+        "summary": {
+            "faster_engine": faster,
+            "duration_difference_seconds": round(abs(mistral_duration - openai_duration), 3),
+            "cheaper_engine": cheaper,
+            "cost_difference_usd": round(abs(mistral_cost_usd - openai_cost_usd), 5),
+        },
+        "mistral": {
+            "model": "mistral-ocr-latest",
+            "duration_seconds": mistral_duration,
+            "estimated_cost_usd": mistral_cost_usd,
+            "pricing_basis": "$10.00 / 1,000 pages ($0.010 / page)",
+            "pages_processed": total_pages,
+            "error": mistral_error,
+            "results": (
+                mistral_extracted_pages
+                if len(mistral_extracted_pages) > 1
+                else (mistral_extracted_pages[0] if mistral_extracted_pages else None)
+            ),
+        },
+        "openai": {
+            "model": openai_ocr_client.model,
+            "duration_seconds": openai_duration,
+            "estimated_cost_usd": openai_cost_usd,
+            "pricing_basis": "$2.50 / 1M prompt tokens + $10.00 / 1M completion tokens",
+            "usage": openai_usage_total,
+            "error": openai_error,
+            "results": (
+                openai_extracted_pages
+                if len(openai_extracted_pages) > 1
+                else (openai_extracted_pages[0] if openai_extracted_pages else None)
+            ),
+        },
+    }
 
 
 # ======================================================================
