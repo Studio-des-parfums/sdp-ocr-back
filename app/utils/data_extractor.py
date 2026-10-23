@@ -2,6 +2,7 @@ import re
 from typing import Any
 
 from app.schemas.ocr_schemas import BlankSheetData, DocumentType, StudioParfumsData
+from app.utils.date_parser import resolve_ocr_date
 
 
 class DataExtractor:
@@ -66,7 +67,8 @@ class DataExtractor:
         # Champs personnels (français/anglais) - ordre important pour éviter conflits
         data.prenom = self._extract_field_value(text, ["prenom", "prénom", "first name"])
         data.nom = self._extract_field_value(text, ["nom", "last name", "name"])
-        data.date = self._extract_field_value(text, "date")
+        raw_date = self._extract_field_value(text, "date")
+        data.date = resolve_ocr_date(raw_date, data.identifiant)
         data.ville = self._extract_field_value(text, ["ville", "city"])
         data.pays = self._extract_field_value(text, ["pays", "country"])
 
